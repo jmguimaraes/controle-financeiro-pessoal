@@ -1,0 +1,126 @@
+<title>Controle Financeiro Pessoal</title>
+<style>
+:root{--bg:#f5f6f8;--surface:#ffffff;--text:#1a1d23;--text-muted:#6b7280;--border:#e2e4e8;--accent:#2563eb;--positivo:#15803d;--negativo:#b91c1c;}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#14161a;--surface:#1e2128;--text:#eef0f3;--text-muted:#9aa1ac;--border:#2c303a;--accent:#60a5fa;--positivo:#4ade80;--negativo:#f87171;}
+}
+:root[data-theme="dark"]{--bg:#14161a;--surface:#1e2128;--text:#eef0f3;--text-muted:#9aa1ac;--border:#2c303a;--accent:#60a5fa;--positivo:#4ade80;--negativo:#f87171;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:76px;}
+.topo{padding:16px;text-align:center;}
+.topo h1{margin:0;font-size:1.1rem;}
+.tela{padding:0 16px 16px;max-width:480px;margin:0 auto;}
+.mes-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.mes-nav button{background:none;border:none;font-size:1.4rem;color:var(--accent);cursor:pointer;padding:4px 12px;}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px;}
+.card-label{font-size:.75rem;color:var(--text-muted);}
+.card-valor{font-size:1.15rem;font-weight:600;}
+.card-sub{font-size:.8rem;}
+.positivo{color:var(--positivo);}
+.negativo{color:var(--negativo);}
+ul{list-style:none;margin:0;padding:0;}
+.lista-parcelas li,.lista-lancamentos li,.lista-investimentos li{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.lista-parcelas li{flex-direction:column;align-items:flex-start;gap:2px;}
+.vazio{color:var(--text-muted);text-align:center;padding:16px 0;border:none;background:none;}
+.lancamento-info,.investimento-info{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
+.lancamento-info small,.investimento-info small{color:var(--text-muted);}
+.tag{font-size:.7rem;background:var(--border);border-radius:6px;padding:1px 6px;margin-left:4px;}
+.lancamento-valor,.investimento-valor{text-align:right;font-weight:600;white-space:nowrap;}
+.lancamento-acoes{display:flex;gap:4px;}
+.lancamento-acoes button{background:none;border:none;font-size:1rem;cursor:pointer;color:var(--text-muted);}
+.fab{position:fixed;right:20px;bottom:88px;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:1.6rem;box-shadow:0 4px 10px rgba(0,0,0,.25);cursor:pointer;}
+.tabbar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding:8px 0;}
+.tabbar button{flex:1;background:none;border:none;color:var(--text-muted);font-size:.8rem;padding:6px 0;cursor:pointer;}
+.tabbar button.tab-ativo{color:var(--accent);font-weight:600;}
+.banner{position:fixed;top:0;left:0;right:0;background:#b45309;color:#fff;text-align:center;padding:8px;font-size:.85rem;z-index:10;}
+dialog{border:none;border-radius:14px;padding:18px;width:min(420px,90vw);background:var(--surface);color:var(--text);}
+dialog::backdrop{background:rgba(0,0,0,.4);}
+dialog label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;margin-bottom:10px;color:var(--text-muted);}
+dialog input,dialog select{font-size:1rem;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);}
+dialog label.checkbox{flex-direction:row;align-items:center;gap:8px;}
+.form-acoes{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
+.form-acoes button{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;}
+.form-acoes button.primario{background:var(--accent);border-color:var(--accent);color:#fff;}
+</style>
+
+<div id="banner-sync" class="banner" hidden></div>
+
+<header class="topo"><h1>Controle Financeiro</h1></header>
+
+<main id="tela-resumo" class="tela"></main>
+<main id="tela-lancamentos" class="tela" hidden></main>
+<main id="tela-investimentos" class="tela" hidden></main>
+
+<dialog id="form-lancamento">
+  <form method="dialog" id="formulario-lancamento">
+    <h3>Lançamento</h3>
+    <input type="hidden" name="id" />
+    <label>Data<input type="date" name="data" required /></label>
+    <label>Descrição<input type="text" name="descricao" required maxlength="80" /></label>
+    <label>Categoria
+      <select name="categoria" required>
+        <optgroup label="Receita">
+          <option>Salário</option>
+          <option>Freelance</option>
+          <option>Investimentos</option>
+          <option>Outras Receitas</option>
+        </optgroup>
+        <optgroup label="Despesa">
+          <option>Moradia</option>
+          <option>Alimentação</option>
+          <option>Transporte</option>
+          <option>Saúde</option>
+          <option>Educação</option>
+          <option>Lazer</option>
+          <option>Assinaturas</option>
+          <option>Vestuário</option>
+          <option>Outras Despesas</option>
+        </optgroup>
+      </select>
+    </label>
+    <label>Tipo
+      <select name="tipo" required>
+        <option value="receita">Receita</option>
+        <option value="despesa">Despesa</option>
+      </select>
+    </label>
+    <label>Valor total<input type="number" name="valorTotal" step="0.01" min="0.01" required /></label>
+    <label class="checkbox"><input type="checkbox" name="parcelado" /> Parcelado</label>
+    <label id="campo-parcelas" hidden>Número de parcelas<input type="number" name="parcelas" min="2" step="1" value="2" /></label>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-investimento">
+  <form method="dialog" id="formulario-investimento">
+    <h3>Investimento</h3>
+    <input type="hidden" name="id" />
+    <label>Nome do ativo<input type="text" name="nome" required maxlength="40" /></label>
+    <label>Tipo
+      <select name="tipo" required>
+        <option value="acao">Ação</option>
+        <option value="fii">Fundo Imobiliário</option>
+        <option value="renda_fixa">Renda Fixa</option>
+        <option value="outro">Outro</option>
+      </select>
+    </label>
+    <label>Valor investido<input type="number" name="valorInvestido" step="0.01" min="0" required /></label>
+    <label>Valor atual<input type="number" name="valorAtual" step="0.01" min="0" required /></label>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<nav class="tabbar">
+  <button data-acao="ir-tab" data-tab="resumo" class="tab-ativo">Resumo</button>
+  <button data-acao="ir-tab" data-tab="lancamentos">Lançamentos</button>
+  <button data-acao="ir-tab" data-tab="investimentos">Investimentos</button>
+</nav>
+
+<!-- SCRIPT_INJECT -->
