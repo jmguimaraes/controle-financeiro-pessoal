@@ -87,6 +87,45 @@ function renderResumo(state, ano, mes) {
   `;
 }
 
+function renderLancamentos(state, ano, mes) {
+  const itens = state.lancamentos
+    .filter((l) => parcelaNoMes(l, ano, mes).noMes)
+    .sort((a, b) => a.data.localeCompare(b.data));
+
+  const linhas = itens.length
+    ? itens
+        .map((l) => {
+          const { numeroParcela } = parcelaNoMes(l, ano, mes);
+          const tag = l.parcelas > 1 ? ` <span class="tag">parcela ${numeroParcela}/${l.parcelas}</span>` : '';
+          const sinal = l.tipo === 'receita' ? '+' : '-';
+          const classe = l.tipo === 'receita' ? 'positivo' : 'negativo';
+          return `
+        <li data-id="${l.id}">
+          <div class="lancamento-info">
+            <strong>${escapeHtml(l.descricao)}</strong>${tag}
+            <small>${escapeHtml(l.categoria)} · ${l.data.split('-').reverse().join('/')}</small>
+          </div>
+          <div class="lancamento-valor ${classe}">${sinal} ${formatCurrency(parcelaValor(l))}</div>
+          <div class="lancamento-acoes">
+            <button data-acao="editar-lancamento" data-id="${l.id}" aria-label="Editar">✎</button>
+            <button data-acao="excluir-lancamento" data-id="${l.id}" aria-label="Excluir">🗑</button>
+          </div>
+        </li>`;
+        })
+        .join('')
+    : '<li class="vazio">Nenhum lançamento neste mês.</li>';
+
+  return `
+    <div class="mes-nav">
+      <button data-acao="mes-anterior" aria-label="Mês anterior">‹</button>
+      <h2>${MESES[mes - 1]} de ${ano}</h2>
+      <button data-acao="mes-seguinte" aria-label="Próximo mês">›</button>
+    </div>
+    <ul class="lista-lancamentos">${linhas}</ul>
+    <button class="fab" data-acao="novo-lancamento" aria-label="Novo lançamento">+</button>
+  `;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { formatCurrency, formatPercent, renderResumo };
+  module.exports = { formatCurrency, formatPercent, renderResumo, renderLancamentos };
 }
