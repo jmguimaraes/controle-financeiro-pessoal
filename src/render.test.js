@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { formatCurrency, formatPercent, renderResumo, renderLancamentos } = require('./render.js');
+const { formatCurrency, formatPercent, renderResumo, renderLancamentos, renderInvestimentos } = require('./render.js');
 
 test('formatCurrency formata em reais no padrão pt-BR', () => {
   assert.equal(formatCurrency(1234.5), 'R$ 1.234,50');
@@ -63,4 +63,25 @@ test('renderLancamentos mostra a tag de parcela quando o lançamento é parcelad
   };
   const html = renderLancamentos(state, 2026, 9);
   assert.match(html, /parcela 2\/12/);
+});
+
+test('renderInvestimentos mostra rendimento positivo e negativo, com rótulo de tipo legível', () => {
+  const state = {
+    lancamentos: [],
+    investimentos: [
+      { id: '1', nome: 'ITSA4', tipo: 'acao', valorInvestido: 2000, valorAtual: 2150 },
+      { id: '2', nome: 'Tesouro', tipo: 'renda_fixa', valorInvestido: 1000, valorAtual: 950 },
+    ],
+  };
+  const html = renderInvestimentos(state);
+  assert.match(html, /ITSA4/);
+  assert.match(html, /Ação/);
+  assert.match(html, /\+7,50%/);
+  assert.match(html, /Tesouro/);
+  assert.match(html, /-5,00%/);
+});
+
+test('renderInvestimentos mostra mensagem quando não há investimentos', () => {
+  const html = renderInvestimentos({ lancamentos: [], investimentos: [] });
+  assert.match(html, /Nenhum investimento cadastrado/);
 });

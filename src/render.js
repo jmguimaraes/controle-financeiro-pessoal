@@ -126,6 +126,38 @@ function renderLancamentos(state, ano, mes) {
   `;
 }
 
+function renderInvestimentos(state) {
+  const itens = state.investimentos.length
+    ? state.investimentos
+        .map((i) => {
+          const { valor, percentual } = rendimento(i.valorInvestido, i.valorAtual);
+          const classe = valor >= 0 ? 'positivo' : 'negativo';
+          const rotuloTipo = ROTULOS_TIPO_INVESTIMENTO[i.tipo] || i.tipo;
+          return `
+        <li data-id="${i.id}">
+          <div class="investimento-info">
+            <strong>${escapeHtml(i.nome)}</strong>
+            <small>${escapeHtml(rotuloTipo)} · investido ${formatCurrency(i.valorInvestido)}</small>
+          </div>
+          <div class="investimento-valor ${classe}">
+            ${formatCurrency(i.valorAtual)}<br>
+            <small>${formatPercent(percentual)}</small>
+          </div>
+          <div class="lancamento-acoes">
+            <button data-acao="editar-investimento" data-id="${i.id}" aria-label="Editar">✎</button>
+            <button data-acao="excluir-investimento" data-id="${i.id}" aria-label="Excluir">🗑</button>
+          </div>
+        </li>`;
+        })
+        .join('')
+    : '<li class="vazio">Nenhum investimento cadastrado.</li>';
+
+  return `
+    <ul class="lista-investimentos">${itens}</ul>
+    <button class="fab" data-acao="novo-investimento" aria-label="Novo investimento">+</button>
+  `;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { formatCurrency, formatPercent, renderResumo, renderLancamentos };
+  module.exports = { formatCurrency, formatPercent, renderResumo, renderLancamentos, renderInvestimentos };
 }
