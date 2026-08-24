@@ -51,6 +51,19 @@ function parcelasEmAberto(lancamentos, ano, mes) {
   return resultado;
 }
 
+function rendimento(investido, atual) {
+  const valor = atual - investido;
+  const percentual = investido === 0 ? 0 : (valor / investido) * 100;
+  return { valor, percentual };
+}
+
+function totalCarteira(investimentos) {
+  const totalInvestido = investimentos.reduce((s, i) => s + i.valorInvestido, 0);
+  const totalAtual = investimentos.reduce((s, i) => s + i.valorAtual, 0);
+  const { valor, percentual } = rendimento(totalInvestido, totalAtual);
+  return { totalInvestido, totalAtual, rendimentoValor: valor, rendimentoPercentual: percentual };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { uid, parcelaValor, parcelaNoMes, resumoMensal, parcelasEmAberto };
+  module.exports = { uid, parcelaValor, parcelaNoMes, resumoMensal, parcelasEmAberto, rendimento, totalCarteira };
 }

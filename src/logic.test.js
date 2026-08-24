@@ -6,6 +6,8 @@ const {
   parcelaNoMes,
   resumoMensal,
   parcelasEmAberto,
+  rendimento,
+  totalCarteira,
 } = require('./logic.js');
 
 test('parcelaValor divide o valor total pelo número de parcelas', () => {
@@ -64,4 +66,20 @@ test('uid gera identificadores não vazios e diferentes entre si', () => {
   const b = uid();
   assert.ok(a.length > 0);
   assert.notEqual(a, b);
+});
+
+test('rendimento calcula valor e percentual de ganho/perda', () => {
+  assert.deepEqual(rendimento(2000, 2150), { valor: 150, percentual: 7.5 });
+  assert.deepEqual(rendimento(0, 0), { valor: 0, percentual: 0 });
+});
+
+test('totalCarteira soma investido/atual e calcula rendimento agregado', () => {
+  const investimentos = [
+    { valorInvestido: 2000, valorAtual: 2150 },
+    { valorInvestido: 1000, valorAtual: 900 },
+  ];
+  const total = totalCarteira(investimentos);
+  assert.equal(total.totalInvestido, 3000);
+  assert.equal(total.totalAtual, 3050);
+  assert.equal(total.rendimentoValor, 50);
 });
