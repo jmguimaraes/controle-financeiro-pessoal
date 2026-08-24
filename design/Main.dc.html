@@ -36,7 +36,7 @@
 
     .mes-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
     .mes-nav h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 1.02rem; margin: 0; }
-    .mes-nav button { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; display: flex; }
+    .mes-nav button { background: none; border: none; color: var(--text-muted); cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
 
     .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -50,10 +50,10 @@
 
     h3.rotulo-secao { font-size: .76rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin: 0 0 10px; font-weight: 500; }
 
-    ul { list-style: none; margin: 0; padding: 0; }
+    ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
     .item-parcela, .item-lancamento, .item-investimento {
       background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-      padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; display: flex; align-items: center; gap: 10px;
     }
     .item-parcela { flex-direction: column; align-items: flex-start; gap: 4px; }
     .item-parcela-linha { display: flex; justify-content: space-between; width: 100%; align-items: center; }
@@ -65,7 +65,7 @@
 
     .item-valor { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; font-weight: 600; font-size: .92rem; text-align: right; white-space: nowrap; }
     .item-acoes { display: flex; gap: 2px; flex-shrink: 0; }
-    .item-acoes button { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; display: flex; border-radius: 8px; }
+    .item-acoes button { background: none; border: none; color: var(--text-muted); cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
 
     .investimento-topo { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
     .investimento-tipo { font-size: .70rem; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 1px 7px; align-self: flex-start; margin-top: 2px; }
@@ -191,7 +191,7 @@
         <sc-for list="{{lancamentos}}" as="item" hint-placeholder-count="5">
           <li class="item-lancamento">
             <div class="item-info">
-              <span><strong>{{item.descricao}}</strong><sc-if value="{{item.tag}}" hint-placeholder-val="{{true}}"><span class="tag">{{item.tag}}</span></sc-if></span>
+              <span><strong>{{item.descricao}}</strong><sc-if value="{{item.tag}}" hint-placeholder-val="true"><span class="tag">{{item.tag}}</span></sc-if></span>
               <small>{{item.categoria}} · {{item.data}}</small>
             </div>
             <span class="item-valor" style="color:{{item.corValor}}">{{item.sinal}} {{item.valor}}</span>
@@ -361,9 +361,9 @@ class Component extends DCLogic {
       categoriasItens,
       lancamentos,
       investimentos,
-      receitasMes: 'R$ 4.500,00',
-      despesasMes: 'R$ 2.850,00',
-      saldoMes: 'R$ 1.650,00',
+      receitasMes: 'R$ 5.300,00',
+      despesasMes: 'R$ 2.120,00',
+      saldoMes: 'R$ 3.180,00',
       carteiraTotal: 'R$ 12.340,00',
       carteiraPct: '+8,20%',
     };

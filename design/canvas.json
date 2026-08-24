@@ -1,9 +1,9 @@
 {
   "artboards": [
-    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 470, "h": 920, "expand": "fit" }
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 550, "h": 1020, "expand": "fit" }
   ],
   "annotations": [
-    { "id": "nota-dados", "x": 500, "y": 0, "w": 260, "text": "Protótipo clicável — as abas (Resumo/Lançamentos/Investimentos) e o botão + (novo lançamento) funcionam de verdade.\n\nDados fictícios só pra ilustrar o visual. Toques de design: cores/tipografia herdados do app real (verde-esmeralda + Fraunces/IBM Plex Sans/IBM Plex Mono), ícones trocados de emoji pra SVG traçado, chips de categoria e seletor Receita/Despesa no formulário, ícone colorido em cada card do Resumo.\n\nTweaks no topo do artboard: cor de destaque e modo escuro." }
+    { "id": "nota-dados", "x": 580, "y": 0, "w": 260, "text": "Protótipo clicável — as abas (Resumo/Lançamentos/Investimentos) e o botão + (novo lançamento) funcionam de verdade.\n\nDados fictícios só pra ilustrar o visual. Toques de design: cores/tipografia herdados do app real (verde-esmeralda + Fraunces/IBM Plex Sans/IBM Plex Mono), ícones trocados de emoji pra SVG traçado, chips de categoria e seletor Receita/Despesa no formulário, ícone colorido em cada card do Resumo.\n\nTweaks no topo do artboard: cor de destaque e modo escuro." }
   ],
   "launch": { "view": "focused", "file": "Main.dc.html" }
 }
