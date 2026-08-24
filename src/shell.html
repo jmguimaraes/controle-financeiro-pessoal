@@ -1,22 +1,24 @@
 <title>Controle Financeiro Pessoal</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-:root{--bg:#f5f6f8;--surface:#ffffff;--text:#1a1d23;--text-muted:#6b7280;--border:#e2e4e8;--accent:#2563eb;--positivo:#15803d;--negativo:#b91c1c;}
+:root{--bg:#f6f4ee;--surface:#ffffff;--text:#211f1a;--text-muted:#75705f;--border:#e3ddce;--accent:#0f6e5c;--positivo:#1a7a42;--negativo:#b0402c;}
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){--bg:#14161a;--surface:#1e2128;--text:#eef0f3;--text-muted:#9aa1ac;--border:#2c303a;--accent:#60a5fa;--positivo:#4ade80;--negativo:#f87171;}
+  :root:not([data-theme="light"]){--bg:#151310;--surface:#201e19;--text:#f2efe6;--text-muted:#a49e8c;--border:#332f26;--accent:#2dd4a8;--positivo:#4ade80;--negativo:#f0745a;}
 }
-:root[data-theme="dark"]{--bg:#14161a;--surface:#1e2128;--text:#eef0f3;--text-muted:#9aa1ac;--border:#2c303a;--accent:#60a5fa;--positivo:#4ade80;--negativo:#f87171;}
+:root[data-theme="dark"]{--bg:#151310;--surface:#201e19;--text:#f2efe6;--text-muted:#a49e8c;--border:#332f26;--accent:#2dd4a8;--positivo:#4ade80;--negativo:#f0745a;}
 *{box-sizing:border-box;}
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:76px;}
-.topo{padding:16px;text-align:center;}
-.topo h1{margin:0;font-size:1.1rem;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:76px;}
+.topo{padding:18px 16px 14px;text-align:center;}
+.topo h1{margin:0;font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:1.3rem;letter-spacing:.01em;}
 .tela{padding:0 16px 16px;max-width:480px;margin:0 auto;}
 .mes-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.mes-nav h2{font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:1.05rem;margin:0;text-wrap:balance;}
 .mes-nav button{background:none;border:none;font-size:1.4rem;color:var(--accent);cursor:pointer;padding:4px 12px;}
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px;}
-.card-label{font-size:.75rem;color:var(--text-muted);}
-.card-valor{font-size:1.15rem;font-weight:600;}
-.card-sub{font-size:.8rem;}
+.card-label{font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;}
+.card-valor{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:1.15rem;font-weight:600;}
+.card-sub{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:.8rem;}
 .positivo{color:var(--positivo);}
 .negativo{color:var(--negativo);}
 ul{list-style:none;margin:0;padding:0;}
@@ -26,22 +28,27 @@ ul{list-style:none;margin:0;padding:0;}
 .lancamento-info,.investimento-info{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
 .lancamento-info small,.investimento-info small{color:var(--text-muted);}
 .tag{font-size:.7rem;background:var(--border);border-radius:6px;padding:1px 6px;margin-left:4px;}
-.lancamento-valor,.investimento-valor{text-align:right;font-weight:600;white-space:nowrap;}
+.lancamento-valor,.investimento-valor{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;text-align:right;font-weight:600;white-space:nowrap;}
 .lancamento-acoes{display:flex;gap:4px;}
 .lancamento-acoes button{background:none;border:none;font-size:1rem;cursor:pointer;color:var(--text-muted);}
 .fab{position:fixed;right:20px;bottom:88px;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:1.6rem;box-shadow:0 4px 10px rgba(0,0,0,.25);cursor:pointer;}
 .tabbar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding:8px 0;}
 .tabbar button{flex:1;background:none;border:none;color:var(--text-muted);font-size:.8rem;padding:6px 0;cursor:pointer;}
 .tabbar button.tab-ativo{color:var(--accent);font-weight:600;}
-.banner{position:fixed;top:0;left:0;right:0;background:#b45309;color:#fff;text-align:center;padding:8px;font-size:.85rem;z-index:10;}
+.banner{position:fixed;top:0;left:0;right:0;background:#9a5b1f;color:#fff;text-align:center;padding:8px;font-size:.85rem;z-index:10;}
 dialog{border:none;border-radius:14px;padding:18px;width:min(420px,90vw);background:var(--surface);color:var(--text);}
-dialog::backdrop{background:rgba(0,0,0,.4);}
+dialog::backdrop{background:rgba(20,18,14,.45);}
+dialog h3{font-family:"Fraunces",Georgia,serif;font-weight:600;margin:0 0 12px;}
 dialog label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;margin-bottom:10px;color:var(--text-muted);}
-dialog input,dialog select{font-size:1rem;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);}
+dialog input,dialog select{font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:1rem;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);}
 dialog label.checkbox{flex-direction:row;align-items:center;gap:8px;}
 .form-acoes{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
 .form-acoes button{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;}
 .form-acoes button.primario{background:var(--accent);border-color:var(--accent);color:#fff;}
+@media (prefers-reduced-motion: no-preference){
+  .fab{transition:transform .15s ease;}
+  .fab:active{transform:scale(.92);}
+}
 </style>
 
 <div id="banner-sync" class="banner" hidden></div>

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node --test src/",
+    "test": "node --test src/*.test.js",
     "build": "node build.js"
   }
 }
