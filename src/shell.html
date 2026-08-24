@@ -1,11 +1,12 @@
 <title>Controle Financeiro Pessoal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-:root{--bg:#f6f4ee;--surface:#ffffff;--text:#211f1a;--text-muted:#75705f;--border:#e3ddce;--accent:#0f6e5c;--positivo:#1a7a42;--negativo:#b0402c;}
+:root{--bg:#f6f4ee;--surface:#ffffff;--text:#211f1a;--text-muted:#75705f;--border:#e3ddce;--accent:#0f6e5c;--on-accent:#fff;--positivo:#1a7a42;--negativo:#b0402c;}
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){--bg:#151310;--surface:#201e19;--text:#f2efe6;--text-muted:#a49e8c;--border:#332f26;--accent:#2dd4a8;--positivo:#4ade80;--negativo:#f0745a;}
+  :root:not([data-theme="light"]){--bg:#151310;--surface:#201e19;--text:#f2efe6;--text-muted:#a49e8c;--border:#332f26;--accent:#2dd4a8;--on-accent:#0c1512;--positivo:#4ade80;--negativo:#f0745a;}
 }
-:root[data-theme="dark"]{--bg:#151310;--surface:#201e19;--text:#f2efe6;--text-muted:#a49e8c;--border:#332f26;--accent:#2dd4a8;--positivo:#4ade80;--negativo:#f0745a;}
+:root[data-theme="dark"]{--bg:#151310;--surface:#201e19;--text:#f2efe6;--text-muted:#a49e8c;--border:#332f26;--accent:#2dd4a8;--on-accent:#0c1512;--positivo:#4ade80;--negativo:#f0745a;}
 *{box-sizing:border-box;}
 body{margin:0;background:var(--bg);color:var(--text);font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:76px;}
 .topo{padding:18px 16px 14px;text-align:center;}
@@ -31,11 +32,13 @@ ul{list-style:none;margin:0;padding:0;}
 .lancamento-valor,.investimento-valor{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;text-align:right;font-weight:600;white-space:nowrap;}
 .lancamento-acoes{display:flex;gap:4px;}
 .lancamento-acoes button{background:none;border:none;font-size:1rem;cursor:pointer;color:var(--text-muted);}
-.fab{position:fixed;right:20px;bottom:88px;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:1.6rem;box-shadow:0 4px 10px rgba(0,0,0,.25);cursor:pointer;}
+.fab{position:fixed;right:20px;bottom:88px;width:52px;height:52px;border-radius:50%;background:var(--accent);color:var(--on-accent);border:none;font-size:1.6rem;box-shadow:0 4px 10px rgba(0,0,0,.25);cursor:pointer;}
 .tabbar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding:8px 0;}
 .tabbar button{flex:1;background:none;border:none;color:var(--text-muted);font-size:.8rem;padding:6px 0;cursor:pointer;}
 .tabbar button.tab-ativo{color:var(--accent);font-weight:600;}
-.banner{position:fixed;top:0;left:0;right:0;background:#9a5b1f;color:#fff;text-align:center;padding:8px;font-size:.85rem;z-index:10;}
+.banner{position:fixed;top:0;left:0;right:0;background:#9a5b1f;color:#fff;text-align:center;padding:8px;font-size:.85rem;z-index:10;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
+.banner-retry{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:6px;padding:3px 10px;font-size:.8rem;cursor:pointer;}
+.somente-leitura .fab,.somente-leitura .lancamento-acoes{display:none;}
 dialog{border:none;border-radius:14px;padding:18px;width:min(420px,90vw);background:var(--surface);color:var(--text);}
 dialog::backdrop{background:rgba(20,18,14,.45);}
 dialog h3{font-family:"Fraunces",Georgia,serif;font-weight:600;margin:0 0 12px;}
@@ -44,7 +47,7 @@ dialog input,dialog select{font-family:"IBM Plex Sans",system-ui,sans-serif;font
 dialog label.checkbox{flex-direction:row;align-items:center;gap:8px;}
 .form-acoes{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
 .form-acoes button{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;}
-.form-acoes button.primario{background:var(--accent);border-color:var(--accent);color:#fff;}
+.form-acoes button.primario{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
 @media (prefers-reduced-motion: no-preference){
   .fab{transition:transform .15s ease;}
   .fab:active{transform:scale(.92);}

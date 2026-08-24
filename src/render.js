@@ -1,11 +1,4 @@
-const {
-  resumoMensal,
-  parcelasEmAberto,
-  parcelaNoMes,
-  parcelaValor,
-  totalCarteira,
-  rendimento,
-} = typeof require !== 'undefined' ? require('./logic.js') : window;
+const L = typeof require !== 'undefined' ? require('./logic.js') : window;
 
 const MESES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -41,9 +34,9 @@ function escapeHtml(texto) {
 }
 
 function renderResumo(state, ano, mes) {
-  const resumo = resumoMensal(state.lancamentos, ano, mes);
-  const carteira = totalCarteira(state.investimentos);
-  const abertas = parcelasEmAberto(state.lancamentos, ano, mes);
+  const resumo = L.resumoMensal(state.lancamentos, ano, mes);
+  const carteira = L.totalCarteira(state.investimentos);
+  const abertas = L.parcelasEmAberto(state.lancamentos, ano, mes);
 
   const listaParcelas = abertas.length
     ? abertas
@@ -89,13 +82,13 @@ function renderResumo(state, ano, mes) {
 
 function renderLancamentos(state, ano, mes) {
   const itens = state.lancamentos
-    .filter((l) => parcelaNoMes(l, ano, mes).noMes)
+    .filter((l) => L.parcelaNoMes(l, ano, mes).noMes)
     .sort((a, b) => a.data.localeCompare(b.data));
 
   const linhas = itens.length
     ? itens
         .map((l) => {
-          const { numeroParcela } = parcelaNoMes(l, ano, mes);
+          const { numeroParcela } = L.parcelaNoMes(l, ano, mes);
           const tag = l.parcelas > 1 ? ` <span class="tag">parcela ${numeroParcela}/${l.parcelas}</span>` : '';
           const sinal = l.tipo === 'receita' ? '+' : '-';
           const classe = l.tipo === 'receita' ? 'positivo' : 'negativo';
@@ -105,7 +98,7 @@ function renderLancamentos(state, ano, mes) {
             <strong>${escapeHtml(l.descricao)}</strong>${tag}
             <small>${escapeHtml(l.categoria)} · ${l.data.split('-').reverse().join('/')}</small>
           </div>
-          <div class="lancamento-valor ${classe}">${sinal} ${formatCurrency(parcelaValor(l))}</div>
+          <div class="lancamento-valor ${classe}">${sinal} ${formatCurrency(L.parcelaValor(l))}</div>
           <div class="lancamento-acoes">
             <button data-acao="editar-lancamento" data-id="${l.id}" aria-label="Editar">✎</button>
             <button data-acao="excluir-lancamento" data-id="${l.id}" aria-label="Excluir">🗑</button>
@@ -130,7 +123,7 @@ function renderInvestimentos(state) {
   const itens = state.investimentos.length
     ? state.investimentos
         .map((i) => {
-          const { valor, percentual } = rendimento(i.valorInvestido, i.valorAtual);
+          const { valor, percentual } = L.rendimento(i.valorInvestido, i.valorAtual);
           const classe = valor >= 0 ? 'positivo' : 'negativo';
           const rotuloTipo = ROTULOS_TIPO_INVESTIMENTO[i.tipo] || i.tipo;
           return `

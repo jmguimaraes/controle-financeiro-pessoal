@@ -8,6 +8,7 @@
   let artifactApi = null;
   let anoAtual;
   let mesAtual;
+  let somenteLeitura = false;
 
   async function iniciar() {
     const hoje = new Date();
@@ -15,7 +16,11 @@
     mesAtual = hoje.getMonth() + 1;
 
     await carregarEstado();
-    artifactApi = window.claude ? await window.claude.use('artifact') : null;
+    try {
+      artifactApi = window.claude ? await window.claude.use('artifact') : null;
+    } catch (erro) {
+      artifactApi = null;
+    }
     renderizarTudo();
     ligarEventos();
   }
@@ -55,6 +60,7 @@
     document.getElementById('tela-resumo').innerHTML = renderResumo(state, anoAtual, mesAtual);
     document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual);
     document.getElementById('tela-investimentos').innerHTML = renderInvestimentos(state);
+    document.body.classList.toggle('somente-leitura', somenteLeitura);
   }
 
   function mostrarAba(nome) {
@@ -91,7 +97,13 @@
         await salvarNoServidor(acao, tentativa + 1);
         return;
       }
-      mostrarBanner('Não foi possível sincronizar agora. Suas alterações estão salvas neste aparelho.');
+      if (erro.code === 'not_writer' || erro.code === 'not_granted') {
+        somenteLeitura = true;
+        renderizarTudo();
+        mostrarBanner('Modo leitura — você não pode editar este artifact.');
+        return;
+      }
+      mostrarBanner('Não foi possível sincronizar agora. Suas alterações estão salvas neste aparelho.', () => salvarNoServidor(acao, 1));
     }
   }
 
@@ -104,9 +116,22 @@
     }
   }
 
-  function mostrarBanner(texto) {
+  function mostrarBanner(texto, aoTentarNovamente) {
     const banner = document.getElementById('banner-sync');
-    banner.textContent = texto;
+    if (aoTentarNovamente) {
+      banner.innerHTML = '';
+      const spanTexto = document.createElement('span');
+      spanTexto.textContent = texto;
+      const botao = document.createElement('button');
+      botao.type = 'button';
+      botao.className = 'banner-retry';
+      botao.textContent = 'Tentar novamente';
+      botao.addEventListener('click', aoTentarNovamente);
+      banner.appendChild(spanTexto);
+      banner.appendChild(botao);
+    } else {
+      banner.textContent = texto;
+    }
     banner.hidden = false;
   }
 
@@ -171,10 +196,16 @@
       if (acao === 'mes-seguinte') mudarMes(1);
       if (acao === 'novo-lancamento') abrirFormularioLancamento();
       if (acao === 'editar-lancamento') abrirFormularioLancamento(alvo.dataset.id);
-      if (acao === 'excluir-lancamento') despachar({ type: 'deleteLancamento', id: alvo.dataset.id });
+      if (acao === 'excluir-lancamento') {
+        if (!confirm('Excluir este lançamento?')) return;
+        despachar({ type: 'deleteLancamento', id: alvo.dataset.id });
+      }
       if (acao === 'novo-investimento') abrirFormularioInvestimento();
       if (acao === 'editar-investimento') abrirFormularioInvestimento(alvo.dataset.id);
-      if (acao === 'excluir-investimento') despachar({ type: 'deleteInvestimento', id: alvo.dataset.id });
+      if (acao === 'excluir-investimento') {
+        if (!confirm('Excluir este investimento?')) return;
+        despachar({ type: 'deleteInvestimento', id: alvo.dataset.id });
+      }
       if (acao === 'cancelar-form') alvo.closest('dialog').close();
     });
 

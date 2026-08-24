@@ -1,6 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { formatCurrency, formatPercent, renderResumo, renderLancamentos, renderInvestimentos } = require('./render.js');
+const fs = require('node:fs');
+const path = require('node:path');
+const { execSync } = require('node:child_process');
+const { Script } = require('node:vm');
 
 test('formatCurrency formata em reais no padrão pt-BR', () => {
   assert.equal(formatCurrency(1234.5), 'R$ 1.234,50');
@@ -84,4 +88,14 @@ test('renderInvestimentos mostra rendimento positivo e negativo, com rótulo de 
 test('renderInvestimentos mostra mensagem quando não há investimentos', () => {
   const html = renderInvestimentos({ lancamentos: [], investimentos: [] });
   assert.match(html, /Nenhum investimento cadastrado/);
+});
+
+test('o bundle concatenado pelo build é um script clássico válido (sem colisão de identificadores)', () => {
+  const raiz = path.join(__dirname, '..');
+  execSync('node build.js', { cwd: raiz });
+  const html = fs.readFileSync(path.join(raiz, 'dist', 'index.html'), 'utf8');
+  const match = html.match(/<script>([\s\S]*)<\/script>/);
+  assert.ok(match, 'dist/index.html deveria conter um bloco <script>');
+  assert.doesNotThrow(() => new Script(match[1]), 'o script concatenado (logic.js + render.js + app.js) deve parsear sem SyntaxError — uma colisão de identificador top-level entre esses arquivos quebraria a página publicada inteira');
+  assert.equal(html.includes('SCRIPT_INJECT'), false, 'o marcador <!-- SCRIPT_INJECT --> não deveria sobrar no HTML gerado');
 });
