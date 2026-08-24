@@ -64,6 +64,34 @@ function totalCarteira(investimentos) {
   return { totalInvestido, totalAtual, rendimentoValor: valor, rendimentoPercentual: percentual };
 }
 
+function applyAction(state, action) {
+  const lancamentos = state.lancamentos ? state.lancamentos.slice() : [];
+  const investimentos = state.investimentos ? state.investimentos.slice() : [];
+
+  switch (action.type) {
+    case 'addLancamento':
+      return { lancamentos: [...lancamentos, action.lancamento], investimentos };
+    case 'editLancamento':
+      return {
+        lancamentos: lancamentos.map((l) => (l.id === action.id ? { ...l, ...action.changes } : l)),
+        investimentos,
+      };
+    case 'deleteLancamento':
+      return { lancamentos: lancamentos.filter((l) => l.id !== action.id), investimentos };
+    case 'addInvestimento':
+      return { lancamentos, investimentos: [...investimentos, action.investimento] };
+    case 'editInvestimento':
+      return {
+        lancamentos,
+        investimentos: investimentos.map((i) => (i.id === action.id ? { ...i, ...action.changes } : i)),
+      };
+    case 'deleteInvestimento':
+      return { lancamentos, investimentos: investimentos.filter((i) => i.id !== action.id) };
+    default:
+      throw new Error(`Ação desconhecida: ${action.type}`);
+  }
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { uid, parcelaValor, parcelaNoMes, resumoMensal, parcelasEmAberto, rendimento, totalCarteira };
+  module.exports = { uid, parcelaValor, parcelaNoMes, resumoMensal, parcelasEmAberto, rendimento, totalCarteira, applyAction };
 }

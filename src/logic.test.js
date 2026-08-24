@@ -8,6 +8,7 @@ const {
   parcelasEmAberto,
   rendimento,
   totalCarteira,
+  applyAction,
 } = require('./logic.js');
 
 test('parcelaValor divide o valor total pelo número de parcelas', () => {
@@ -82,4 +83,56 @@ test('totalCarteira soma investido/atual e calcula rendimento agregado', () => {
   assert.equal(total.totalInvestido, 3000);
   assert.equal(total.totalAtual, 3050);
   assert.equal(total.rendimentoValor, 50);
+});
+
+test('applyAction addLancamento acrescenta sem mutar o estado original', () => {
+  const estadoOriginal = { lancamentos: [], investimentos: [] };
+  const novo = applyAction(estadoOriginal, {
+    type: 'addLancamento',
+    lancamento: { id: 'a1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', valorTotal: 50, parcelas: 1 },
+  });
+  assert.equal(estadoOriginal.lancamentos.length, 0);
+  assert.equal(novo.lancamentos.length, 1);
+  assert.equal(novo.lancamentos[0].id, 'a1');
+});
+
+test('applyAction editLancamento altera só o item com o id informado', () => {
+  const estado = {
+    lancamentos: [{ id: 'a1', valorTotal: 50 }, { id: 'a2', valorTotal: 100 }],
+    investimentos: [],
+  };
+  const novo = applyAction(estado, { type: 'editLancamento', id: 'a2', changes: { valorTotal: 999 } });
+  assert.equal(novo.lancamentos.find((l) => l.id === 'a1').valorTotal, 50);
+  assert.equal(novo.lancamentos.find((l) => l.id === 'a2').valorTotal, 999);
+});
+
+test('applyAction deleteLancamento remove só o item com o id informado', () => {
+  const estado = { lancamentos: [{ id: 'a1' }, { id: 'a2' }], investimentos: [] };
+  const novo = applyAction(estado, { type: 'deleteLancamento', id: 'a1' });
+  assert.deepEqual(novo.lancamentos.map((l) => l.id), ['a2']);
+});
+
+test('applyAction reaplica a mesma ação de add em cima de um estado mais novo (simula retry após conflito)', () => {
+  // Estado A: o que este dispositivo tinha quando começou a ação.
+  const acao = {
+    type: 'addLancamento',
+    lancamento: { id: 'novo-id-gerado-uma-vez', valorTotal: 10, parcelas: 1 },
+  };
+  // Estado B: enquanto isso, outro dispositivo publicou e o estado real já mudou.
+  const estadoB = { lancamentos: [{ id: 'existente' }, { id: 'de-outro-dispositivo' }], investimentos: [] };
+  // O retry reaplica a MESMA ação (mesmo id) em cima do estado B, não do A.
+  const resultado = applyAction(estadoB, acao);
+  assert.deepEqual(
+    resultado.lancamentos.map((l) => l.id),
+    ['existente', 'de-outro-dispositivo', 'novo-id-gerado-uma-vez']
+  );
+});
+
+test('applyAction addInvestimento, editInvestimento e deleteInvestimento funcionam por id', () => {
+  let estado = { lancamentos: [], investimentos: [] };
+  estado = applyAction(estado, { type: 'addInvestimento', investimento: { id: 'i1', valorAtual: 100 } });
+  estado = applyAction(estado, { type: 'editInvestimento', id: 'i1', changes: { valorAtual: 150 } });
+  assert.equal(estado.investimentos[0].valorAtual, 150);
+  estado = applyAction(estado, { type: 'deleteInvestimento', id: 'i1' });
+  assert.equal(estado.investimentos.length, 0);
 });
