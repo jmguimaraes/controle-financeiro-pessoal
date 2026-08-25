@@ -12,6 +12,7 @@ const {
   renderAbertura,
   renderInvestimentos,
   renderAtivoDetalhe,
+  renderPin,
 } = require('./render.js');
 const { estadoInicial } = require('./logic.js');
 const fs = require('node:fs');
@@ -182,6 +183,32 @@ test('renderConfiguracoes lista as contas cadastradas e o tema ativo', () => {
   const html = renderConfiguracoes(state);
   assert.match(html, /Nubank/);
   assert.match(html, /data-tema="claro" class="ativo"/);
+});
+
+test('renderConfiguracoes mostra o PIN como desativado por padrão, com botão pra definir', () => {
+  const html = renderConfiguracoes(estado(), false);
+  assert.match(html, /Desativado/);
+  assert.match(html, /DEFINIR/);
+  assert.doesNotMatch(html, /REMOVER/);
+});
+
+test('renderConfiguracoes mostra o PIN como ativado, com botões de alterar e remover', () => {
+  const html = renderConfiguracoes(estado(), true);
+  assert.match(html, /Ativado/);
+  assert.match(html, /ALTERAR/);
+  assert.match(html, /REMOVER/);
+});
+
+test('renderPin mostra a marca e o campo de PIN, sem mensagem de erro por padrão', () => {
+  const html = renderPin(false);
+  assert.match(html, /NUVRA/);
+  assert.match(html, /name="pin"/);
+  assert.doesNotMatch(html, /PIN incorreto/);
+});
+
+test('renderPin mostra a mensagem de erro quando o PIN foi digitado errado', () => {
+  const html = renderPin(true);
+  assert.match(html, /PIN incorreto/);
 });
 
 test('renderAbertura mostra a marca e o convite para começar', () => {

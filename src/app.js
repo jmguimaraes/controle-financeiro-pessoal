@@ -1,7 +1,7 @@
 (function () {
   const logica = typeof require !== 'undefined' ? require('./logic.js') : window;
   const renderizacao = typeof require !== 'undefined' ? require('./render.js') : window;
-  const { uid, applyAction, estadoInicial } = logica;
+  const { uid, applyAction, estadoInicial, hashSimples } = logica;
   const {
     renderResumo,
     renderLancamentos,
@@ -12,9 +12,11 @@
     renderAbertura,
     renderInvestimentos,
     renderAtivoDetalhe,
+    renderPin,
   } = renderizacao;
 
   const CHAVE_ONBOARDING = 'nuvra-onboarding-visto';
+  const CHAVE_PIN = 'nuvra-pin-hash';
 
   let state = estadoInicial();
   let artifactApi = null;
@@ -47,11 +49,28 @@
     aplicarTema(state.tema);
     ligarEventos();
 
+    if (localStorage_get(CHAVE_PIN)) {
+      mostrarTelaPin();
+    } else {
+      prosseguirAposPin();
+    }
+  }
+
+  function prosseguirAposPin() {
     if (localStorage_get(CHAVE_ONBOARDING)) {
       mostrarApp();
     } else {
       mostrarAbertura();
     }
+  }
+
+  function mostrarTelaPin(erro) {
+    document.getElementById('tela-pin').hidden = false;
+    document.getElementById('tela-pin').innerHTML = renderPin(erro);
+    document.getElementById('tela-abertura').hidden = true;
+    document.getElementById('app-shell').hidden = true;
+    const campo = document.querySelector('#formulario-pin [name="pin"]');
+    if (campo) campo.focus();
   }
 
   function localStorage_get(chave) {
@@ -71,12 +90,14 @@
   }
 
   function mostrarAbertura() {
+    document.getElementById('tela-pin').hidden = true;
     document.getElementById('tela-abertura').hidden = false;
     document.getElementById('tela-abertura').innerHTML = renderAbertura();
     document.getElementById('app-shell').hidden = true;
   }
 
   function mostrarApp() {
+    document.getElementById('tela-pin').hidden = true;
     document.getElementById('tela-abertura').hidden = true;
     document.getElementById('app-shell').hidden = false;
     renderizarTudo();
@@ -155,7 +176,7 @@
       atualizarSaldoProjetado();
     }
     if (telaAtual === 'configuracoes') {
-      document.getElementById('tela-configuracoes').innerHTML = renderConfiguracoes(state);
+      document.getElementById('tela-configuracoes').innerHTML = renderConfiguracoes(state, !!localStorage_get(CHAVE_PIN));
       const statusEl = document.getElementById('status-sincronizacao');
       if (statusEl) statusEl.textContent = descricaoSincronizacao;
     }
@@ -418,6 +439,21 @@
       if (acao === 'mes-seguinte') mudarMes(1);
       if (acao === 'abrir-configuracoes') abrirConfiguracoes();
       if (acao === 'fechar-configuracoes') fecharConfiguracoes();
+
+      if (acao === 'definir-pin') {
+        document.getElementById('formulario-definir-pin').reset();
+        document.getElementById('erro-definir-pin').style.display = 'none';
+        document.getElementById('form-pin').showModal();
+      }
+      if (acao === 'remover-pin') {
+        if (!confirm('Remover o PIN de acesso?')) return;
+        try {
+          localStorage.removeItem(CHAVE_PIN);
+        } catch (erro) {
+          // localStorage indisponível — nada a remover
+        }
+        renderizarTudo();
+      }
       if (acao === 'abrir-categoria') abrirCategoria(alvo.dataset.categoria);
       if (acao === 'fechar-categoria') fecharCategoria();
       if (acao === 'abrir-ativo') abrirAtivo(alvo.dataset.id);
@@ -566,6 +602,32 @@
     document.body.addEventListener('submit', (evento) => {
       // Nota: não usar evento.target.id aqui — cada <form> tem um <input name="id">, e o HTML
       // spec faz esse controle "sombrear" a propriedade .id do próprio elemento <form>.
+      if (evento.target.getAttribute('id') === 'formulario-pin') {
+        evento.preventDefault();
+        const dados = new FormData(evento.target);
+        const digitado = dados.get('pin') || '';
+        if (hashSimples(digitado) === localStorage_get(CHAVE_PIN)) {
+          prosseguirAposPin();
+        } else {
+          mostrarTelaPin(true);
+        }
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-definir-pin') {
+        const dados = new FormData(evento.target);
+        const pin = dados.get('pin') || '';
+        const confirmarPin = dados.get('confirmarPin') || '';
+        if (pin !== confirmarPin) {
+          evento.preventDefault();
+          document.getElementById('erro-definir-pin').style.display = 'block';
+          return;
+        }
+        localStorage_set(CHAVE_PIN, hashSimples(pin));
+        renderizarTudo();
+        return;
+      }
+
       if (evento.target.getAttribute('id') === 'formulario-lancamento') {
         evento.preventDefault();
         const dados = coletarRascunhoDoFormulario();

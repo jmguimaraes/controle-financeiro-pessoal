@@ -528,7 +528,24 @@ function renderMetas(state, ano, mes) {
   `;
 }
 
-function renderConfiguracoes(state) {
+function renderPin(erro) {
+  return `
+    <div class="nv-abertura">
+      ${iconSymbol(56, '#f3f2f2', 'var(--nv-accent)')}
+      <div class="nv-wordmark" style="font-size:22px;margin-top:20px">NUVRA</div>
+      <form id="formulario-pin" style="margin-top:auto;display:flex;flex-direction:column;gap:16px">
+        <label style="display:flex;flex-direction:column;gap:8px;font-size:11px;font-weight:600;letter-spacing:.14em;color:rgba(243,242,242,.6)">
+          DIGITE SEU PIN
+          <input type="password" inputmode="numeric" pattern="[0-9]*" name="pin" maxlength="6" autofocus
+            style="background:none;border:none;border-bottom:2px solid rgba(243,242,242,.35);color:#f3f2f2;font-size:36px;letter-spacing:.4em;text-align:center;padding:10px 0;outline:none;font-family:inherit" />
+        </label>
+        ${erro ? '<div style="color:var(--nv-negative);font-size:12px;font-weight:600;text-align:center">PIN incorreto</div>' : ''}
+        <button type="submit" class="nv-abertura-cta">ENTRAR</button>
+      </form>
+    </div>`;
+}
+
+function renderConfiguracoes(state, temPin) {
   const contas = state.contas || [];
   const tema = state.tema || 'escuro';
   const ocultar = !!state.ocultarValores;
@@ -580,6 +597,15 @@ function renderConfiguracoes(state) {
         <input type="checkbox" id="campo-ocultar-valores" ${ocultar ? 'checked' : ''} />
         <span class="nv-switch"><span class="knob"></span></span>
       </label>
+    </div>
+    <div class="nv-section-head" style="padding-top:8px;padding-bottom:8px;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">SEGURANÇA</span></div>
+    <div class="nv-dado-linha">
+      <span>PIN de acesso</span>
+      <span style="display:flex;gap:14px;align-items:center">
+        <span class="nv-item-meta">${temPin ? 'Ativado' : 'Desativado'}</span>
+        <button type="button" class="nv-link-accent" data-acao="definir-pin" style="font-size:11px">${temPin ? 'ALTERAR' : 'DEFINIR'}</button>
+        ${temPin ? '<button type="button" class="nv-link-muted" data-acao="remover-pin" style="font-size:11px;color:var(--nv-negative)">REMOVER</button>' : ''}
+      </span>
     </div>
     <div class="nv-rodape-versao">NUVRA 1.0.0</div>
   `;
@@ -802,6 +828,7 @@ if (typeof module !== 'undefined' && module.exports) {
     renderCategoriaDetalhe,
     renderMetas,
     renderConfiguracoes,
+    renderPin,
     renderAbertura,
     renderInvestimentos,
     renderAtivoDetalhe,

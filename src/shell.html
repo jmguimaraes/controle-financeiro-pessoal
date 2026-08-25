@@ -222,6 +222,8 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
 
 <div id="tela-abertura" hidden></div>
 
+<div id="tela-pin" hidden></div>
+
 <div id="app-shell" hidden>
   <main id="tela-resumo" class="nv-tela"></main>
   <main id="tela-lancamentos" class="nv-tela" hidden></main>
@@ -349,6 +351,19 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
     <label>Limite mensal<input type="text" inputmode="decimal" name="limite" class="nv-campo-moeda" required /></label>
     <div class="form-acoes">
       <button type="button" id="botao-excluir-meta" data-acao="excluir-meta-atual" hidden style="margin-right:auto;color:var(--nv-negative);border-color:var(--nv-negative)">Excluir</button>
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-pin">
+  <form method="dialog" id="formulario-definir-pin">
+    <h3>Definir PIN</h3>
+    <label>PIN (4 a 6 dígitos)<input type="password" inputmode="numeric" pattern="[0-9]*" name="pin" minlength="4" maxlength="6" required /></label>
+    <label>Confirmar PIN<input type="password" inputmode="numeric" pattern="[0-9]*" name="confirmarPin" minlength="4" maxlength="6" required /></label>
+    <div id="erro-definir-pin" style="color:var(--nv-negative);font-size:.8rem;display:none">Os PINs não coincidem.</div>
+    <div class="form-acoes">
       <button type="button" data-acao="cancelar-form">Cancelar</button>
       <button type="submit" class="primario">Salvar</button>
     </div>
