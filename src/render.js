@@ -20,8 +20,19 @@ const ROTULOS_TIPO_INVESTIMENTO = {
   tesouro_direto: 'Tesouro Direto',
   renda_fixa: 'Renda Fixa',
   outro: 'Outro',
+};
+
+// Rótulo pra grupos sintéticos que não são um tipo de ativo de verdade selecionável no
+// formulário (hoje só o "Outros" que a composição da carteira usa pra agrupar o 7º tipo em
+// diante) — fica fora de ROTULOS_TIPO_INVESTIMENTO de propósito, senão viraria uma opção
+// escolhível ao criar um ativo.
+const ROTULOS_GRUPO_SINTETICO = {
   outros_agrupados: 'Outros',
 };
+
+function rotuloTipoInvestimento(tipo) {
+  return ROTULOS_TIPO_INVESTIMENTO[tipo] || ROTULOS_GRUPO_SINTETICO[tipo] || tipo;
+}
 
 const ROTULOS_TIPO_CONTA = {
   cartao: 'Cartão',
@@ -102,7 +113,7 @@ function renderComboBusca(nomeCampo, valorInicial, sugestoes) {
       <input type="text" name="${nomeCampo}" class="nv-combo-input" autocomplete="off" required maxlength="40" value="${escapeHtml(valorInicial || '')}" />
       <div class="nv-combo-lista" hidden>${(sugestoes || [])
         .map((t) => `<div class="nv-combo-item" data-acao="selecionar-combo-item" data-valor="${escapeHtml(t)}">${escapeHtml(t)}</div>`)
-        .join('')}</div>
+        .join('')}<div class="nv-combo-vazio" ${(sugestoes || []).length ? 'hidden' : ''}>Nenhuma sugestão — pode digitar o nome livremente.</div></div>
     </div>`;
 }
 
@@ -767,7 +778,7 @@ function renderInvestimentos(state) {
           ${composicao
             .map(
               (c, i) =>
-                `<div class="nv-composicao-item"><span class="nv-composicao-bolinha" style="background:${cores[i % cores.length]}"></span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[c.tipo] || c.tipo).toUpperCase()} <b>${Math.round((c.valor / totalComposicao) * 100)}%</b></div>`
+                `<div class="nv-composicao-item"><span class="nv-composicao-bolinha" style="background:${cores[i % cores.length]}"></span>${escapeHtml(rotuloTipoInvestimento(c.tipo)).toUpperCase()} <b>${Math.round((c.valor / totalComposicao) * 100)}%</b></div>`
             )
             .join('')}
         </div>

@@ -15,6 +15,7 @@ const {
   renderPin,
   renderComboSelect,
   renderComboBusca,
+  opcoesTipoInvestimento,
 } = require('./render.js');
 const { estadoInicial } = require('./logic.js');
 const fs = require('node:fs');
@@ -244,6 +245,13 @@ test('renderComboBusca lista as sugestões e mantém o valor digitado', () => {
   assert.match(html, /data-valor="PETZ3"/);
 });
 
+test('renderComboBusca inclui uma mensagem de vazio (escondida) pro caso de filtro sem nenhum resultado', () => {
+  const comSugestoes = renderComboBusca('nome', '', ['PETR4']);
+  assert.match(comSugestoes, /nv-combo-vazio" hidden/);
+  const semSugestoes = renderComboBusca('nome', '', []);
+  assert.match(semSugestoes, /nv-combo-vazio" >|nv-combo-vazio">/);
+});
+
 test('renderAbertura mostra a marca e o convite para começar', () => {
   const html = renderAbertura();
   assert.match(html, /NUVRA/);
@@ -277,6 +285,12 @@ test('renderInvestimentos mostra o gráfico de composição (SVG) com a legenda 
   const posFii = html.indexOf('FUNDO IMOBILIÁRIO');
   const posAcao = html.indexOf('AÇÃO');
   assert.ok(posFii !== -1 && posAcao !== -1 && posFii < posAcao, 'FII (900) é maior que Ação (100), deve aparecer primeiro na legenda');
+});
+
+test('opcoesTipoInvestimento não inclui o grupo sintético "Outros" da composição entre os tipos selecionáveis', () => {
+  const opcoes = opcoesTipoInvestimento();
+  assert.equal(opcoes.filter((o) => o.rotulo === 'Outros').length, 0);
+  assert.ok(opcoes.some((o) => o.valor === 'outro' && o.rotulo === 'Outro'));
 });
 
 test('renderInvestimentos agrupa tipos além do 6º em "Outros" na composição', () => {

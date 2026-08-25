@@ -213,8 +213,28 @@
   function atualizarSugestoesAtivo(tipo) {
     const container = document.getElementById('combo-nome-ativo');
     if (!container) return;
-    const valorAtual = container.querySelector('.nv-combo-input');
-    container.innerHTML = renderizacao.renderComboBusca('nome', valorAtual ? valorAtual.value : '', logica.listaSugeridaPorTipo(tipo));
+    const inputAnterior = container.querySelector('.nv-combo-input');
+    const valorAtual = inputAnterior ? inputAnterior.value : '';
+    container.innerHTML = renderizacao.renderComboBusca('nome', valorAtual, logica.listaSugeridaPorTipo(tipo));
+    // Reaplica o filtro do que já tinha sido digitado em cima da lista nova (a lista em si vem
+    // fechada por padrão — só isso já evita mostrar sugestões de um tipo antigo se a pessoa
+    // reabrir o campo depois de trocar o tipo).
+    if (valorAtual) filtrarComboBusca(container, valorAtual);
+  }
+
+  // Esconde/mostra os itens de um combo de busca conforme o texto digitado, e mostra a
+  // mensagem de "nenhuma sugestão" quando o filtro não bate com nada da lista.
+  function filtrarComboBusca(combo, textoDigitado) {
+    const lista = combo.querySelector('.nv-combo-lista');
+    const termo = textoDigitado.trim().toUpperCase();
+    let algumVisivel = false;
+    lista.querySelectorAll('.nv-combo-item').forEach((item) => {
+      const visivel = !termo || item.dataset.valor.toUpperCase().includes(termo);
+      item.hidden = !visivel;
+      if (visivel) algumVisivel = true;
+    });
+    const vazio = lista.querySelector('.nv-combo-vazio');
+    if (vazio) vazio.hidden = algumVisivel;
   }
 
   function aplicarTema(tema) {
@@ -660,17 +680,8 @@
     document.body.addEventListener('input', (evento) => {
       if (evento.target.classList.contains('nv-combo-input')) {
         const combo = evento.target.closest('.nv-combo');
-        const lista = combo.querySelector('.nv-combo-lista');
-        const termo = evento.target.value.trim().toUpperCase();
-        let algumVisivel = false;
-        lista.querySelectorAll('.nv-combo-item').forEach((item) => {
-          const visivel = !termo || item.dataset.valor.toUpperCase().includes(termo);
-          item.hidden = !visivel;
-          if (visivel) algumVisivel = true;
-        });
-        const vazio = lista.querySelector('.nv-combo-vazio');
-        if (vazio) vazio.hidden = algumVisivel;
-        lista.hidden = false;
+        filtrarComboBusca(combo, evento.target.value);
+        combo.querySelector('.nv-combo-lista').hidden = false;
         return;
       }
       if (evento.target.id === 'campo-busca-lancamentos') {
