@@ -413,6 +413,20 @@ function aporteNecessarioParaMeta({ capitalInicial = 0, meses, taxaMensal = 0, v
   return { aporteMensal: Math.max(0, (valorAlvo - capitalFuturo) / fatorAnuidade) };
 }
 
+// Junta os dividendos previstos (cadastrados manualmente pelo usuário, não vêm de nenhuma fonte
+// de mercado — ver restrição de plataforma) de todos os ativos numa única agenda, ignorando datas
+// já passadas em relação a dataReferencia e ordenando do mais próximo pro mais distante.
+function proximosDividendosPrevistos(investimentos, dataReferencia) {
+  const hoje = dataReferencia || new Date().toISOString().slice(0, 10);
+  const todos = [];
+  for (const inv of investimentos) {
+    for (const p of inv.proventosPrevistos || []) {
+      todos.push({ investimentoId: inv.id, nome: inv.nome, ...p });
+    }
+  }
+  return todos.filter((p) => p.data >= hoje).sort((a, b) => a.data.localeCompare(b.data));
+}
+
 function estadoInicial() {
   return {
     lancamentos: [],
@@ -511,5 +525,6 @@ if (typeof module !== 'undefined' && module.exports) {
     aplicarVariacaoPercentual,
     mesesParaAtingirMeta,
     aporteNecessarioParaMeta,
+    proximosDividendosPrevistos,
   };
 }

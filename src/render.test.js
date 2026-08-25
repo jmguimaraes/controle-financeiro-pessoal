@@ -437,6 +437,60 @@ test('renderInvestimentos mostra o imposto estimado do mês atual quando há ven
   assert.match(html, /não substitui/i);
 });
 
+test('renderAtivoDetalhe mostra a agenda de dividendos previstos (futuros), separada dos recebidos', () => {
+  const hoje = new Date();
+  const dataFutura = new Date(hoje.getFullYear(), hoje.getMonth() + 2, 10).toISOString().slice(0, 10);
+  const dataPassada = new Date(hoje.getFullYear() - 1, 0, 1).toISOString().slice(0, 10);
+  const state = estado({
+    investimentos: [
+      {
+        id: '1',
+        nome: 'ITSA4',
+        tipo: 'acao',
+        precoAtual: 10,
+        operacoes: [],
+        proventosPrevistos: [
+          { id: 'pv1', data: dataFutura, valor: 25, descricao: 'trimestral' },
+          { id: 'pv2', data: dataPassada, valor: 10 },
+        ],
+      },
+    ],
+  });
+  const html = renderAtivoDetalhe(state, '1');
+  assert.match(html, /PRÓXIMOS DIVIDENDOS/);
+  assert.ok(html.includes('pv1'));
+  assert.ok(!html.includes('pv2'));
+  assert.match(html, /trimestral/);
+});
+
+test('renderAtivoDetalhe mostra estado vazio de dividendos previstos quando não há nenhum futuro cadastrado', () => {
+  const html = renderAtivoDetalhe(estado({ investimentos: [{ id: '1', nome: 'X', tipo: 'acao', precoAtual: 0, operacoes: [], proventosPrevistos: [] }] }), '1');
+  assert.match(html, /Nenhum dividendo previsto cadastrado/);
+});
+
+test('renderInvestimentos mostra a agenda de próximos dividendos de todos os ativos, ordenada por data', () => {
+  const hoje = new Date();
+  const dataMaisPerto = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 5).toISOString().slice(0, 10);
+  const dataMaisLonge = new Date(hoje.getFullYear(), hoje.getMonth() + 3, 5).toISOString().slice(0, 10);
+  const state = estado({
+    investimentos: [
+      { id: '1', nome: 'ITSA4', tipo: 'acao', precoAtual: 10, operacoes: [], proventosPrevistos: [{ id: 'pv1', data: dataMaisLonge, valor: 25 }] },
+      { id: '2', nome: 'HGLG11', tipo: 'fii', precoAtual: 100, operacoes: [], proventosPrevistos: [{ id: 'pv2', data: dataMaisPerto, valor: 12 }] },
+    ],
+  });
+  const html = renderInvestimentos(state);
+  assert.match(html, /PRÓXIMOS DIVIDENDOS/);
+  const posHeading = html.indexOf('PRÓXIMOS DIVIDENDOS');
+  const posPerto = html.indexOf('HGLG11', posHeading);
+  const posLonge = html.indexOf('ITSA4', posHeading);
+  assert.ok(posPerto !== -1 && posLonge !== -1 && posPerto < posLonge);
+});
+
+test('renderInvestimentos não mostra a agenda de dividendos quando nenhum ativo tem previsto futuro', () => {
+  const html = renderInvestimentos(estado({ investimentos: [{ id: '1', nome: 'ITSA4', tipo: 'acao', precoAtual: 10, operacoes: [] }] }));
+  assert.doesNotMatch(html, /PRÓXIMOS DIVIDENDOS/);
+});
+
 test('renderInvestimentos não mostra o card de imposto quando não há venda tributável no mês', () => {
   const html = renderInvestimentos(estado({ investimentos: [{ id: '1', nome: 'ITSA4', tipo: 'acao', precoAtual: 10, operacoes: [] }] }));
   assert.doesNotMatch(html, /IMPOSTO ESTIMADO/);

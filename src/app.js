@@ -611,6 +611,13 @@
     document.getElementById('form-provento').showModal();
   }
 
+  function abrirFormularioProventoPrevisto(ativoId) {
+    const form = document.getElementById('formulario-provento-previsto');
+    form.reset();
+    form.elements.ativoId.value = ativoId;
+    document.getElementById('form-provento-previsto').showModal();
+  }
+
   function abrirFormularioConta(id) {
     const form = document.getElementById('formulario-conta');
     form.reset();
@@ -762,6 +769,14 @@
         const item = state.investimentos.find((i) => i.id === ativoAberto);
         const proventos = (item.proventos || []).filter((p) => p.id !== alvo.dataset.id);
         despachar({ type: 'editInvestimento', id: ativoAberto, changes: { proventos } });
+      }
+
+      if (acao === 'novo-provento-previsto') abrirFormularioProventoPrevisto(alvo.dataset.id);
+      if (acao === 'excluir-provento-previsto') {
+        if (!ativoAberto || !confirm('Excluir este dividendo previsto?')) return;
+        const item = state.investimentos.find((i) => i.id === ativoAberto);
+        const proventosPrevistos = (item.proventosPrevistos || []).filter((p) => p.id !== alvo.dataset.id);
+        despachar({ type: 'editInvestimento', id: ativoAberto, changes: { proventosPrevistos } });
       }
 
       if (acao === 'nova-conta') abrirFormularioConta();
@@ -990,6 +1005,25 @@
           type: 'editInvestimento',
           id: ativoId,
           changes: { proventos: [...(item.proventos || []), novoProvento] },
+        });
+        evento.target.reset();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-provento-previsto') {
+        const dados = new FormData(evento.target);
+        const ativoId = dados.get('ativoId');
+        const item = state.investimentos.find((i) => i.id === ativoId);
+        const novoPrevisto = {
+          id: uid(),
+          data: dados.get('data'),
+          valor: numeroDoCampoMoeda(dados.get('valor')),
+          descricao: dados.get('descricao') || '',
+        };
+        despachar({
+          type: 'editInvestimento',
+          id: ativoId,
+          changes: { proventosPrevistos: [...(item.proventosPrevistos || []), novoPrevisto] },
         });
         evento.target.reset();
         return;

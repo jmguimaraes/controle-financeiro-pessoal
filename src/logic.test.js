@@ -33,6 +33,7 @@ const {
   aplicarVariacaoPercentual,
   mesesParaAtingirMeta,
   aporteNecessarioParaMeta,
+  proximosDividendosPrevistos,
 } = require('./logic.js');
 
 const arred = (x) => Math.round(x * 100) / 100;
@@ -642,4 +643,41 @@ test('aporteNecessarioParaMeta retorna 0 quando o capital inicial já supera a m
 test('aporteNecessarioParaMeta com prazo zero ou negativo retorna null', () => {
   assert.equal(aporteNecessarioParaMeta({ capitalInicial: 100, meses: 0, taxaMensal: 0.01, valorAlvo: 1000 }).aporteMensal, null);
   assert.equal(aporteNecessarioParaMeta({ capitalInicial: 100, meses: -3, taxaMensal: 0.01, valorAlvo: 1000 }).aporteMensal, null);
+});
+
+// --- Agenda de dividendos previstos ---
+
+test('proximosDividendosPrevistos lista os dividendos previstos futuros de todos os ativos, ordenados por data', () => {
+  const investimentos = [
+    {
+      id: 'i1',
+      nome: 'PETR4',
+      proventosPrevistos: [
+        { id: 'p1', data: '2026-09-15', valor: 50 },
+        { id: 'p2', data: '2026-08-30', valor: 20 },
+      ],
+    },
+    {
+      id: 'i2',
+      nome: 'HGLG11',
+      proventosPrevistos: [{ id: 'p3', data: '2026-09-01', valor: 30 }],
+    },
+  ];
+  const agenda = proximosDividendosPrevistos(investimentos, '2026-08-25');
+  assert.equal(agenda.length, 3);
+  assert.deepEqual(agenda.map((a) => a.id), ['p2', 'p3', 'p1']);
+  assert.equal(agenda[0].nome, 'PETR4');
+  assert.equal(agenda[0].investimentoId, 'i1');
+});
+
+test('proximosDividendosPrevistos ignora datas anteriores à data de referência', () => {
+  const investimentos = [
+    { id: 'i1', nome: 'PETR4', proventosPrevistos: [{ id: 'p1', data: '2026-01-01', valor: 50 }] },
+  ];
+  assert.deepEqual(proximosDividendosPrevistos(investimentos, '2026-08-25'), []);
+});
+
+test('proximosDividendosPrevistos lida com ativos sem nenhum previsto cadastrado', () => {
+  const investimentos = [{ id: 'i1', nome: 'PETR4' }];
+  assert.deepEqual(proximosDividendosPrevistos(investimentos, '2026-08-25'), []);
 });

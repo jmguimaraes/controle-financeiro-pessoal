@@ -340,6 +340,20 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   </form>
 </dialog>
 
+<dialog id="form-provento-previsto">
+  <form method="dialog" id="formulario-provento-previsto">
+    <h3>Dividendo previsto</h3>
+    <input type="hidden" name="ativoId" />
+    <label>Data prevista<input type="date" name="data" required /></label>
+    <label>Valor esperado<input type="text" inputmode="decimal" name="valor" class="nv-campo-moeda" required /></label>
+    <label>Descrição (opcional)<input type="text" name="descricao" maxlength="60" placeholder="ex.: dividendo trimestral" /></label>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="form-meta">
   <form method="dialog" id="formulario-meta">
     <h3>Nova meta</h3>

@@ -908,6 +908,7 @@ function renderInvestimentos(state) {
   const sugestao = L.sugestaoAporte(investimentos, state.alocacaoAlvo).filter((s) => s.diferenca > 0);
   const hoje = new Date();
   const imposto = L.impostoEstimadoMes(investimentos, hoje.getFullYear(), hoje.getMonth() + 1);
+  const agendaDividendos = L.proximosDividendosPrevistos(investimentos);
 
   const itens = resumos.length
     ? resumos
@@ -976,6 +977,19 @@ function renderInvestimentos(state) {
     </div>`
         : ''
     }
+    ${
+      agendaDividendos.length
+        ? `<div class="nv-section-head"><span class="nv-section-label">PRÓXIMOS DIVIDENDOS</span></div>
+    <div class="nv-list-plain">
+      ${agendaDividendos
+        .map((p) => {
+          const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
+          return `<div class="nv-row-plain"><span>${escapeHtml(p.nome)} · ${dataFmt}</span><span>${mascarar(formatCurrency(p.valor), ocultar)}</span></div>`;
+        })
+        .join('')}
+    </div>`
+        : ''
+    }
     <div>${itens}</div>
     <div class="nv-acao-fixa" style="margin-top:auto">
       <button type="button" class="nv-btn-contorno" data-acao="novo-investimento">
@@ -1009,6 +1023,7 @@ function renderAtivoDetalhe(state, ativoId) {
   const proventos = investimento.proventos || [];
   const totalProventos = L.totalProventos(proventos);
   const classeRend = resumo.rendimentoValor > 0 ? 'positivo' : resumo.rendimentoValor < 0 ? 'negativo' : '';
+  const dividendosPrevistos = L.proximosDividendosPrevistos([investimento]);
 
   const listaProventos = proventos.length
     ? [...proventos]
@@ -1083,6 +1098,29 @@ function renderAtivoDetalhe(state, ativoId) {
       <button type="button" class="nv-link-accent" data-acao="nova-operacao" data-id="${investimento.id}">+ NOVA OPERAÇÃO</button>
     </div>
     <div>${listaOperacoes}</div>
+    <div class="nv-section-head">
+      <span class="nv-section-label">PRÓXIMOS DIVIDENDOS</span>
+      <button type="button" class="nv-link-accent" data-acao="novo-provento-previsto" data-id="${investimento.id}">+ NOVO PREVISTO</button>
+    </div>
+    <div>${
+      dividendosPrevistos.length
+        ? dividendosPrevistos
+            .map((p) => {
+              const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
+              return `
+        <div class="nv-conta-linha" data-id="${p.id}">
+          <div>
+            <div class="nv-item-nome">${dataFmt}${p.descricao ? ` · ${escapeHtml(p.descricao)}` : ''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="nv-item-valor">${mascarar(formatCurrency(p.valor), ocultar)}</div>
+            <button type="button" class="nv-link-muted" data-acao="excluir-provento-previsto" data-id="${p.id}" aria-label="Excluir dividendo previsto" style="color:var(--nv-negative)">✕</button>
+          </div>
+        </div>`;
+            })
+            .join('')
+        : '<p class="nv-vazio">Nenhum dividendo previsto cadastrado.</p>'
+    }</div>
     <div class="nv-section-head">
       <span class="nv-section-label">PROVENTOS</span>
       <button type="button" class="nv-link-accent" data-acao="novo-provento" data-id="${investimento.id}">+ NOVO PROVENTO</button>
