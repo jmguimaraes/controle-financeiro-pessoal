@@ -34,6 +34,8 @@ const {
   mesesParaAtingirMeta,
   aporteNecessarioParaMeta,
   proximosDividendosPrevistos,
+  iniciaisAtivo,
+  corIndiceAtivo,
 } = require('./logic.js');
 
 const arred = (x) => Math.round(x * 100) / 100;
@@ -680,4 +682,31 @@ test('proximosDividendosPrevistos ignora datas anteriores à data de referência
 test('proximosDividendosPrevistos lida com ativos sem nenhum previsto cadastrado', () => {
   const investimentos = [{ id: 'i1', nome: 'PETR4' }];
   assert.deepEqual(proximosDividendosPrevistos(investimentos, '2026-08-25'), []);
+});
+
+// --- Monograma do ativo (ícone) ---
+
+test('iniciaisAtivo usa as duas primeiras letras de um nome de uma palavra só (ticker)', () => {
+  assert.equal(iniciaisAtivo('PETR4'), 'PE');
+  assert.equal(iniciaisAtivo('AAPL'), 'AA');
+});
+
+test('iniciaisAtivo usa a primeira letra de cada uma das duas primeiras palavras de um nome composto', () => {
+  assert.equal(iniciaisAtivo('Tesouro Selic'), 'TS');
+});
+
+test('iniciaisAtivo lida com nome vazio ou de uma letra só', () => {
+  assert.equal(iniciaisAtivo(''), '?');
+  assert.equal(iniciaisAtivo('B'), 'B');
+});
+
+test('corIndiceAtivo é determinístico: o mesmo nome sempre cai no mesmo índice', () => {
+  assert.equal(corIndiceAtivo('PETR4', 8), corIndiceAtivo('PETR4', 8));
+});
+
+test('corIndiceAtivo devolve sempre um índice dentro do tamanho da paleta', () => {
+  for (const nome of ['PETR4', 'AAPL', 'HGLG11', 'BTC', 'Tesouro Selic', '']) {
+    const indice = corIndiceAtivo(nome, 8);
+    assert.ok(indice >= 0 && indice < 8);
+  }
 });

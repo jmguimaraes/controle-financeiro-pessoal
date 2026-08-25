@@ -427,6 +427,30 @@ function proximosDividendosPrevistos(investimentos, dataReferencia) {
   return todos.filter((p) => p.data >= hoje).sort((a, b) => a.data.localeCompare(b.data));
 }
 
+// --- Monograma do ativo (ícone) ---
+// O app não pode carregar logo de marca de fora (CSP do Artifact) nem reproduzir a arte de uma
+// empresa sem licença — em vez disso, cada ativo ganha um "monograma": duas letras + uma cor
+// derivada do próprio nome, sempre a mesma pra um dado ativo. A escolha da paleta de cores em si
+// é responsabilidade de render.js (é uma questão de apresentação); aqui só fica o cálculo puro
+// das iniciais e do índice na paleta.
+
+function iniciaisAtivo(nome) {
+  const texto = (nome || '').trim();
+  if (!texto) return '?';
+  const palavras = texto.split(/\s+/);
+  if (palavras.length > 1) {
+    return (palavras[0][0] + palavras[1][0]).toUpperCase();
+  }
+  return texto.slice(0, 2).toUpperCase();
+}
+
+// Reaproveita hashSimples (já usado pro PIN) só como gerador determinístico de índice — não tem
+// nenhuma relação com segurança aqui, é só "sempre o mesmo ativo cai na mesma cor".
+function corIndiceAtivo(nome, quantidadeCores) {
+  if (!quantidadeCores) return 0;
+  return parseInt(hashSimples(nome || ''), 36) % quantidadeCores;
+}
+
 function estadoInicial() {
   return {
     lancamentos: [],
@@ -526,5 +550,7 @@ if (typeof module !== 'undefined' && module.exports) {
     mesesParaAtingirMeta,
     aporteNecessarioParaMeta,
     proximosDividendosPrevistos,
+    iniciaisAtivo,
+    corIndiceAtivo,
   };
 }

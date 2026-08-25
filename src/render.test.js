@@ -17,6 +17,7 @@ const {
   renderComboBusca,
   opcoesTipoInvestimento,
   renderCalculadoras,
+  monogramaAtivo,
 } = require('./render.js');
 const { estadoInicial } = require('./logic.js');
 const fs = require('node:fs');
@@ -555,4 +556,29 @@ test('renderCalculadoras("milhao") no modo aporte mostra o prazo desejado e esco
 test('renderCalculadoras("milhao") pré-preenche o valor-alvo padrão de R$1.000.000', () => {
   const html = renderCalculadoras('milhao');
   assert.ok(html.includes('1.000.000,00'));
+});
+
+// --- Monograma do ativo ---
+
+test('monogramaAtivo mostra as iniciais dentro de um badge com classe nv-monograma', () => {
+  const html = monogramaAtivo('PETR4');
+  assert.match(html, /class="nv-monograma"/);
+  assert.ok(html.includes('PE'));
+});
+
+test('monogramaAtivo é determinístico: o mesmo nome sempre gera a mesma cor de fundo', () => {
+  const cor = (html) => html.match(/background:([^;"]+)/)[1];
+  assert.equal(cor(monogramaAtivo('PETR4')), cor(monogramaAtivo('PETR4')));
+});
+
+test('renderInvestimentos mostra o monograma de cada ativo listado', () => {
+  const html = renderInvestimentos(estado({ investimentos: [{ id: '1', nome: 'PETR4', tipo: 'acao', precoAtual: 10, operacoes: [] }] }));
+  assert.match(html, /nv-monograma/);
+  assert.ok(html.includes('PE'));
+});
+
+test('renderAtivoDetalhe mostra o monograma do ativo no cabeçalho', () => {
+  const html = renderAtivoDetalhe(estado({ investimentos: [{ id: '1', nome: 'AAPL', tipo: 'stock', precoAtual: 10, operacoes: [] }] }), '1');
+  assert.match(html, /nv-monograma/);
+  assert.ok(html.includes('AA'));
 });

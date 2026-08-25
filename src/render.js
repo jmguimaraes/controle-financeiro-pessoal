@@ -121,6 +121,21 @@ function iconSearch() {
   return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>';
 }
 
+// Paleta fixa e propositalmente discreta (tons médios, baixa saturação) pra não brigar com a
+// identidade monocromática + acento do resto do app — serve só pra diferenciar ativos visualmente
+// numa lista, não é uma paleta categórica de gráfico. Ordem fixa, nunca gerada dinamicamente.
+const PALETA_MONOGRAMA = ['#6b7a99', '#a1665e', '#6b8f71', '#8a6b9c', '#9c8465', '#6ba1a1', '#a17f6b', '#7a7a9c'];
+
+// Não pode carregar o logo de marca de nenhum ativo (CSP do Artifact bloqueia fetch externo, e
+// reproduzir a arte de uma empresa sem licença seria problema de marca registrada de qualquer
+// forma) — em vez disso, cada ativo ganha duas letras + uma cor sempre igual pra aquele nome.
+function monogramaAtivo(nome, tamanho = 32) {
+  const iniciais = L.iniciaisAtivo(nome);
+  const cor = PALETA_MONOGRAMA[L.corIndiceAtivo(nome, PALETA_MONOGRAMA.length)];
+  const fonte = Math.round(tamanho * 0.4);
+  return `<span class="nv-monograma" style="width:${tamanho}px;height:${tamanho}px;font-size:${fonte}px;background:${cor}" aria-hidden="true">${escapeHtml(iniciais)}</span>`;
+}
+
 function iconCalculator(size = 18) {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="8" y2="10.01"></line><line x1="12" y1="10" x2="12" y2="10.01"></line><line x1="16" y1="10" x2="16" y2="10.01"></line><line x1="8" y1="14" x2="8" y2="14.01"></line><line x1="12" y1="14" x2="12" y2="14.01"></line><line x1="16" y1="14" x2="16" y2="14.01"></line><line x1="8" y1="18" x2="8" y2="18.01"></line><line x1="12" y1="18" x2="12" y2="18.01"></line><line x1="16" y1="18" x2="16" y2="18.01"></line></svg>`;
 }
@@ -917,9 +932,12 @@ function renderInvestimentos(state) {
           const rotuloTipo = ROTULOS_TIPO_INVESTIMENTO[i.tipo] || i.tipo;
           return `
         <div class="nv-ativo-linha" data-id="${i.id}" data-acao="abrir-ativo">
-          <div>
-            <div class="nv-item-nome">${escapeHtml(i.nome)}</div>
-            <div class="nv-item-meta">${escapeHtml(rotuloTipo)} · investido ${mascarar(formatCurrency(r.valorInvestido), ocultar)}</div>
+          <div style="display:flex;align-items:center;gap:12px">
+            ${monogramaAtivo(i.nome, 34)}
+            <div>
+              <div class="nv-item-nome">${escapeHtml(i.nome)}</div>
+              <div class="nv-item-meta">${escapeHtml(rotuloTipo)} · investido ${mascarar(formatCurrency(r.valorInvestido), ocultar)}</div>
+            </div>
           </div>
           <div class="nv-ativo-valor">
             <div class="nv-item-valor">${mascarar(formatCurrency(r.valorAtual), ocultar)}</div>
@@ -1068,6 +1086,7 @@ function renderAtivoDetalhe(state, ativoId) {
   return `
     <div class="nv-header nv-header--back">
       <button type="button" class="nv-back" data-acao="fechar-ativo" aria-label="Voltar">${'‹'}</button>
+      ${monogramaAtivo(investimento.nome, 24)}
       <span class="nv-title">${escapeHtml(investimento.nome)}</span>
       <button type="button" class="nv-gear" data-acao="editar-investimento" data-id="${investimento.id}" aria-label="Editar ativo" style="margin-left:auto">${iconGear(19)}</button>
     </div>
@@ -1155,5 +1174,6 @@ if (typeof module !== 'undefined' && module.exports) {
     ROTULOS_TIPO_CONTA,
     MESES,
     renderCalculadoras,
+    monogramaAtivo,
   };
 }
