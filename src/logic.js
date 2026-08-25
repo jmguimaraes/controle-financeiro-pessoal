@@ -1,3 +1,23 @@
+// Sugestões de nome/ticker por tipo de ativo — lista curada, não exaustiva nem uma fonte de dados
+// de mercado (não é atualizada nem vem de API nenhuma). Serve só de ponto de partida no
+// autocomplete; o campo continua aceitando qualquer texto digitado livremente. Renda fixa, fundo
+// de investimento e outro ficam sem lista porque não têm um "ticker" padronizado como esses.
+const ATIVOS_SUGERIDOS = {
+  acao: ['PETR4', 'VALE3', 'ITUB4', 'BBDC4', 'ABEV3', 'BBAS3', 'WEGE3', 'ITSA4', 'B3SA3', 'RENT3', 'SUZB3', 'JBSS3', 'RADL3', 'PRIO3', 'EQTL3'],
+  fii: ['HGLG11', 'KNRI11', 'MXRF11', 'XPML11', 'VISC11', 'BCFF11', 'HGRE11', 'VILG11', 'BTLG11', 'RECT11'],
+  criptomoeda: ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC'],
+  stock: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK.B', 'JPM', 'V'],
+  reit: ['O', 'PLD', 'AMT', 'SPG', 'PSA', 'EQIX', 'WELL', 'DLR'],
+  bdr: ['AAPL34', 'GOGL34', 'AMZO34', 'MSFT34', 'TSLA34', 'NVDC34', 'META34', 'DISB34'],
+  etf: ['BOVA11', 'IVVB11', 'SMAL11', 'DIVO11', 'BOVV11', 'XFIX11'],
+  etf_internacional: ['SPY', 'QQQ', 'VOO', 'VTI', 'IWM', 'DIA'],
+  tesouro_direto: ['Tesouro Selic', 'Tesouro IPCA+', 'Tesouro Prefixado', 'Tesouro IPCA+ com Juros Semestrais', 'Tesouro Prefixado com Juros Semestrais'],
+};
+
+function listaSugeridaPorTipo(tipo) {
+  return ATIVOS_SUGERIDOS[tipo] || [];
+}
+
 // Hash não-criptográfico simples pra não guardar o PIN em claro no localStorage. Não é segurança
 // de verdade (é só uma trava de acesso casual, não protege contra alguém sofisticado) — serve
 // apenas pra não deixar o PIN legível de bandeja no localStorage.
@@ -383,5 +403,6 @@ if (typeof module !== 'undefined' && module.exports) {
     historicoRealizado,
     impostoEstimadoMes,
     hashSimples,
+    listaSugeridaPorTipo,
   };
 }

@@ -239,15 +239,24 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   <form method="dialog" id="formulario-investimento">
     <h3>Investimento</h3>
     <input type="hidden" name="id" />
-    <label>Nome do ativo<input type="text" name="nome" required maxlength="40" /></label>
     <label>Tipo
       <select name="tipo" required>
         <option value="acao">Ação</option>
         <option value="fii">Fundo Imobiliário</option>
+        <option value="fundo_investimento">Fundo de Investimento</option>
+        <option value="criptomoeda">Criptomoeda</option>
+        <option value="stock">Stock</option>
+        <option value="reit">REIT</option>
+        <option value="bdr">BDR</option>
+        <option value="etf">ETF</option>
+        <option value="etf_internacional">ETF Internacional</option>
+        <option value="tesouro_direto">Tesouro Direto</option>
         <option value="renda_fixa">Renda Fixa</option>
         <option value="outro">Outro</option>
       </select>
     </label>
+    <label>Nome do ativo<input type="text" name="nome" required maxlength="40" list="lista-sugestoes-ativo" autocomplete="off" /></label>
+    <datalist id="lista-sugestoes-ativo"></datalist>
     <label>Preço atual por cota<input type="text" inputmode="decimal" name="precoAtual" class="nv-campo-moeda" required /></label>
     <div class="form-acoes">
       <button type="button" id="botao-excluir-investimento" data-acao="excluir-investimento-atual" hidden style="margin-right:auto;color:var(--nv-negative);border-color:var(--nv-negative)">Excluir</button>

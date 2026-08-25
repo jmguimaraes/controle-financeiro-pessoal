@@ -25,6 +25,7 @@ const {
   historicoRealizado,
   impostoEstimadoMes,
   hashSimples,
+  listaSugeridaPorTipo,
 } = require('./logic.js');
 
 test('parcelaValor divide o valor total pelo número de parcelas', () => {
@@ -504,6 +505,18 @@ test('hashSimples devolve hashes diferentes pra PINs diferentes', () => {
 
 test('hashSimples nunca devolve o texto original em claro', () => {
   assert.notEqual(hashSimples('1234'), '1234');
+});
+
+test('listaSugeridaPorTipo devolve os tickers sugeridos pra um tipo conhecido', () => {
+  const lista = listaSugeridaPorTipo('acao');
+  assert.ok(Array.isArray(lista));
+  assert.ok(lista.length > 0);
+  assert.ok(lista.includes('PETR4'));
+});
+
+test('listaSugeridaPorTipo devolve lista vazia pra um tipo desconhecido ou sem sugestões cadastradas', () => {
+  assert.deepEqual(listaSugeridaPorTipo('tipo-que-nao-existe'), []);
+  assert.deepEqual(listaSugeridaPorTipo('outro'), []);
 });
 
 test('applyAction preserva contas e metas existentes ao aplicar uma ação não relacionada', () => {

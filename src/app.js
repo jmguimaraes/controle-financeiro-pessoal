@@ -367,8 +367,21 @@
     } else {
       form.elements.id.value = '';
     }
+    atualizarSugestoesAtivo(form.elements.tipo.value);
     document.getElementById('botao-excluir-investimento').hidden = !id;
     document.getElementById('form-investimento').showModal();
+  }
+
+  // Preenche o <datalist> de sugestão de nome/ticker de acordo com o tipo de ativo escolhido —
+  // é só um ponto de partida (lista fixa embutida no app, sem cotação nenhuma); o campo continua
+  // aceitando qualquer texto digitado que não esteja na lista.
+  function atualizarSugestoesAtivo(tipo) {
+    const datalist = document.getElementById('lista-sugestoes-ativo');
+    if (!datalist) return;
+    datalist.innerHTML = logica
+      .listaSugeridaPorTipo(tipo)
+      .map((ticker) => `<option value="${ticker}"></option>`)
+      .join('');
   }
 
   function abrirFormularioOperacao(ativoId) {
@@ -568,6 +581,9 @@
     });
 
     document.body.addEventListener('change', (evento) => {
+      if (evento.target.name === 'tipo' && evento.target.closest('#formulario-investimento')) {
+        atualizarSugestoesAtivo(evento.target.value);
+      }
       if (evento.target.id === 'campo-conta-filtro') {
         contaSelecionada = evento.target.value || null;
         document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual, {

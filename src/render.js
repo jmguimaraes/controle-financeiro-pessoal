@@ -10,6 +10,14 @@ const MESES_ABREV = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SE
 const ROTULOS_TIPO_INVESTIMENTO = {
   acao: 'Ação',
   fii: 'Fundo Imobiliário',
+  fundo_investimento: 'Fundo de Investimento',
+  criptomoeda: 'Criptomoeda',
+  stock: 'Stock',
+  reit: 'REIT',
+  bdr: 'BDR',
+  etf: 'ETF',
+  etf_internacional: 'ETF Internacional',
+  tesouro_direto: 'Tesouro Direto',
   renda_fixa: 'Renda Fixa',
   outro: 'Outro',
 };
