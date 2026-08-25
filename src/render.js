@@ -20,6 +20,7 @@ const ROTULOS_TIPO_INVESTIMENTO = {
   tesouro_direto: 'Tesouro Direto',
   renda_fixa: 'Renda Fixa',
   outro: 'Outro',
+  outros_agrupados: 'Outros',
 };
 
 const ROTULOS_TIPO_CONTA = {
@@ -677,14 +678,44 @@ function renderAbertura() {
     </div>`;
 }
 
+// Gráfico de rosca (donut) da composição da carteira por tipo de ativo — mesma paleta
+// monocromática + acento já usada na barra de composição, pra manter a identidade do app (o
+// resto da UI não usa nenhuma outra cor além dessas).
+function renderGraficoComposicao(composicao, total, cores) {
+  const raio = 52;
+  const espessura = 20;
+  const circunferencia = 2 * Math.PI * raio;
+  let acumulado = 0;
+  const segmentos = composicao
+    .map((c, i) => {
+      const fracao = total ? c.valor / total : 0;
+      const comprimento = fracao * circunferencia;
+      const dashoffset = -acumulado;
+      acumulado += comprimento;
+      return `<circle cx="60" cy="60" r="${raio}" fill="none" stroke="${cores[i % cores.length]}" stroke-width="${espessura}" stroke-dasharray="${comprimento.toFixed(2)} ${(circunferencia - comprimento).toFixed(2)}" stroke-dashoffset="${dashoffset.toFixed(2)}"></circle>`;
+    })
+    .join('');
+  return `
+    <svg width="120" height="120" viewBox="0 0 120 120" style="transform:rotate(-90deg);flex:none" role="img" aria-label="Gráfico de composição da carteira por tipo de ativo">
+      <circle cx="60" cy="60" r="${raio}" fill="none" stroke="var(--nv-hairline)" stroke-width="${espessura}"></circle>
+      ${segmentos}
+    </svg>`;
+}
+
 function renderInvestimentos(state) {
   const ocultar = !!state.ocultarValores;
   const investimentos = state.investimentos || [];
   const carteira = L.totalCarteira(investimentos);
 
-  const cores = ['var(--nv-accent)', 'var(--nv-bar-neutral-strong)', 'var(--nv-bar-neutral)', 'var(--nv-rule-soft)'];
+  const cores = ['var(--nv-accent)', 'var(--nv-bar-neutral-strong)', 'var(--nv-bar-neutral)', 'var(--nv-muted)', 'var(--nv-muted-2)', 'var(--nv-track)'];
   const resumos = investimentos.map((i) => ({ investimento: i, resumo: L.resumoInvestimento(i) }));
-  const composicao = L.composicaoPorTipo(investimentos);
+  const composicaoBruta = L.composicaoPorTipo(investimentos);
+  // Mais de 6 tipos distintos vira ilegível numa pizza — os menores (já vêm ordenados do maior
+  // pro menor) dobram em "Outros" em vez de gerar mais uma cor.
+  const composicao =
+    composicaoBruta.length > 6
+      ? [...composicaoBruta.slice(0, 5), { tipo: 'outros_agrupados', valor: composicaoBruta.slice(5).reduce((s, c) => s + c.valor, 0) }]
+      : composicaoBruta;
   const totalComposicao = composicao.reduce((s, c) => s + c.valor, 0) || 1;
   const sugestao = L.sugestaoAporte(investimentos, state.alocacaoAlvo).filter((s) => s.diferenca > 0);
   const hoje = new Date();
@@ -730,11 +761,16 @@ function renderInvestimentos(state) {
       composicao.length
         ? `<div class="nv-composicao">
       <div class="nv-section-label" style="margin-bottom:10px">COMPOSIÇÃO</div>
-      <div class="nv-composicao-barra">
-        ${composicao.map((c, i) => `<div class="nv-composicao-seg" style="width:${((c.valor / totalComposicao) * 100).toFixed(1)}%;background:${cores[i % cores.length]}"></div>`).join('')}
-      </div>
-      <div class="nv-composicao-legenda">
-        ${composicao.map((c) => `<span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[c.tipo] || c.tipo).toUpperCase()} ${Math.round((c.valor / totalComposicao) * 100)}%</span>`).join('')}
+      <div class="nv-composicao-grafico">
+        ${renderGraficoComposicao(composicao, totalComposicao, cores)}
+        <div class="nv-composicao-legenda">
+          ${composicao
+            .map(
+              (c, i) =>
+                `<div class="nv-composicao-item"><span class="nv-composicao-bolinha" style="background:${cores[i % cores.length]}"></span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[c.tipo] || c.tipo).toUpperCase()} <b>${Math.round((c.valor / totalComposicao) * 100)}%</b></div>`
+            )
+            .join('')}
+        </div>
       </div>
       <button type="button" class="nv-link-accent" data-acao="editar-alocacao" style="margin-top:10px;font-size:10px">METAS DE ALOCAÇÃO</button>
     </div>`

@@ -265,6 +265,33 @@ test('renderInvestimentos mostra rendimento positivo e negativo, com rótulo de 
   assert.match(html, /-5,00%/);
 });
 
+test('renderInvestimentos mostra o gráfico de composição (SVG) com a legenda por tipo, ordenada do maior para o menor', () => {
+  const state = estado({
+    investimentos: [
+      { id: '1', nome: 'ITSA4', tipo: 'acao', precoAtual: 10, operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-01', quantidade: 10, precoUnitario: 10 }] },
+      { id: '2', nome: 'HGLG11', tipo: 'fii', precoAtual: 10, operacoes: [{ id: 'o2', tipo: 'compra', data: '2026-01-01', quantidade: 90, precoUnitario: 10 }] },
+    ],
+  });
+  const html = renderInvestimentos(state);
+  assert.match(html, /<svg[^>]*aria-label="Gráfico de composição/);
+  const posFii = html.indexOf('FUNDO IMOBILIÁRIO');
+  const posAcao = html.indexOf('AÇÃO');
+  assert.ok(posFii !== -1 && posAcao !== -1 && posFii < posAcao, 'FII (900) é maior que Ação (100), deve aparecer primeiro na legenda');
+});
+
+test('renderInvestimentos agrupa tipos além do 6º em "Outros" na composição', () => {
+  const tipos = ['acao', 'fii', 'fundo_investimento', 'criptomoeda', 'stock', 'reit', 'bdr', 'etf'];
+  const investimentos = tipos.map((tipo, i) => ({
+    id: String(i),
+    nome: `Ativo ${i}`,
+    tipo,
+    precoAtual: 10,
+    operacoes: [{ id: `o${i}`, tipo: 'compra', data: '2026-01-01', quantidade: 10 - i, precoUnitario: 10 }],
+  }));
+  const html = renderInvestimentos(estado({ investimentos }));
+  assert.match(html, /OUTROS/);
+});
+
 test('renderInvestimentos mostra mensagem quando não há investimentos', () => {
   const html = renderInvestimentos(estado());
   assert.match(html, /Nenhum investimento cadastrado/);

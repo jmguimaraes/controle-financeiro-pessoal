@@ -214,8 +214,11 @@ select option{background-color:var(--nv-bg);color:var(--nv-fg);}
 .nv-carteira-badge-row{margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
 .nv-carteira-badge{font-size:12px;font-weight:600;background:var(--nv-accent);color:var(--nv-on-accent);padding:4px 8px;border-radius:var(--nv-radius-badge);}
 .nv-composicao{padding:16px 20px 12px;}
-.nv-composicao-barra{display:flex;height:10px;gap:2px;}
-.nv-composicao-legenda{display:flex;gap:14px;margin-top:10px;font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--nv-muted);flex-wrap:wrap;}
+.nv-composicao-grafico{display:flex;align-items:center;gap:20px;}
+.nv-composicao-legenda{display:flex;flex-direction:column;gap:9px;flex:1;min-width:0;}
+.nv-composicao-item{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--nv-muted);display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nv-composicao-item b{color:var(--nv-fg);font-weight:600;margin-left:auto;padding-left:8px;}
+.nv-composicao-bolinha{width:9px;height:9px;border-radius:50%;flex:none;}
 .nv-ativo-linha{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--nv-hairline);cursor:pointer;background:none;width:100%;text-align:left;border-left:none;border-right:none;border-top:none;font-family:inherit;color:inherit;}
 .nv-ativo-valor{text-align:right;}
 .nv-ativo-rend{font-size:11px;font-weight:600;margin-top:3px;}
