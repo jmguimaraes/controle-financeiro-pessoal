@@ -61,6 +61,50 @@ function iconSymbol(size = 20, corTraco = 'currentColor', corLaje = 'var(--nv-ac
   return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" aria-hidden="true"><rect x="1" y="1" width="18" height="18" rx="4" fill="none" stroke="${corTraco}" stroke-width="2"></rect><path d="M4 16 L16 4 L16 9.5 L9.5 16 Z" fill="${corLaje}"></path></svg>`;
 }
 
+// Função (não const) de propósito — no bundle do navegador (script clássico, sem módulos),
+// `function` no nível superior vira propriedade de window automaticamente, mas `const` não.
+// ROTULOS_TIPO_INVESTIMENTO sozinho não estaria acessível via `renderizacao.` no app.js.
+function opcoesTipoInvestimento() {
+  return Object.entries(ROTULOS_TIPO_INVESTIMENTO).map(([valor, rotulo]) => ({ valor, rotulo }));
+}
+
+// Combobox custom (dropdown com fundo/cor de seleção controlados pelo app) — substitui
+// <select>/<datalist> nativos, cujo popup o navegador não deixa estilizar de forma confiável
+// entre navegadores/SOs (ver commits anteriores tentando resolver isso via CSS só).
+function renderComboItens(opcoes, valorAtual) {
+  return opcoes.length
+    ? opcoes
+        .map(
+          (o) =>
+            `<div class="nv-combo-item ${o.valor === valorAtual ? 'ativo' : ''}" data-acao="selecionar-combo-item" data-valor="${escapeHtml(o.valor)}" data-rotulo="${escapeHtml(o.rotulo || o.valor)}">${escapeHtml(o.rotulo || o.valor)}</div>`
+        )
+        .join('')
+    : '<div class="nv-combo-vazio">Nenhuma opção encontrada.</div>';
+}
+
+function renderComboSelect(nomeCampo, opcoes, valorAtual) {
+  const atual = opcoes.find((o) => o.valor === valorAtual) || opcoes[0] || { valor: '', rotulo: '' };
+  return `
+    <div class="nv-combo" data-combo="${nomeCampo}">
+      <input type="hidden" name="${nomeCampo}" value="${escapeHtml(atual.valor)}" />
+      <button type="button" class="nv-combo-gatilho" data-acao="abrir-combo">
+        <span class="nv-combo-valor">${escapeHtml(atual.rotulo)}</span>
+        <svg class="nv-combo-seta" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+      <div class="nv-combo-lista" hidden>${renderComboItens(opcoes, atual.valor)}</div>
+    </div>`;
+}
+
+function renderComboBusca(nomeCampo, valorInicial, sugestoes) {
+  return `
+    <div class="nv-combo" data-combo="${nomeCampo}">
+      <input type="text" name="${nomeCampo}" class="nv-combo-input" autocomplete="off" required maxlength="40" value="${escapeHtml(valorInicial || '')}" />
+      <div class="nv-combo-lista" hidden>${(sugestoes || [])
+        .map((t) => `<div class="nv-combo-item" data-acao="selecionar-combo-item" data-valor="${escapeHtml(t)}">${escapeHtml(t)}</div>`)
+        .join('')}</div>
+    </div>`;
+}
+
 function iconSearch() {
   return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>';
 }
@@ -323,11 +367,10 @@ function renderLancamentos(state, ano, mes, opcoes = {}) {
   `;
 }
 
-function renderCategoriasOptions(categoriaSelecionada, tipo) {
+function opcoesCategoria(tipo) {
   const receitas = ['Salário', 'Freelance', 'Investimentos', 'Outras Receitas'];
   const despesas = ['Moradia', 'Alimentação', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Vestuário', 'Outras Despesas'];
-  const opt = (c) => `<option value="${escapeHtml(c)}" ${c === categoriaSelecionada ? 'selected' : ''}>${escapeHtml(c)}</option>`;
-  return (tipo === 'receita' ? receitas : despesas).map(opt).join('');
+  return (tipo === 'receita' ? receitas : despesas).map((c) => ({ valor: c, rotulo: c }));
 }
 
 function renderNovoLancamento(state, dadosIniciais) {
@@ -361,8 +404,8 @@ function renderNovoLancamento(state, dadosIniciais) {
         <input type="text" id="campo-descricao" name="descricao" required maxlength="80" value="${escapeHtml(d.descricao || '')}" />
       </div>
       <div class="nv-campo-linha">
-        <label class="nv-campo-label" for="campo-categoria">CATEGORIA</label>
-        <select id="campo-categoria" name="categoria" required>${renderCategoriasOptions(d.categoria, tipo)}</select>
+        <label class="nv-campo-label">CATEGORIA</label>
+        ${renderComboSelect('categoria', opcoesCategoria(tipo), d.categoria)}
       </div>
       <div class="nv-campo-dupla">
         <div>
@@ -839,6 +882,10 @@ if (typeof module !== 'undefined' && module.exports) {
     renderMetas,
     renderConfiguracoes,
     renderPin,
+    renderComboSelect,
+    renderComboBusca,
+    renderComboItens,
+    opcoesTipoInvestimento,
     renderAbertura,
     renderInvestimentos,
     renderAtivoDetalhe,

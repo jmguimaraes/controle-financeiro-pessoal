@@ -130,6 +130,19 @@ select option{background-color:var(--nv-bg);color:var(--nv-fg);}
 
 .nv-campo-linha{padding:12px 20px;border-bottom:1px solid var(--nv-rule-soft);display:flex;flex-direction:column;}
 .nv-campo-label{font-size:9px;font-weight:600;letter-spacing:.14em;color:var(--nv-muted);}
+
+/* Combobox custom — substitui <select>/<datalist> nativos, cuja aparência de popup (fundo,
+   cor de item selecionado) o navegador não deixa a página controlar de forma confiável. */
+.nv-combo{position:relative;}
+.nv-combo-gatilho{background:none;border:none;color:inherit;font:inherit;padding:0;outline:none;cursor:pointer;width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.nv-combo-gatilho .nv-combo-seta{flex:none;color:var(--nv-muted);}
+.nv-combo-input{font-size:15px;font-weight:500;background:none;border:none;color:inherit;width:100%;font-family:inherit;padding:0;outline:none;}
+.nv-combo-lista{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--nv-bg);border:1px solid var(--nv-rule-soft);border-radius:var(--nv-radius-control);max-height:240px;overflow-y:auto;z-index:30;box-shadow:0 10px 28px rgba(0,0,0,.4);}
+.nv-combo-lista[hidden]{display:none;}
+.nv-combo-item{padding:11px 14px;font-size:14px;font-weight:500;cursor:pointer;}
+.nv-combo-item:hover,.nv-combo-item.ativo{background:var(--nv-accent);color:var(--nv-on-accent);}
+.nv-combo-item[hidden]{display:none;}
+.nv-combo-vazio{padding:11px 14px;font-size:12px;color:var(--nv-muted);}
 .nv-campo-linha input,.nv-campo-linha select{font-size:15px;font-weight:500;margin-top:4px;background:none;border:none;color:inherit;width:100%;font-family:inherit;padding:0;outline:none;}
 .nv-campo-dupla{display:flex;border-bottom:1px solid var(--nv-rule-soft);}
 .nv-campo-dupla>div{flex:1;padding:12px 20px;display:flex;flex-direction:column;}
@@ -244,24 +257,10 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   <form method="dialog" id="formulario-investimento">
     <h3>Investimento</h3>
     <input type="hidden" name="id" />
-    <label>Tipo
-      <select name="tipo" required>
-        <option value="acao">Ação</option>
-        <option value="fii">Fundo Imobiliário</option>
-        <option value="fundo_investimento">Fundo de Investimento</option>
-        <option value="criptomoeda">Criptomoeda</option>
-        <option value="stock">Stock</option>
-        <option value="reit">REIT</option>
-        <option value="bdr">BDR</option>
-        <option value="etf">ETF</option>
-        <option value="etf_internacional">ETF Internacional</option>
-        <option value="tesouro_direto">Tesouro Direto</option>
-        <option value="renda_fixa">Renda Fixa</option>
-        <option value="outro">Outro</option>
-      </select>
-    </label>
-    <label>Nome do ativo<input type="text" name="nome" required maxlength="40" list="lista-sugestoes-ativo" autocomplete="off" /></label>
-    <datalist id="lista-sugestoes-ativo"></datalist>
+    <label>Tipo</label>
+    <div id="combo-tipo-investimento"></div>
+    <label>Nome do ativo</label>
+    <div id="combo-nome-ativo"></div>
     <label>Preço atual por cota<input type="text" inputmode="decimal" name="precoAtual" class="nv-campo-moeda" required /></label>
     <div class="form-acoes">
       <button type="button" id="botao-excluir-investimento" data-acao="excluir-investimento-atual" hidden style="margin-right:auto;color:var(--nv-negative);border-color:var(--nv-negative)">Excluir</button>
@@ -275,12 +274,8 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   <form method="dialog" id="formulario-operacao">
     <h3>Nova operação</h3>
     <input type="hidden" name="ativoId" />
-    <label>Tipo
-      <select name="tipo" required>
-        <option value="compra">Compra</option>
-        <option value="venda">Venda</option>
-      </select>
-    </label>
+    <label>Tipo</label>
+    <div id="combo-tipo-operacao"></div>
     <label>Data<input type="date" name="data" required /></label>
     <label>Quantidade (use 1 para Renda Fixa/Outro)<input type="number" name="quantidade" step="0.000001" min="0.000001" value="1" required /></label>
     <label>Preço unitário<input type="text" inputmode="decimal" name="precoUnitario" class="nv-campo-moeda" required /></label>
@@ -296,13 +291,8 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
     <h3>Conta ou cartão</h3>
     <input type="hidden" name="id" />
     <label>Nome<input type="text" name="nome" required maxlength="40" /></label>
-    <label>Tipo
-      <select name="tipo" required>
-        <option value="conta">Conta corrente</option>
-        <option value="cartao">Cartão</option>
-        <option value="carteira">Carteira</option>
-      </select>
-    </label>
+    <label>Tipo</label>
+    <div id="combo-tipo-conta"></div>
     <label>Dia de fechamento (opcional, para cartão)<input type="number" name="fechamento" min="1" max="31" /></label>
     <div class="form-acoes">
       <button type="button" data-acao="cancelar-form">Cancelar</button>
@@ -329,12 +319,8 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   <form method="dialog" id="formulario-provento">
     <h3>Novo provento</h3>
     <input type="hidden" name="ativoId" />
-    <label>Tipo
-      <select name="tipo" required>
-        <option value="dividendo">Dividendo</option>
-        <option value="jcp">JCP</option>
-      </select>
-    </label>
+    <label>Tipo</label>
+    <div id="combo-tipo-provento"></div>
     <label>Data<input type="date" name="data" required /></label>
     <label>Valor recebido<input type="text" inputmode="decimal" name="valor" class="nv-campo-moeda" required /></label>
     <div class="form-acoes">
@@ -348,19 +334,8 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   <form method="dialog" id="formulario-meta">
     <h3>Nova meta</h3>
     <input type="hidden" name="id" />
-    <label>Categoria
-      <select name="categoria" required>
-        <option>Moradia</option>
-        <option>Alimentação</option>
-        <option>Transporte</option>
-        <option>Saúde</option>
-        <option>Educação</option>
-        <option>Lazer</option>
-        <option>Assinaturas</option>
-        <option>Vestuário</option>
-        <option>Outras Despesas</option>
-      </select>
-    </label>
+    <label>Categoria</label>
+    <div id="combo-categoria-meta"></div>
     <label>Nome (opcional)<input type="text" name="nome" maxlength="40" placeholder="ex.: Carro novo" /></label>
     <label>Limite mensal<input type="text" inputmode="decimal" name="limite" class="nv-campo-moeda" required /></label>
     <div class="form-acoes">

@@ -47,6 +47,7 @@
     }
     descricaoSincronizacao = artifactApi ? 'Ativa' : 'Indisponível neste dispositivo';
     aplicarTema(state.tema);
+    inicializarCombosEstaticos();
     ligarEventos();
 
     if (localStorage_get(CHAVE_PIN)) {
@@ -146,6 +147,74 @@
     if (!bruto) return;
     const numero = numeroDoCampoMoeda(bruto);
     elemento.value = renderizacao.formatNumero(numero);
+  }
+
+  // Combobox custom (ver render.js renderComboSelect/renderComboBusca) — funções de apoio pra
+  // abrir/fechar, selecionar item e definir valor programaticamente (prefill em modo de edição).
+  function fecharTodosCombos() {
+    document.querySelectorAll('.nv-combo-lista').forEach((lista) => {
+      lista.hidden = true;
+    });
+  }
+
+  function selecionarItemCombo(combo, valor, rotulo) {
+    const inputBusca = combo.querySelector('.nv-combo-input');
+    if (inputBusca) {
+      inputBusca.value = valor;
+      return;
+    }
+    definirComboPorValor(combo, valor, rotulo);
+  }
+
+  function definirComboPorValor(combo, valor, rotuloConhecido) {
+    if (!combo) return;
+    const oculto = combo.querySelector('input[type="hidden"]');
+    if (oculto) oculto.value = valor;
+    const item = combo.querySelector(`.nv-combo-item[data-valor="${(window.CSS && CSS.escape) ? CSS.escape(String(valor)) : valor}"]`);
+    const rotulo = rotuloConhecido || (item ? item.dataset.rotulo : valor);
+    const gatilhoValor = combo.querySelector('.nv-combo-valor');
+    if (gatilhoValor) gatilhoValor.textContent = rotulo;
+    combo.querySelectorAll('.nv-combo-item').forEach((it) => it.classList.toggle('ativo', it.dataset.valor === valor));
+  }
+
+  const OPCOES_TIPO_OPERACAO = [
+    { valor: 'compra', rotulo: 'Compra' },
+    { valor: 'venda', rotulo: 'Venda' },
+  ];
+  const OPCOES_TIPO_CONTA = [
+    { valor: 'conta', rotulo: 'Conta corrente' },
+    { valor: 'cartao', rotulo: 'Cartão' },
+    { valor: 'carteira', rotulo: 'Carteira' },
+  ];
+  const OPCOES_TIPO_PROVENTO = [
+    { valor: 'dividendo', rotulo: 'Dividendo' },
+    { valor: 'jcp', rotulo: 'JCP' },
+  ];
+  const CATEGORIAS_META = ['Moradia', 'Alimentação', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Vestuário', 'Outras Despesas'];
+
+  // Combos com opções fixas (não dependem de nenhum outro campo) — populados uma única vez no
+  // início. O de nome do ativo (busca) é populado de novo sempre que o tipo de ativo muda.
+  function inicializarCombosEstaticos() {
+    document.getElementById('combo-tipo-investimento').innerHTML = renderizacao.renderComboSelect('tipo', renderizacao.opcoesTipoInvestimento(), 'acao');
+    document.getElementById('combo-tipo-operacao').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_OPERACAO, 'compra');
+    document.getElementById('combo-tipo-conta').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_CONTA, 'conta');
+    document.getElementById('combo-tipo-provento').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_PROVENTO, 'dividendo');
+    document.getElementById('combo-categoria-meta').innerHTML = renderizacao.renderComboSelect(
+      'categoria',
+      CATEGORIAS_META.map((c) => ({ valor: c, rotulo: c })),
+      'Moradia'
+    );
+    atualizarSugestoesAtivo('acao');
+  }
+
+  // Repopula o combo de busca de nome/ticker de acordo com o tipo de ativo escolhido — é só um
+  // ponto de partida (lista fixa embutida no app, sem cotação nenhuma); o campo continua
+  // aceitando qualquer texto digitado que não esteja na lista.
+  function atualizarSugestoesAtivo(tipo) {
+    const container = document.getElementById('combo-nome-ativo');
+    if (!container) return;
+    const valorAtual = container.querySelector('.nv-combo-input');
+    container.innerHTML = renderizacao.renderComboBusca('nome', valorAtual ? valorAtual.value : '', logica.listaSugeridaPorTipo(tipo));
   }
 
   function aplicarTema(tema) {
@@ -357,36 +426,30 @@
   function abrirFormularioInvestimento(id) {
     const form = document.getElementById('formulario-investimento');
     form.reset();
+    fecharTodosCombos();
+    const comboTipo = document.getElementById('combo-tipo-investimento');
     if (id) {
       const item = state.investimentos.find((i) => i.id === id);
       const migrado = logica.migrarInvestimentoLegado(item);
       form.elements.id.value = item.id;
+      atualizarSugestoesAtivo(item.tipo);
       form.elements.nome.value = item.nome;
-      form.elements.tipo.value = item.tipo;
+      definirComboPorValor(comboTipo, item.tipo);
       form.elements.precoAtual.value = renderizacao.formatNumero(migrado.precoAtual);
     } else {
       form.elements.id.value = '';
+      atualizarSugestoesAtivo('acao');
+      definirComboPorValor(comboTipo, 'acao');
     }
-    atualizarSugestoesAtivo(form.elements.tipo.value);
     document.getElementById('botao-excluir-investimento').hidden = !id;
     document.getElementById('form-investimento').showModal();
-  }
-
-  // Preenche o <datalist> de sugestão de nome/ticker de acordo com o tipo de ativo escolhido —
-  // é só um ponto de partida (lista fixa embutida no app, sem cotação nenhuma); o campo continua
-  // aceitando qualquer texto digitado que não esteja na lista.
-  function atualizarSugestoesAtivo(tipo) {
-    const datalist = document.getElementById('lista-sugestoes-ativo');
-    if (!datalist) return;
-    datalist.innerHTML = logica
-      .listaSugeridaPorTipo(tipo)
-      .map((ticker) => `<option value="${ticker}"></option>`)
-      .join('');
   }
 
   function abrirFormularioOperacao(ativoId) {
     const form = document.getElementById('formulario-operacao');
     form.reset();
+    fecharTodosCombos();
+    definirComboPorValor(document.getElementById('combo-tipo-operacao'), 'compra');
     form.elements.ativoId.value = ativoId;
     form.elements.data.value = `${anoAtual}-${String(mesAtual).padStart(2, '0')}-01`;
     document.getElementById('form-operacao').showModal();
@@ -405,6 +468,8 @@
   function abrirFormularioProvento(ativoId) {
     const form = document.getElementById('formulario-provento');
     form.reset();
+    fecharTodosCombos();
+    definirComboPorValor(document.getElementById('combo-tipo-provento'), 'dividendo');
     form.elements.ativoId.value = ativoId;
     form.elements.data.value = `${anoAtual}-${String(mesAtual).padStart(2, '0')}-01`;
     document.getElementById('form-provento').showModal();
@@ -413,14 +478,17 @@
   function abrirFormularioConta(id) {
     const form = document.getElementById('formulario-conta');
     form.reset();
+    fecharTodosCombos();
+    const comboTipo = document.getElementById('combo-tipo-conta');
     if (id) {
       const item = state.contas.find((c) => c.id === id);
       form.elements.id.value = item.id;
       form.elements.nome.value = item.nome;
-      form.elements.tipo.value = item.tipo;
+      definirComboPorValor(comboTipo, item.tipo);
       form.elements.fechamento.value = item.fechamento || '';
     } else {
       form.elements.id.value = '';
+      definirComboPorValor(comboTipo, 'conta');
     }
     document.getElementById('form-conta').showModal();
   }
@@ -428,14 +496,17 @@
   function abrirFormularioMeta(id) {
     const form = document.getElementById('formulario-meta');
     form.reset();
+    fecharTodosCombos();
+    const comboCategoria = document.getElementById('combo-categoria-meta');
     if (id) {
       const item = state.metas.find((m) => m.id === id);
       form.elements.id.value = item.id;
-      form.elements.categoria.value = item.categoria;
+      definirComboPorValor(comboCategoria, item.categoria);
       form.elements.nome.value = item.nome || '';
       form.elements.limite.value = renderizacao.formatNumero(item.limite);
     } else {
       form.elements.id.value = '';
+      definirComboPorValor(comboCategoria, 'Moradia');
     }
     document.getElementById('botao-excluir-meta').hidden = !id;
     document.getElementById('form-meta').showModal();
@@ -557,9 +628,51 @@
       }
 
       if (acao === 'cancelar-form') alvo.closest('dialog').close();
+
+      if (acao === 'abrir-combo') {
+        const lista = alvo.closest('.nv-combo').querySelector('.nv-combo-lista');
+        const estavaAberta = !lista.hidden;
+        fecharTodosCombos();
+        lista.hidden = estavaAberta;
+      }
+
+      if (acao === 'selecionar-combo-item') {
+        const combo = alvo.closest('.nv-combo');
+        selecionarItemCombo(combo, alvo.dataset.valor, alvo.dataset.rotulo);
+        fecharTodosCombos();
+        // trocar o tipo de ativo muda quais tickers fazem sentido sugerir no nome
+        if (alvo.closest('#combo-tipo-investimento')) atualizarSugestoesAtivo(alvo.dataset.valor);
+      }
+    });
+
+    // Fecha qualquer combo aberto ao clicar fora dele (o clique dentro já foi tratado acima).
+    document.body.addEventListener('click', (evento) => {
+      if (!evento.target.closest('.nv-combo')) fecharTodosCombos();
+    });
+
+    document.body.addEventListener('focusin', (evento) => {
+      if (evento.target.classList.contains('nv-combo-input')) {
+        fecharTodosCombos();
+        evento.target.closest('.nv-combo').querySelector('.nv-combo-lista').hidden = false;
+      }
     });
 
     document.body.addEventListener('input', (evento) => {
+      if (evento.target.classList.contains('nv-combo-input')) {
+        const combo = evento.target.closest('.nv-combo');
+        const lista = combo.querySelector('.nv-combo-lista');
+        const termo = evento.target.value.trim().toUpperCase();
+        let algumVisivel = false;
+        lista.querySelectorAll('.nv-combo-item').forEach((item) => {
+          const visivel = !termo || item.dataset.valor.toUpperCase().includes(termo);
+          item.hidden = !visivel;
+          if (visivel) algumVisivel = true;
+        });
+        const vazio = lista.querySelector('.nv-combo-vazio');
+        if (vazio) vazio.hidden = algumVisivel;
+        lista.hidden = false;
+        return;
+      }
       if (evento.target.id === 'campo-busca-lancamentos') {
         busca = evento.target.value;
         const foco = evento.target;

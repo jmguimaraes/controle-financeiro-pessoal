@@ -13,6 +13,8 @@ const {
   renderInvestimentos,
   renderAtivoDetalhe,
   renderPin,
+  renderComboSelect,
+  renderComboBusca,
 } = require('./render.js');
 const { estadoInicial } = require('./logic.js');
 const fs = require('node:fs');
@@ -221,6 +223,25 @@ test('renderPin mostra a marca e o campo de PIN, sem mensagem de erro por padrã
 test('renderPin mostra a mensagem de erro quando o PIN foi digitado errado', () => {
   const html = renderPin(true);
   assert.match(html, /PIN incorreto/);
+});
+
+test('renderComboSelect marca o item correspondente ao valor atual como ativo', () => {
+  const html = renderComboSelect('tipo', [{ valor: 'acao', rotulo: 'Ação' }, { valor: 'fii', rotulo: 'Fundo Imobiliário' }], 'fii');
+  assert.match(html, /name="tipo" value="fii"/);
+  assert.match(html, /<span class="nv-combo-valor">Fundo Imobiliário<\/span>/);
+  assert.match(html, /class="nv-combo-item ativo"[^>]*data-valor="fii"/);
+});
+
+test('renderComboSelect mostra mensagem de vazio quando não há opções', () => {
+  const html = renderComboSelect('categoria', [], null);
+  assert.match(html, /Nenhuma opção encontrada/);
+});
+
+test('renderComboBusca lista as sugestões e mantém o valor digitado', () => {
+  const html = renderComboBusca('nome', 'PETR', ['PETR4', 'PETZ3']);
+  assert.match(html, /value="PETR"/);
+  assert.match(html, /data-valor="PETR4"/);
+  assert.match(html, /data-valor="PETZ3"/);
 });
 
 test('renderAbertura mostra a marca e o convite para começar', () => {
