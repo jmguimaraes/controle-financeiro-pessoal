@@ -343,7 +343,7 @@ function renderNovoLancamento(state, dadosIniciais) {
         <div class="nv-cell-label">VALOR TOTAL</div>
         <div class="nv-hero-value">
           <span class="cifrao">R$</span>
-          <input type="number" name="valorTotal" step="0.01" min="0.01" required value="${d.valorTotal ?? ''}" placeholder="0,00" />
+          <input type="text" inputmode="decimal" name="valorTotal" class="nv-campo-moeda" required value="${d.valorTotal ? formatNumero(d.valorTotal) : ''}" placeholder="0,00" />
         </div>
       </div>
       <div class="nv-campo-linha">
@@ -494,7 +494,10 @@ function renderMetas(state, ano, mes) {
           return `
         <div class="nv-meta-item ${status.excedeu ? 'excedida' : ''}" data-id="${m.id}" data-acao="editar-meta" role="button" tabindex="0">
           <div class="nv-meta-topo">
-            <span class="nv-meta-nome">${escapeHtml(m.categoria)}</span>
+            <span>
+              <span class="nv-meta-nome">${escapeHtml(m.nome || m.categoria)}</span>
+              ${m.nome ? `<div class="nv-item-meta">${escapeHtml(m.categoria)}</div>` : ''}
+            </span>
             <span class="nv-meta-valores ${status.excedeu ? 'excedida' : ''}">${mascarar(formatNumero(gasto), ocultar)} / ${mascarar(formatNumero(m.limite), ocultar)}</span>
           </div>
           <div class="nv-meta-track"><div class="nv-meta-fill ${status.excedeu ? 'excedida' : ''}" style="width:${pctBarra}%"></div></div>

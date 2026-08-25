@@ -111,6 +111,22 @@
     }
   }
 
+  // Campos de valor monetário (.nv-campo-moeda) são <input type="text">, não number, porque um
+  // number input nunca exibe vírgula decimal (só ponto, mesmo em pt-BR) — essas duas funções
+  // convertem entre o texto exibido ("1.234,56") e o número usado no resto do app.
+  function numeroDoCampoMoeda(texto) {
+    if (!texto) return 0;
+    const numero = Number(String(texto).trim().replace(/\./g, '').replace(',', '.'));
+    return Number.isFinite(numero) ? numero : 0;
+  }
+
+  function formatarCampoMoeda(elemento) {
+    const bruto = elemento.value.trim();
+    if (!bruto) return;
+    const numero = numeroDoCampoMoeda(bruto);
+    elemento.value = renderizacao.formatNumero(numero);
+  }
+
   function aplicarTema(tema) {
     const raiz = document.documentElement;
     if (tema === 'claro') raiz.dataset.theme = 'light';
@@ -219,7 +235,7 @@
       descricao: dados.get('descricao') || '',
       categoria: dados.get('categoria') || '',
       tipo: dados.get('tipo') || 'despesa',
-      valorTotal: Number(dados.get('valorTotal')) || 0,
+      valorTotal: numeroDoCampoMoeda(dados.get('valorTotal')),
       contaId: dados.get('contaId') || null,
       parcelas: dados.get('parcelado') === 'on' ? Number(dados.get('parcelas')) || 2 : 1,
     };
@@ -230,7 +246,7 @@
     if (!rodape) return;
     const form = document.getElementById('formulario-lancamento');
     if (!form) return;
-    const valorTotal = Number(form.elements.valorTotal.value) || 0;
+    const valorTotal = numeroDoCampoMoeda(form.elements.valorTotal.value);
     const parcelado = form.elements.parcelado.checked;
     const parcelas = parcelado ? Number(document.getElementById('campo-parcelas').value) || 2 : 1;
     const valorParcela = valorTotal / parcelas;
@@ -326,7 +342,7 @@
       form.elements.id.value = item.id;
       form.elements.nome.value = item.nome;
       form.elements.tipo.value = item.tipo;
-      form.elements.precoAtual.value = migrado.precoAtual;
+      form.elements.precoAtual.value = renderizacao.formatNumero(migrado.precoAtual);
     } else {
       form.elements.id.value = '';
     }
@@ -382,7 +398,8 @@
       const item = state.metas.find((m) => m.id === id);
       form.elements.id.value = item.id;
       form.elements.categoria.value = item.categoria;
-      form.elements.limite.value = item.limite;
+      form.elements.nome.value = item.nome || '';
+      form.elements.limite.value = renderizacao.formatNumero(item.limite);
     } else {
       form.elements.id.value = '';
     }
@@ -532,6 +549,20 @@
       }
     });
 
+    // Campos de valor monetário (.nv-campo-moeda): reformata pro padrão "1.234,56" assim que a
+    // pessoa sai do campo (focusout, que ao contrário de blur borbulha até o body) ou aperta
+    // Enter nele — sem precisar digitar a vírgula e os dois zeros na mão.
+    document.body.addEventListener('focusout', (evento) => {
+      if (evento.target.classList && evento.target.classList.contains('nv-campo-moeda')) {
+        formatarCampoMoeda(evento.target);
+      }
+    });
+    document.body.addEventListener('keydown', (evento) => {
+      if (evento.key === 'Enter' && evento.target.classList && evento.target.classList.contains('nv-campo-moeda')) {
+        formatarCampoMoeda(evento.target);
+      }
+    });
+
     document.body.addEventListener('submit', (evento) => {
       // Nota: não usar evento.target.id aqui — cada <form> tem um <input name="id">, e o HTML
       // spec faz esse controle "sombrear" a propriedade .id do próprio elemento <form>.
@@ -554,12 +585,12 @@
           despachar({
             type: 'editInvestimento',
             id,
-            changes: { nome: dados.get('nome'), tipo: dados.get('tipo'), precoAtual: Number(dados.get('precoAtual')) },
+            changes: { nome: dados.get('nome'), tipo: dados.get('tipo'), precoAtual: numeroDoCampoMoeda(dados.get('precoAtual')) },
           });
         } else {
           despachar({
             type: 'addInvestimento',
-            investimento: { id, nome: dados.get('nome'), tipo: dados.get('tipo'), precoAtual: Number(dados.get('precoAtual')), operacoes: [] },
+            investimento: { id, nome: dados.get('nome'), tipo: dados.get('tipo'), precoAtual: numeroDoCampoMoeda(dados.get('precoAtual')), operacoes: [] },
           });
           abrirAtivo(id);
         }
@@ -581,7 +612,7 @@
           tipo: dados.get('tipo'),
           data: dados.get('data'),
           quantidade: Number(dados.get('quantidade')),
-          precoUnitario: Number(dados.get('precoUnitario')),
+          precoUnitario: numeroDoCampoMoeda(dados.get('precoUnitario')),
         };
         try {
           logica.posicaoAtivo([...migrado.operacoes, novaOperacao]);
@@ -619,7 +650,7 @@
           id: uid(),
           tipo: dados.get('tipo'),
           data: dados.get('data'),
-          valor: Number(dados.get('valor')),
+          valor: numeroDoCampoMoeda(dados.get('valor')),
         };
         despachar({
           type: 'editInvestimento',
@@ -648,7 +679,12 @@
       if (evento.target.getAttribute('id') === 'formulario-meta') {
         const dados = new FormData(evento.target);
         const id = dados.get('id') || uid();
-        const meta = { id, categoria: dados.get('categoria'), limite: Number(dados.get('limite')) };
+        const meta = {
+          id,
+          categoria: dados.get('categoria'),
+          nome: dados.get('nome') || '',
+          limite: numeroDoCampoMoeda(dados.get('limite')),
+        };
         const existe = state.metas.some((m) => m.id === id);
         despachar(existe ? { type: 'editMeta', id, changes: meta } : { type: 'addMeta', meta });
         evento.target.reset();

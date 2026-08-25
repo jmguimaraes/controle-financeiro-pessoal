@@ -156,6 +156,22 @@ test('renderMetas mostra o progresso e destaca metas excedidas', () => {
   assert.match(html, /Excedeu/);
 });
 
+test('renderMetas mostra o nome apelidado da meta, com a categoria como legenda', () => {
+  const state = estado({
+    lancamentos: [],
+    metas: [{ id: 'm1', categoria: 'Transporte', nome: 'Carro novo', limite: 500 }],
+  });
+  const html = renderMetas(state, 2026, 8);
+  assert.match(html, /Carro novo/);
+  assert.match(html, /Transporte/);
+});
+
+test('renderMetas usa a categoria como nome quando a meta não tem apelido', () => {
+  const state = estado({ lancamentos: [], metas: [{ id: 'm1', categoria: 'Transporte', limite: 500 }] });
+  const html = renderMetas(state, 2026, 8);
+  assert.match(html, /Transporte/);
+});
+
 test('renderMetas mostra mensagem quando não há metas', () => {
   const html = renderMetas(estado(), 2026, 8);
   assert.match(html, /Nenhuma meta definida/);

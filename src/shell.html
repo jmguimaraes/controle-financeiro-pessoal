@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&display=swap">
 <style>
 :root{
+  color-scheme:light;
   --nv-radius-control:12px;--nv-radius-avatar:16px;--nv-radius-stepper:9px;--nv-radius-badge:8px;--nv-radius-pill:999px;
   --nv-bg:#f3f2f2;--nv-fg:#201e1d;--nv-fg-inverse:#fff;--nv-accent:#ec3013;--nv-on-accent:#fff;
   --nv-positive:#201e1d;--nv-negative:#ec3013;--nv-negative-soft:#ec3013;
@@ -13,6 +14,7 @@
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
+    color-scheme:dark;
     --nv-bg:#201e1d;--nv-fg:#f3f2f2;--nv-fg-inverse:#201e1d;
     --nv-positive:#7fd6a3;--nv-negative:#ff6a4d;--nv-negative-soft:#ff8f78;
     --nv-muted:rgba(243,242,242,.55);--nv-muted-2:rgba(243,242,242,.5);
@@ -22,6 +24,7 @@
   }
 }
 :root[data-theme="dark"]{
+  color-scheme:dark;
   --nv-bg:#201e1d;--nv-fg:#f3f2f2;--nv-fg-inverse:#201e1d;
   --nv-positive:#7fd6a3;--nv-negative:#ff6a4d;--nv-negative-soft:#ff8f78;
   --nv-muted:rgba(243,242,242,.55);--nv-muted-2:rgba(243,242,242,.5);
@@ -58,7 +61,7 @@ button,input,select{font-family:inherit;}
 .nv-hero-value{display:flex;align-items:baseline;gap:6px;margin-top:8px;}
 .nv-hero-value .cifrao{font-size:20px;font-weight:600;color:var(--nv-muted);}
 .nv-hero-value .numero{font-size:52px;font-weight:600;letter-spacing:-.035em;line-height:.9;font-variant-numeric:tabular-nums;}
-.nv-hero-value input{font-family:inherit;background:none;border:none;color:inherit;outline:none;padding:0;width:100%;}
+.nv-hero-value input{font-family:inherit;background:none;border:none;color:inherit;outline:none;padding:0;width:100%;font-size:52px;font-weight:600;letter-spacing:-.035em;font-variant-numeric:tabular-nums;}
 .nv-hero-sub{margin-top:12px;font-size:11px;font-weight:600;color:var(--nv-muted);}
 
 .nv-sparkline{padding:16px 20px 14px;border-bottom:1px solid var(--nv-rule-soft);}
@@ -243,7 +246,7 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
         <option value="outro">Outro</option>
       </select>
     </label>
-    <label>Preço atual por cota<input type="number" name="precoAtual" step="0.01" min="0" required /></label>
+    <label>Preço atual por cota<input type="text" inputmode="decimal" name="precoAtual" class="nv-campo-moeda" required /></label>
     <div class="form-acoes">
       <button type="button" id="botao-excluir-investimento" data-acao="excluir-investimento-atual" hidden style="margin-right:auto;color:var(--nv-negative);border-color:var(--nv-negative)">Excluir</button>
       <button type="button" data-acao="cancelar-form">Cancelar</button>
@@ -264,7 +267,7 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
     </label>
     <label>Data<input type="date" name="data" required /></label>
     <label>Quantidade (use 1 para Renda Fixa/Outro)<input type="number" name="quantidade" step="0.000001" min="0.000001" value="1" required /></label>
-    <label>Preço unitário<input type="number" name="precoUnitario" step="0.01" min="0" required /></label>
+    <label>Preço unitário<input type="text" inputmode="decimal" name="precoUnitario" class="nv-campo-moeda" required /></label>
     <div class="form-acoes">
       <button type="button" data-acao="cancelar-form">Cancelar</button>
       <button type="submit" class="primario">Salvar</button>
@@ -317,7 +320,7 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
       </select>
     </label>
     <label>Data<input type="date" name="data" required /></label>
-    <label>Valor recebido<input type="number" name="valor" step="0.01" min="0" required /></label>
+    <label>Valor recebido<input type="text" inputmode="decimal" name="valor" class="nv-campo-moeda" required /></label>
     <div class="form-acoes">
       <button type="button" data-acao="cancelar-form">Cancelar</button>
       <button type="submit" class="primario">Salvar</button>
@@ -342,7 +345,8 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
         <option>Outras Despesas</option>
       </select>
     </label>
-    <label>Limite mensal<input type="number" name="limite" step="0.01" min="0.01" required /></label>
+    <label>Nome (opcional)<input type="text" name="nome" maxlength="40" placeholder="ex.: Carro novo" /></label>
+    <label>Limite mensal<input type="text" inputmode="decimal" name="limite" class="nv-campo-moeda" required /></label>
     <div class="form-acoes">
       <button type="button" id="botao-excluir-meta" data-acao="excluir-meta-atual" hidden style="margin-right:auto;color:var(--nv-negative);border-color:var(--nv-negative)">Excluir</button>
       <button type="button" data-acao="cancelar-form">Cancelar</button>
