@@ -1,14 +1,36 @@
 (function () {
   const logica = typeof require !== 'undefined' ? require('./logic.js') : window;
   const renderizacao = typeof require !== 'undefined' ? require('./render.js') : window;
-  const { uid, applyAction } = logica;
-  const { renderResumo, renderLancamentos, renderInvestimentos } = renderizacao;
+  const { uid, applyAction, estadoInicial } = logica;
+  const {
+    renderResumo,
+    renderLancamentos,
+    renderNovoLancamento,
+    renderCategoriaDetalhe,
+    renderMetas,
+    renderConfiguracoes,
+    renderAbertura,
+    renderInvestimentos,
+    renderAtivoDetalhe,
+  } = renderizacao;
 
-  let state = { lancamentos: [], investimentos: [] };
+  const CHAVE_ONBOARDING = 'nuvra-onboarding-visto';
+
+  let state = estadoInicial();
   let artifactApi = null;
   let anoAtual;
   let mesAtual;
   let somenteLeitura = false;
+
+  let abaAtual = 'resumo'; // resumo | lancamentos | carteira | metas — última aba principal visitada
+  let telaAtual = 'resumo'; // aba atual + categoria | novo-lancamento | configuracoes | ativo-detalhe
+  let categoriaAberta = null;
+  let ativoAberto = null;
+  let busca = '';
+  let filtroLancamentos = 'todos';
+  let contaSelecionada = null;
+  let rascunhoLancamento = null; // dados em edição na tela de novo lançamento
+  let descricaoSincronizacao = 'Verificando…';
 
   async function iniciar() {
     const hoje = new Date();
@@ -21,22 +43,55 @@
     } catch (erro) {
       artifactApi = null;
     }
-    renderizarTudo();
+    descricaoSincronizacao = artifactApi ? 'Ativa' : 'Indisponível neste dispositivo';
+    aplicarTema(state.tema);
     ligarEventos();
+
+    if (localStorage_get(CHAVE_ONBOARDING)) {
+      mostrarApp();
+    } else {
+      mostrarAbertura();
+    }
+  }
+
+  function localStorage_get(chave) {
+    try {
+      return localStorage.getItem(chave);
+    } catch (erro) {
+      return null;
+    }
+  }
+
+  function localStorage_set(chave, valor) {
+    try {
+      localStorage.setItem(chave, valor);
+    } catch (erro) {
+      // localStorage indisponível — onboarding vai reaparecer, sem problema
+    }
+  }
+
+  function mostrarAbertura() {
+    document.getElementById('tela-abertura').hidden = false;
+    document.getElementById('tela-abertura').innerHTML = renderAbertura();
+    document.getElementById('app-shell').hidden = true;
+  }
+
+  function mostrarApp() {
+    document.getElementById('tela-abertura').hidden = true;
+    document.getElementById('app-shell').hidden = false;
+    renderizarTudo();
   }
 
   async function carregarEstado() {
+    let carregado = null;
     try {
       const resposta = await fetch('data/state.json');
-      if (resposta.ok) {
-        state = await resposta.json();
-        return;
-      }
+      if (resposta.ok) carregado = await resposta.json();
     } catch (erro) {
       // sem dado publicado ainda, ou sem rede — segue com estado vazio/local
     }
-    const salvoLocal = lerBackupLocal();
-    if (salvoLocal) state = salvoLocal;
+    if (!carregado) carregado = lerBackupLocal();
+    if (carregado) state = { ...estadoInicial(), ...carregado };
   }
 
   function lerBackupLocal() {
@@ -56,20 +111,140 @@
     }
   }
 
+  function aplicarTema(tema) {
+    const raiz = document.documentElement;
+    if (tema === 'claro') raiz.dataset.theme = 'light';
+    else if (tema === 'escuro') raiz.dataset.theme = 'dark';
+    else delete raiz.dataset.theme;
+  }
+
   function renderizarTudo() {
     document.getElementById('tela-resumo').innerHTML = renderResumo(state, anoAtual, mesAtual);
-    document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual);
-    document.getElementById('tela-investimentos').innerHTML = renderInvestimentos(state);
+    document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual, {
+      busca,
+      filtro: filtroLancamentos,
+      contaSelecionada,
+    });
+    document.getElementById('tela-carteira').innerHTML = renderInvestimentos(state);
+    document.getElementById('tela-metas').innerHTML = renderMetas(state, anoAtual, mesAtual);
+
+    if (telaAtual === 'categoria' && categoriaAberta) {
+      document.getElementById('tela-categoria').innerHTML = renderCategoriaDetalhe(state, categoriaAberta, anoAtual, mesAtual);
+    }
+    if (telaAtual === 'ativo-detalhe' && ativoAberto) {
+      document.getElementById('tela-ativo-detalhe').innerHTML = renderAtivoDetalhe(state, ativoAberto);
+    }
+    if (telaAtual === 'novo-lancamento') {
+      document.getElementById('tela-novo-lancamento').innerHTML = renderNovoLancamento(state, rascunhoLancamento);
+      atualizarSaldoProjetado();
+    }
+    if (telaAtual === 'configuracoes') {
+      document.getElementById('tela-configuracoes').innerHTML = renderConfiguracoes(state);
+      const statusEl = document.getElementById('status-sincronizacao');
+      if (statusEl) statusEl.textContent = descricaoSincronizacao;
+    }
+
+    const telas = ['resumo', 'lancamentos', 'carteira', 'metas', 'categoria', 'ativo-detalhe', 'novo-lancamento', 'configuracoes'];
+    for (const nome of telas) {
+      document.getElementById(`tela-${nome}`).hidden = nome !== telaAtual;
+    }
     document.body.classList.toggle('somente-leitura', somenteLeitura);
   }
 
-  function mostrarAba(nome) {
-    for (const aba of ['resumo', 'lancamentos', 'investimentos']) {
-      document.getElementById(`tela-${aba}`).hidden = aba !== nome;
+  function irParaAba(nome) {
+    abaAtual = nome;
+    telaAtual = nome;
+    categoriaAberta = null;
+    renderizarTudo();
+  }
+
+  function abrirCategoria(categoria) {
+    categoriaAberta = categoria;
+    telaAtual = 'categoria';
+    renderizarTudo();
+  }
+
+  function fecharCategoria() {
+    categoriaAberta = null;
+    telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  function abrirAtivo(id) {
+    ativoAberto = id;
+    telaAtual = 'ativo-detalhe';
+    renderizarTudo();
+  }
+
+  function fecharAtivo() {
+    ativoAberto = null;
+    telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  function abrirConfiguracoes() {
+    telaAtual = 'configuracoes';
+    renderizarTudo();
+  }
+
+  function fecharConfiguracoes() {
+    telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  function abrirNovoLancamento(id) {
+    if (id) {
+      const item = state.lancamentos.find((l) => l.id === id);
+      rascunhoLancamento = { ...item };
+    } else {
+      rascunhoLancamento = { data: `${anoAtual}-${String(mesAtual).padStart(2, '0')}-01`, tipo: 'despesa', parcelas: 1 };
     }
-    for (const botao of document.querySelectorAll('[data-acao="ir-tab"]')) {
-      botao.classList.toggle('tab-ativo', botao.dataset.tab === nome);
-    }
+    telaAtual = 'novo-lancamento';
+    renderizarTudo();
+  }
+
+  function fecharNovoLancamento() {
+    rascunhoLancamento = null;
+    telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  function coletarRascunhoDoFormulario() {
+    const form = document.getElementById('formulario-lancamento');
+    if (!form) return rascunhoLancamento || {};
+    const dados = new FormData(form);
+    return {
+      id: dados.get('id') || (rascunhoLancamento && rascunhoLancamento.id) || '',
+      data: dados.get('data') || '',
+      descricao: dados.get('descricao') || '',
+      categoria: dados.get('categoria') || '',
+      tipo: dados.get('tipo') || 'despesa',
+      valorTotal: Number(dados.get('valorTotal')) || 0,
+      contaId: dados.get('contaId') || null,
+      parcelas: dados.get('parcelado') === 'on' ? Number(dados.get('parcelas')) || 2 : 1,
+    };
+  }
+
+  function atualizarSaldoProjetado() {
+    const rodape = document.querySelector('#tela-novo-lancamento .nv-rodape-saldo span:last-child');
+    if (!rodape) return;
+    const form = document.getElementById('formulario-lancamento');
+    if (!form) return;
+    const valorTotal = Number(form.elements.valorTotal.value) || 0;
+    const parcelado = form.elements.parcelado.checked;
+    const parcelas = parcelado ? Number(document.getElementById('campo-parcelas').value) || 2 : 1;
+    const valorParcela = valorTotal / parcelas;
+    const tipo = form.elements.tipo.value;
+    const resumoAtual = logica.resumoMensal(state.lancamentos, anoAtual, mesAtual);
+    const projetado = resumoAtual.saldo + (tipo === 'receita' ? valorParcela : -valorParcela);
+    rodape.textContent = renderizacao.formatCurrency(projetado);
+  }
+
+  function mudarMes(delta) {
+    mesAtual += delta;
+    if (mesAtual > 12) { mesAtual = 1; anoAtual += 1; }
+    if (mesAtual < 1) { mesAtual = 12; anoAtual -= 1; }
+    renderizarTudo();
   }
 
   async function despachar(acao) {
@@ -81,11 +256,13 @@
 
   async function salvarNoServidor(acao, tentativa = 1) {
     if (!artifactApi) {
+      descricaoSincronizacao = 'Indisponível neste dispositivo';
       mostrarBanner('Sincronização indisponível nesta visualização — os dados ficam só neste aparelho.');
       return;
     }
     try {
       await artifactApi.publish({ 'data/state.json': JSON.stringify(state) });
+      descricaoSincronizacao = 'Ativa';
       esconderBanner();
     } catch (erro) {
       if (erro.code === 'conflict' && tentativa <= 3) {
@@ -103,6 +280,7 @@
         mostrarBanner('Modo leitura — você não pode editar este artifact.');
         return;
       }
+      descricaoSincronizacao = 'Erro ao sincronizar';
       mostrarBanner('Não foi possível sincronizar agora. Suas alterações estão salvas neste aparelho.', () => salvarNoServidor(acao, 1));
     }
   }
@@ -110,7 +288,7 @@
   async function reidratarDeOutraVersao() {
     try {
       const resposta = await fetch(`data/state.json?t=${Date.now()}`);
-      if (resposta.ok) state = await resposta.json();
+      if (resposta.ok) state = { ...estadoInicial(), ...(await resposta.json()) };
     } catch (erro) {
       // mantém o estado local se não conseguir buscar a versão mais nova
     }
@@ -139,50 +317,59 @@
     document.getElementById('banner-sync').hidden = true;
   }
 
-  function mudarMes(delta) {
-    mesAtual += delta;
-    if (mesAtual > 12) { mesAtual = 1; anoAtual += 1; }
-    if (mesAtual < 1) { mesAtual = 12; anoAtual -= 1; }
-    renderizarTudo();
-  }
-
-  function abrirFormularioLancamento(id) {
-    const form = document.getElementById('formulario-lancamento');
-    form.reset();
-    document.getElementById('campo-parcelas').hidden = true;
-    if (id) {
-      const item = state.lancamentos.find((l) => l.id === id);
-      form.elements.id.value = item.id;
-      form.elements.data.value = item.data;
-      form.elements.descricao.value = item.descricao;
-      form.elements.categoria.value = item.categoria;
-      form.elements.tipo.value = item.tipo;
-      form.elements.valorTotal.value = item.valorTotal;
-      if (item.parcelas > 1) {
-        form.elements.parcelado.checked = true;
-        form.elements.parcelas.value = item.parcelas;
-        document.getElementById('campo-parcelas').hidden = false;
-      }
-    } else {
-      form.elements.id.value = '';
-    }
-    document.getElementById('form-lancamento').showModal();
-  }
-
   function abrirFormularioInvestimento(id) {
     const form = document.getElementById('formulario-investimento');
     form.reset();
     if (id) {
       const item = state.investimentos.find((i) => i.id === id);
+      const migrado = logica.migrarInvestimentoLegado(item);
       form.elements.id.value = item.id;
       form.elements.nome.value = item.nome;
       form.elements.tipo.value = item.tipo;
-      form.elements.valorInvestido.value = item.valorInvestido;
-      form.elements.valorAtual.value = item.valorAtual;
+      form.elements.precoAtual.value = migrado.precoAtual;
     } else {
       form.elements.id.value = '';
     }
+    document.getElementById('botao-excluir-investimento').hidden = !id;
     document.getElementById('form-investimento').showModal();
+  }
+
+  function abrirFormularioOperacao(ativoId) {
+    const form = document.getElementById('formulario-operacao');
+    form.reset();
+    form.elements.ativoId.value = ativoId;
+    form.elements.data.value = `${anoAtual}-${String(mesAtual).padStart(2, '0')}-01`;
+    document.getElementById('form-operacao').showModal();
+  }
+
+  function abrirFormularioConta(id) {
+    const form = document.getElementById('formulario-conta');
+    form.reset();
+    if (id) {
+      const item = state.contas.find((c) => c.id === id);
+      form.elements.id.value = item.id;
+      form.elements.nome.value = item.nome;
+      form.elements.tipo.value = item.tipo;
+      form.elements.fechamento.value = item.fechamento || '';
+    } else {
+      form.elements.id.value = '';
+    }
+    document.getElementById('form-conta').showModal();
+  }
+
+  function abrirFormularioMeta(id) {
+    const form = document.getElementById('formulario-meta');
+    form.reset();
+    if (id) {
+      const item = state.metas.find((m) => m.id === id);
+      form.elements.id.value = item.id;
+      form.elements.categoria.value = item.categoria;
+      form.elements.limite.value = item.limite;
+    } else {
+      form.elements.id.value = '';
+    }
+    document.getElementById('botao-excluir-meta').hidden = !id;
+    document.getElementById('form-meta').showModal();
   }
 
   function ligarEventos() {
@@ -191,62 +378,222 @@
       if (!alvo) return;
       const acao = alvo.dataset.acao;
 
-      if (acao === 'ir-tab') mostrarAba(alvo.dataset.tab);
+      if (acao === 'ir-tab') irParaAba(alvo.dataset.tab);
       if (acao === 'mes-anterior') mudarMes(-1);
       if (acao === 'mes-seguinte') mudarMes(1);
-      if (acao === 'novo-lancamento') abrirFormularioLancamento();
-      if (acao === 'editar-lancamento') abrirFormularioLancamento(alvo.dataset.id);
-      if (acao === 'excluir-lancamento') {
-        if (!confirm('Excluir este lançamento?')) return;
-        despachar({ type: 'deleteLancamento', id: alvo.dataset.id });
+      if (acao === 'abrir-configuracoes') abrirConfiguracoes();
+      if (acao === 'fechar-configuracoes') fecharConfiguracoes();
+      if (acao === 'abrir-categoria') abrirCategoria(alvo.dataset.categoria);
+      if (acao === 'fechar-categoria') fecharCategoria();
+      if (acao === 'abrir-ativo') abrirAtivo(alvo.dataset.id);
+      if (acao === 'fechar-ativo') fecharAtivo();
+      if (acao === 'comecar') {
+        localStorage_set(CHAVE_ONBOARDING, '1');
+        mostrarApp();
       }
+
+      if (acao === 'novo-lancamento') abrirNovoLancamento();
+      if (acao === 'editar-lancamento') abrirNovoLancamento(alvo.dataset.id);
+      if (acao === 'cancelar-lancamento') fecharNovoLancamento();
+      if (acao === 'excluir-lancamento-atual' && rascunhoLancamento && rascunhoLancamento.id) {
+        if (!confirm('Excluir este lançamento?')) return;
+        despachar({ type: 'deleteLancamento', id: rascunhoLancamento.id });
+        fecharNovoLancamento();
+      }
+      if (acao === 'tipo-lancamento') {
+        rascunhoLancamento = { ...coletarRascunhoDoFormulario(), tipo: alvo.dataset.tipo };
+        renderizarTudo();
+      }
+      if (acao === 'parcelas-menos' || acao === 'parcelas-mais') {
+        const campo = document.getElementById('campo-parcelas');
+        const span = document.getElementById('valor-parcelas');
+        let valor = Number(campo.value) || 2;
+        valor = acao === 'parcelas-mais' ? valor + 1 : Math.max(2, valor - 1);
+        campo.value = valor;
+        span.textContent = valor;
+        atualizarSaldoProjetado();
+      }
+
+      if (acao === 'filtrar-lancamentos') {
+        filtroLancamentos = alvo.dataset.filtro;
+        document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual, {
+          busca,
+          filtro: filtroLancamentos,
+          contaSelecionada,
+        });
+      }
+
+      if (acao === 'definir-tema') {
+        despachar({ type: 'setTema', tema: alvo.dataset.tema });
+        aplicarTema(alvo.dataset.tema);
+      }
+
       if (acao === 'novo-investimento') abrirFormularioInvestimento();
       if (acao === 'editar-investimento') abrirFormularioInvestimento(alvo.dataset.id);
-      if (acao === 'excluir-investimento') {
-        if (!confirm('Excluir este investimento?')) return;
-        despachar({ type: 'deleteInvestimento', id: alvo.dataset.id });
+      if (acao === 'excluir-investimento-atual') {
+        const idAtual = document.getElementById('formulario-investimento').elements.id.value;
+        if (!idAtual || !confirm('Excluir este investimento?')) return;
+        despachar({ type: 'deleteInvestimento', id: idAtual });
+        document.getElementById('form-investimento').close();
+        fecharAtivo();
       }
+
+      if (acao === 'nova-operacao') abrirFormularioOperacao(alvo.dataset.id);
+      if (acao === 'excluir-operacao') {
+        if (!ativoAberto || !confirm('Excluir esta operação?')) return;
+        const item = state.investimentos.find((i) => i.id === ativoAberto);
+        const migrado = logica.migrarInvestimentoLegado(item);
+        const operacoes = migrado.operacoes.filter((op) => op.id !== alvo.dataset.id);
+        despachar({ type: 'editInvestimento', id: ativoAberto, changes: { operacoes, precoAtual: migrado.precoAtual } });
+      }
+
+      if (acao === 'nova-conta') abrirFormularioConta();
+      if (acao === 'excluir-conta') {
+        if (!confirm('Remover esta conta? Lançamentos associados não serão apagados.')) return;
+        despachar({ type: 'deleteConta', id: alvo.dataset.id });
+      }
+
+      if (acao === 'nova-meta') abrirFormularioMeta();
+      if (acao === 'editar-meta') abrirFormularioMeta(alvo.dataset.id);
+      if (acao === 'excluir-meta-atual') {
+        const idAtual = document.getElementById('formulario-meta').elements.id.value;
+        if (!idAtual) return;
+        despachar({ type: 'deleteMeta', id: idAtual });
+        document.getElementById('form-meta').close();
+      }
+
       if (acao === 'cancelar-form') alvo.closest('dialog').close();
     });
 
-    document.body.addEventListener('change', (evento) => {
-      if (evento.target.name === 'parcelado') {
-        document.getElementById('campo-parcelas').hidden = !evento.target.checked;
+    document.body.addEventListener('input', (evento) => {
+      if (evento.target.id === 'campo-busca-lancamentos') {
+        busca = evento.target.value;
+        const foco = evento.target;
+        const posicaoCursor = foco.selectionStart;
+        document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual, {
+          busca,
+          filtro: filtroLancamentos,
+          contaSelecionada,
+        });
+        const novoFoco = document.getElementById('campo-busca-lancamentos');
+        if (novoFoco) {
+          novoFoco.focus();
+          novoFoco.setSelectionRange(posicaoCursor, posicaoCursor);
+        }
+      }
+      if (['valorTotal', 'parcelado'].includes(evento.target.name) && evento.target.closest('#formulario-lancamento')) {
+        atualizarSaldoProjetado();
       }
     });
 
-    document.getElementById('formulario-lancamento').addEventListener('submit', (evento) => {
-      const dados = new FormData(evento.target);
-      const id = dados.get('id') || uid();
-      const parcelado = dados.get('parcelado') === 'on';
-      const lancamento = {
-        id,
-        data: dados.get('data'),
-        descricao: dados.get('descricao'),
-        categoria: dados.get('categoria'),
-        tipo: dados.get('tipo'),
-        valorTotal: Number(dados.get('valorTotal')),
-        parcelas: parcelado ? Number(dados.get('parcelas')) : 1,
-      };
-      const existe = state.lancamentos.some((l) => l.id === id);
-      despachar(existe ? { type: 'editLancamento', id, changes: lancamento } : { type: 'addLancamento', lancamento });
-      evento.target.reset();
+    document.body.addEventListener('change', (evento) => {
+      if (evento.target.id === 'campo-conta-filtro') {
+        contaSelecionada = evento.target.value || null;
+        document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual, {
+          busca,
+          filtro: filtroLancamentos,
+          contaSelecionada,
+        });
+      }
+      if (evento.target.name === 'parcelado' && evento.target.closest('#formulario-lancamento')) {
+        document.getElementById('campo-parcelas-linha').classList.toggle('desabilitado', !evento.target.checked);
+        atualizarSaldoProjetado();
+      }
+      if (evento.target.id === 'campo-ocultar-valores') {
+        despachar({ type: 'setOcultarValores', valor: evento.target.checked });
+      }
     });
 
-    document.getElementById('formulario-investimento').addEventListener('submit', (evento) => {
-      const dados = new FormData(evento.target);
-      const id = dados.get('id') || uid();
-      const investimento = {
-        id,
-        nome: dados.get('nome'),
-        tipo: dados.get('tipo'),
-        valorInvestido: Number(dados.get('valorInvestido')),
-        valorAtual: Number(dados.get('valorAtual')),
-        atualizadoEm: new Date().toISOString().slice(0, 10),
-      };
-      const existe = state.investimentos.some((i) => i.id === id);
-      despachar(existe ? { type: 'editInvestimento', id, changes: investimento } : { type: 'addInvestimento', investimento });
-      evento.target.reset();
+    document.body.addEventListener('submit', (evento) => {
+      // Nota: não usar evento.target.id aqui — cada <form> tem um <input name="id">, e o HTML
+      // spec faz esse controle "sombrear" a propriedade .id do próprio elemento <form>.
+      if (evento.target.getAttribute('id') === 'formulario-lancamento') {
+        evento.preventDefault();
+        const dados = coletarRascunhoDoFormulario();
+        const id = dados.id || uid();
+        const lancamento = { ...dados, id };
+        const existe = state.lancamentos.some((l) => l.id === id);
+        despachar(existe ? { type: 'editLancamento', id, changes: lancamento } : { type: 'addLancamento', lancamento });
+        fecharNovoLancamento();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-investimento') {
+        const dados = new FormData(evento.target);
+        const id = dados.get('id') || uid();
+        const existe = state.investimentos.some((i) => i.id === id);
+        if (existe) {
+          despachar({
+            type: 'editInvestimento',
+            id,
+            changes: { nome: dados.get('nome'), tipo: dados.get('tipo'), precoAtual: Number(dados.get('precoAtual')) },
+          });
+        } else {
+          despachar({
+            type: 'addInvestimento',
+            investimento: { id, nome: dados.get('nome'), tipo: dados.get('tipo'), precoAtual: Number(dados.get('precoAtual')), operacoes: [] },
+          });
+          abrirAtivo(id);
+        }
+        evento.target.reset();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-operacao') {
+        // preventDefault: essa validação pode falhar (venda maior que a posição) — nesse caso o
+        // dialog precisa continuar aberto pro usuário corrigir, então o fechamento automático do
+        // <form method="dialog"> só deve acontecer depois que a validação passar (fechamos manualmente).
+        evento.preventDefault();
+        const dados = new FormData(evento.target);
+        const ativoId = dados.get('ativoId');
+        const item = state.investimentos.find((i) => i.id === ativoId);
+        const migrado = logica.migrarInvestimentoLegado(item);
+        const novaOperacao = {
+          id: uid(),
+          tipo: dados.get('tipo'),
+          data: dados.get('data'),
+          quantidade: Number(dados.get('quantidade')),
+          precoUnitario: Number(dados.get('precoUnitario')),
+        };
+        try {
+          logica.posicaoAtivo([...migrado.operacoes, novaOperacao]);
+        } catch (erro) {
+          alert(erro.message);
+          return;
+        }
+        despachar({
+          type: 'editInvestimento',
+          id: ativoId,
+          changes: { operacoes: [...migrado.operacoes, novaOperacao], precoAtual: migrado.precoAtual },
+        });
+        evento.target.reset();
+        document.getElementById('form-operacao').close();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-conta') {
+        const dados = new FormData(evento.target);
+        const id = dados.get('id') || uid();
+        const conta = {
+          id,
+          nome: dados.get('nome'),
+          tipo: dados.get('tipo'),
+          fechamento: dados.get('fechamento') ? Number(dados.get('fechamento')) : null,
+        };
+        const existe = state.contas.some((c) => c.id === id);
+        despachar(existe ? { type: 'editConta', id, changes: conta } : { type: 'addConta', conta });
+        evento.target.reset();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-meta') {
+        const dados = new FormData(evento.target);
+        const id = dados.get('id') || uid();
+        const meta = { id, categoria: dados.get('categoria'), limite: Number(dados.get('limite')) };
+        const existe = state.metas.some((m) => m.id === id);
+        despachar(existe ? { type: 'editMeta', id, changes: meta } : { type: 'addMeta', meta });
+        evento.target.reset();
+      }
     });
   }
 
