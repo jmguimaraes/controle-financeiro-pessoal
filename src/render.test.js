@@ -55,6 +55,41 @@ test('renderResumo mostra o wordmark da marca e o saldo do mês', () => {
   assert.match(html, /Moradia/); // barra de gastos por categoria
 });
 
+test('renderResumo traduz os rótulos e o número quando o idioma é inglês', () => {
+  const state = estado({
+    idioma: 'en',
+    lancamentos: [
+      { id: '1', data: '2026-08-05', tipo: 'receita', categoria: 'Salário', descricao: 'Salário', valorTotal: 4500, parcelas: 1 },
+    ],
+  });
+  const html = renderResumo(state, 2026, 8);
+  assert.match(html, /MONTH BALANCE/);
+  assert.match(html, /INCOME/);
+  assert.match(html, /EXPENSES/);
+  assert.match(html, /PORTFOLIO/);
+  assert.match(html, /EXPENSES BY CATEGORY/);
+  assert.match(html, /SEE ALL/);
+  assert.match(html, /OPEN INSTALLMENTS/);
+  assert.match(html, /No open installments this month\./);
+  assert.match(html, /AUG 2026/); // mês abreviado em inglês no cabeçalho
+  assert.match(html, /4,500\.00/); // separador de milhar/decimal em inglês
+  assert.doesNotMatch(html, /SALDO DO MÊS/);
+});
+
+test('renderResumo traduz pro espanhol', () => {
+  const html = renderResumo(estado({ idioma: 'es' }), 2026, 8);
+  assert.match(html, /SALDO DEL MES/);
+  assert.match(html, /GASTOS/);
+  assert.match(html, /CARTERA/);
+});
+
+test('tabBar (via renderResumo) traduz os rótulos das abas', () => {
+  const html = renderResumo(estado({ idioma: 'en' }), 2026, 8);
+  assert.match(html, />SUMMARY</);
+  assert.match(html, />ENTRIES</);
+  assert.match(html, />GOALS</);
+});
+
 test('renderResumo lista parcelas em aberto do mês', () => {
   const state = estado({
     lancamentos: [
@@ -210,6 +245,26 @@ test('renderConfiguracoes mostra um ícone em cada opção de tema (claro/escuro
   for (const botao of botoes) {
     assert.match(botao, /<svg/);
   }
+});
+
+test('renderConfiguracoes mostra o seletor de idioma com os três idiomas, marcando o ativo', () => {
+  const html = renderConfiguracoes(estado({ idioma: 'es' }));
+  assert.match(html, /data-acao="definir-idioma" data-idioma="pt"/);
+  assert.match(html, /data-acao="definir-idioma" data-idioma="en"/);
+  assert.match(html, /data-acao="definir-idioma" data-idioma="es"\s+class="ativo"/);
+  assert.match(html, /PORTUGUÊS/);
+  assert.match(html, /ENGLISH/);
+  assert.match(html, /ESPAÑOL/);
+});
+
+test('renderConfiguracoes traduz os textos da tela quando o idioma é inglês', () => {
+  const html = renderConfiguracoes(estado({ idioma: 'en' }), true);
+  assert.match(html, />Settings</);
+  assert.match(html, /APPEARANCE/);
+  assert.match(html, /ACCOUNTS & CARDS/);
+  assert.match(html, /Access PIN/);
+  assert.match(html, /Enabled/);
+  assert.match(html, /CHANGE/);
 });
 
 test('renderConfiguracoes mostra o PIN como desativado por padrão, com botão pra definir', () => {

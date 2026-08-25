@@ -741,6 +741,9 @@
         despachar({ type: 'setTema', tema: alvo.dataset.tema });
         aplicarTema(alvo.dataset.tema);
       }
+      if (acao === 'definir-idioma') {
+        despachar({ type: 'setIdioma', idioma: alvo.dataset.idioma });
+      }
 
       if (acao === 'novo-investimento') abrirFormularioInvestimento();
       if (acao === 'editar-investimento') abrirFormularioInvestimento(alvo.dataset.id);

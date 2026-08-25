@@ -198,7 +198,7 @@ test('statusMeta indica excedente quando o gasto passa do limite', () => {
   assert.deepEqual(statusMeta(100, 0), { percentual: 0, excedeu: false, excedente: 0 });
 });
 
-test('estadoInicial começa com listas vazias, tema escuro, valores visíveis e sem alocação-alvo', () => {
+test('estadoInicial começa com listas vazias, tema escuro, valores visíveis, sem alocação-alvo e idioma português', () => {
   const estado = estadoInicial();
   assert.deepEqual(estado.lancamentos, []);
   assert.deepEqual(estado.investimentos, []);
@@ -207,6 +207,13 @@ test('estadoInicial começa com listas vazias, tema escuro, valores visíveis e 
   assert.equal(estado.tema, 'escuro');
   assert.equal(estado.ocultarValores, false);
   assert.equal(estado.alocacaoAlvo, null);
+  assert.equal(estado.idioma, 'pt');
+});
+
+test('applyAction setIdioma altera o idioma persistido', () => {
+  let estado = estadoInicial();
+  estado = applyAction(estado, { type: 'setIdioma', idioma: 'en' });
+  assert.equal(estado.idioma, 'en');
 });
 
 test('applyAction setAlocacaoAlvo grava as metas de % por tipo de ativo', () => {

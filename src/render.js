@@ -1,4 +1,5 @@
 const L = typeof require !== 'undefined' ? require('./logic.js') : window;
+const I18N = typeof require !== 'undefined' ? require('./i18n.js') : window;
 
 const MESES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -42,16 +43,20 @@ const ROTULOS_TIPO_CONTA = {
 
 const OCULTO = '••••';
 
-function formatCurrency(valor) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+// idioma é opcional (default português) — o valor em si nunca deixa de ser real brasileiro
+// (não tem conversão de moeda aqui), só o separador de milhar/decimal e a posição do "R$" mudam
+// pra convenção de cada idioma. currencyDisplay:'narrowSymbol' garante "R$" nos três idiomas —
+// sem isso o ICU mostra "BRL" por extenso em espanhol em vez do símbolo.
+function formatCurrency(valor, idioma) {
+  return new Intl.NumberFormat(I18N.localeDoIdioma(idioma), { style: 'currency', currency: 'BRL', currencyDisplay: 'narrowSymbol' }).format(valor);
 }
 
-function formatNumero(valor) {
-  return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valor);
+function formatNumero(valor, idioma) {
+  return new Intl.NumberFormat(I18N.localeDoIdioma(idioma), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valor);
 }
 
-function formatPercent(valor) {
-  const formatado = formatNumero(valor);
+function formatPercent(valor, idioma) {
+  const formatado = formatNumero(valor, idioma);
   return `${valor >= 0 ? '+' : ''}${formatado}%`;
 }
 
@@ -156,12 +161,12 @@ function iconGear(size = 18) {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
 }
 
-function tabBar(abaAtiva) {
+function tabBar(abaAtiva, idioma) {
   const itens = [
-    { id: 'resumo', rotulo: 'RESUMO' },
-    { id: 'lancamentos', rotulo: 'LANÇAM.' },
-    { id: 'carteira', rotulo: 'CARTEIRA' },
-    { id: 'metas', rotulo: 'METAS' },
+    { id: 'resumo', rotulo: I18N.t('tabs.resumo', idioma) },
+    { id: 'lancamentos', rotulo: I18N.t('tabs.lancamentos', idioma) },
+    { id: 'carteira', rotulo: I18N.t('tabs.carteira', idioma) },
+    { id: 'metas', rotulo: I18N.t('tabs.metas', idioma) },
   ];
   return `
     <nav class="nv-tabbar">
@@ -174,7 +179,8 @@ function tabBar(abaAtiva) {
     </nav>`;
 }
 
-function headerResumo(ano, mes) {
+function headerResumo(ano, mes, idioma) {
+  const meses = I18N.mesesDoIdioma(idioma);
   return `
     <div class="nv-header nv-header--brand">
       <div class="nv-brand">
@@ -182,11 +188,11 @@ function headerResumo(ano, mes) {
         <span class="nv-wordmark">NUVRA</span>
       </div>
       <div class="nv-monthnav">
-        <button type="button" data-acao="mes-anterior" aria-label="Mês anterior">${'‹'}</button>
-        <span>${MESES[mes - 1].slice(0, 3).toUpperCase()} ${ano}</span>
-        <button type="button" data-acao="mes-seguinte" aria-label="Próximo mês">${'›'}</button>
-        <button type="button" class="nv-gear" data-acao="abrir-calculadoras" aria-label="Calculadoras">${iconCalculator(19)}</button>
-        <button type="button" class="nv-gear" data-acao="abrir-configuracoes" aria-label="Configurações">${iconGear(19)}</button>
+        <button type="button" data-acao="mes-anterior" aria-label="${I18N.t('header.mesAnterior', idioma)}">${'‹'}</button>
+        <span>${meses[mes - 1].slice(0, 3).toUpperCase()} ${ano}</span>
+        <button type="button" data-acao="mes-seguinte" aria-label="${I18N.t('header.mesSeguinte', idioma)}">${'›'}</button>
+        <button type="button" class="nv-gear" data-acao="abrir-calculadoras" aria-label="${I18N.t('header.calculadoras', idioma)}">${iconCalculator(19)}</button>
+        <button type="button" class="nv-gear" data-acao="abrir-configuracoes" aria-label="${I18N.t('header.configuracoes', idioma)}">${iconGear(19)}</button>
       </div>
     </div>`;
 }
@@ -239,6 +245,7 @@ function sparkline(pontos) {
 }
 
 function renderResumo(state, ano, mes) {
+  const idioma = state.idioma;
   const investimentos = state.investimentos || [];
   const ocultar = !!state.ocultarValores;
   const resumo = L.resumoMensal(state.lancamentos, ano, mes);
@@ -249,18 +256,19 @@ function renderResumo(state, ano, mes) {
   const variacao = anterior ? resumo.saldo - anterior.saldo : 0;
   const categorias = L.gastosPorCategoria(state.lancamentos, ano, mes).slice(0, 3);
   const maiorCategoria = categorias.length ? categorias[0].valor : 0;
+  const meses = I18N.mesesDoIdioma(idioma);
 
   const barrasCategoria = categorias.length
     ? categorias
         .map(
           (c, i) => `
         <button type="button" class="nv-bar-row" data-acao="abrir-categoria" data-categoria="${escapeHtml(c.categoria)}">
-          <div class="nv-bar-top"><span>${escapeHtml(c.categoria)}</span><span>${mascarar(formatNumero(c.valor), ocultar)}</span></div>
+          <div class="nv-bar-top"><span>${escapeHtml(c.categoria)}</span><span>${mascarar(formatNumero(c.valor, idioma), ocultar)}</span></div>
           <div class="nv-bar-track"><div class="nv-bar-fill" style="width:${maiorCategoria ? (c.valor / maiorCategoria) * 100 : 0}%;background:${i === 0 ? 'var(--nv-accent)' : 'var(--nv-bar-neutral-strong)'}"></div></div>
         </button>`
         )
         .join('')
-    : '<p class="nv-vazio">Nenhuma despesa neste mês ainda.</p>';
+    : `<p class="nv-vazio">${I18N.t('resumo.semDespesas', idioma)}</p>`;
 
   const listaParcelas = abertas.length
     ? abertas
@@ -268,47 +276,47 @@ function renderResumo(state, ano, mes) {
           (p) => `
         <div class="nv-row-plain">
           <span>${escapeHtml(p.descricao)} <small>${p.numeroParcela}/${p.parcelas}</small></span>
-          <span>${mascarar(formatNumero(p.valorParcela), ocultar)}</span>
+          <span>${mascarar(formatNumero(p.valorParcela, idioma), ocultar)}</span>
         </div>`
         )
         .join('')
-    : '<p class="nv-vazio">Nenhuma parcela em aberto neste mês.</p>';
+    : `<p class="nv-vazio">${I18N.t('resumo.semParcelas', idioma)}</p>`;
 
   return `
-    ${headerResumo(ano, mes)}
+    ${headerResumo(ano, mes, idioma)}
     <div class="nv-hero">
-      <div class="nv-hero-label">SALDO DO MÊS</div>
+      <div class="nv-hero-label">${I18N.t('resumo.saldoDoMes', idioma)}</div>
       <div class="nv-hero-value">
         <span class="cifrao">R$</span>
-        <span class="numero">${mascarar(formatNumero(resumo.saldo), ocultar)}</span>
+        <span class="numero">${mascarar(formatNumero(resumo.saldo, idioma), ocultar)}</span>
       </div>
-      <div class="nv-hero-sub">${variacao >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(variacao)), ocultar)} em relação a ${MESES[(mes - 2 + 12) % 12].toLowerCase()}</div>
+      <div class="nv-hero-sub">${variacao >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(variacao), idioma), ocultar)} ${I18N.t('resumo.emRelacaoA', idioma)} ${meses[(mes - 2 + 12) % 12].toLowerCase()}</div>
     </div>
     ${sparkline(historico)}
     <div class="nv-cells">
       <div class="nv-cell">
-        <div class="nv-cell-label">RECEITAS</div>
-        <div class="nv-cell-valor">${mascarar(formatNumero(resumo.receitas), ocultar)}</div>
+        <div class="nv-cell-label">${I18N.t('resumo.receitas', idioma)}</div>
+        <div class="nv-cell-valor">${mascarar(formatNumero(resumo.receitas, idioma), ocultar)}</div>
       </div>
       <div class="nv-cell">
-        <div class="nv-cell-label">DESPESAS</div>
-        <div class="nv-cell-valor" style="color:var(--nv-negative)">${mascarar(formatNumero(resumo.despesas), ocultar)}</div>
+        <div class="nv-cell-label">${I18N.t('resumo.despesas', idioma)}</div>
+        <div class="nv-cell-valor" style="color:var(--nv-negative)">${mascarar(formatNumero(resumo.despesas, idioma), ocultar)}</div>
       </div>
       <div class="nv-cell">
-        <div class="nv-cell-label">CARTEIRA</div>
-        <div class="nv-cell-valor">${mascarar(formatNumero(carteira.totalAtual), ocultar)}</div>
+        <div class="nv-cell-label">${I18N.t('resumo.carteira', idioma)}</div>
+        <div class="nv-cell-valor">${mascarar(formatNumero(carteira.totalAtual, idioma), ocultar)}</div>
       </div>
     </div>
     <div class="nv-section-head">
-      <span class="nv-section-label">GASTOS POR CATEGORIA</span>
-      <button type="button" class="nv-link-accent" data-acao="ir-tab" data-tab="lancamentos">VER TUDO</button>
+      <span class="nv-section-label">${I18N.t('resumo.gastosPorCategoria', idioma)}</span>
+      <button type="button" class="nv-link-accent" data-acao="ir-tab" data-tab="lancamentos">${I18N.t('resumo.verTudo', idioma)}</button>
     </div>
     <div class="nv-bars">${barrasCategoria}</div>
     <div class="nv-section-head">
-      <span class="nv-section-label">PARCELAS EM ABERTO</span>
+      <span class="nv-section-label">${I18N.t('resumo.parcelasEmAberto', idioma)}</span>
     </div>
     <div class="nv-list-plain">${listaParcelas}</div>
-    ${tabBar('resumo')}
+    ${tabBar('resumo', idioma)}
   `;
 }
 
@@ -406,7 +414,7 @@ function renderLancamentos(state, ano, mes, opcoes = {}) {
         <span>NOVO LANÇAMENTO</span><span class="mais">+</span>
       </button>
     </div>
-    ${tabBar('lancamentos')}
+    ${tabBar('lancamentos', state.idioma)}
     ${contaAtual ? '' : ''}
   `;
 }
@@ -565,7 +573,7 @@ function renderCategoriaDetalhe(state, categoria, ano, mes) {
     }
     <div class="nv-section-head"><span class="nv-section-label">LANÇAMENTOS</span></div>
     <div>${listaItens}</div>
-    ${tabBar('resumo')}
+    ${tabBar('resumo', state.idioma)}
   `;
 }
 
@@ -621,7 +629,7 @@ function renderMetas(state, ano, mes) {
         <span>DEFINIR NOVA META</span><span class="mais">+</span>
       </button>
     </div>
-    ${tabBar('metas')}
+    ${tabBar('metas', state.idioma)}
   `;
 }
 
@@ -814,7 +822,19 @@ function renderCalculadoras(modo = 'compostos', modoMilhao = 'tempo') {
     <div id="corpo-calculadora">${corpo}</div>`;
 }
 
+// Nome de cada idioma escrito nele mesmo (não traduzido) — é assim que seletor de idioma
+// normalmente funciona (a pessoa reconhece o nome do próprio idioma mesmo sem saber ler os outros).
+const NOME_PROPRIO_IDIOMA = { pt: 'PORTUGUÊS', en: 'ENGLISH', es: 'ESPAÑOL' };
+
+const CHAVE_I18N_TIPO_CONTA = { cartao: 'conta.tipoCartao', conta: 'conta.tipoContaCorrente', carteira: 'conta.tipoCarteira' };
+
+function rotuloTipoConta(tipo, idioma) {
+  const chave = CHAVE_I18N_TIPO_CONTA[tipo];
+  return chave ? I18N.t(chave, idioma) : tipo;
+}
+
 function renderConfiguracoes(state, temPin) {
+  const idioma = state.idioma;
   const contas = state.contas || [];
   const tema = state.tema || 'escuro';
   const ocultar = !!state.ocultarValores;
@@ -828,7 +848,7 @@ function renderConfiguracoes(state, temPin) {
         <span class="nv-item-nome">${escapeHtml(c.nome)}</span>
       </span>
       <span style="display:flex;align-items:center;gap:10px">
-        <span class="nv-item-meta">${escapeHtml(ROTULOS_TIPO_CONTA[c.tipo] || c.tipo)}${c.fechamento ? ` · fecha dia ${c.fechamento}` : ''}</span>
+        <span class="nv-item-meta">${escapeHtml(rotuloTipoConta(c.tipo, idioma))}${c.fechamento ? ` · ${I18N.t('config.fechaDia', idioma)} ${c.fechamento}` : ''}</span>
         <button type="button" class="nv-link-muted" data-acao="excluir-conta" data-id="${c.id}" aria-label="Remover conta">✕</button>
       </span>
     </div>`
@@ -836,44 +856,55 @@ function renderConfiguracoes(state, temPin) {
     .join('');
 
   return `
-    ${headerVoltar('Configurações', 'fechar-configuracoes')}
+    ${headerVoltar(I18N.t('config.titulo', idioma), 'fechar-configuracoes')}
     <div class="nv-perfil">
       <div class="nv-avatar">${iconSymbol(24, 'var(--nv-fg-inverse)', 'var(--nv-accent)')}</div>
       <div>
-        <div class="nv-perfil-nome">Minha conta</div>
-        <div class="nv-perfil-sub">dados sincronizados neste Artifact</div>
+        <div class="nv-perfil-nome">${I18N.t('config.minhaConta', idioma)}</div>
+        <div class="nv-perfil-sub">${I18N.t('config.dadosSincronizados', idioma)}</div>
       </div>
     </div>
-    <div class="nv-section-head" style="padding-bottom:0"><span class="nv-section-label">APARÊNCIA</span></div>
+    <div class="nv-section-head" style="padding-bottom:0"><span class="nv-section-label">${I18N.t('config.aparencia', idioma)}</span></div>
     <div style="padding:8px 20px 16px">
       <div class="nv-segmentado-tema">
-        <button type="button" data-acao="definir-tema" data-tema="claro" class="${tema === 'claro' ? 'ativo' : ''}">${iconSol(16)}<span>CLARO</span></button>
-        <button type="button" data-acao="definir-tema" data-tema="escuro" class="${tema === 'escuro' ? 'ativo' : ''}">${iconLua(16)}<span>ESCURO</span></button>
-        <button type="button" data-acao="definir-tema" data-tema="sistema" class="${tema === 'sistema' ? 'ativo' : ''}">${iconMonitor(16)}<span>SISTEMA</span></button>
+        <button type="button" data-acao="definir-tema" data-tema="claro" class="${tema === 'claro' ? 'ativo' : ''}">${iconSol(16)}<span>${I18N.t('config.claro', idioma)}</span></button>
+        <button type="button" data-acao="definir-tema" data-tema="escuro" class="${tema === 'escuro' ? 'ativo' : ''}">${iconLua(16)}<span>${I18N.t('config.escuro', idioma)}</span></button>
+        <button type="button" data-acao="definir-tema" data-tema="sistema" class="${tema === 'sistema' ? 'ativo' : ''}">${iconMonitor(16)}<span>${I18N.t('config.sistema', idioma)}</span></button>
       </div>
     </div>
-    <div class="nv-section-head" style="padding-top:8px;padding-bottom:8px;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">CONTAS E CARTÕES</span></div>
+    <div class="nv-section-head" style="padding-top:8px;padding-bottom:0;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">${I18N.t('config.idioma', idioma)}</span></div>
+    <div style="padding:8px 20px 16px">
+      <div class="nv-segmentado-tema">
+        ${I18N.listaIdiomas()
+          .map(
+            (cod) =>
+              `<button type="button" data-acao="definir-idioma" data-idioma="${cod}" class="${(idioma || 'pt') === cod ? 'ativo' : ''}"><span>${NOME_PROPRIO_IDIOMA[cod]}</span></button>`
+          )
+          .join('')}
+      </div>
+    </div>
+    <div class="nv-section-head" style="padding-top:8px;padding-bottom:8px;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">${I18N.t('config.contasCartoes', idioma)}</span></div>
     <div>${linhasContas}</div>
     <div class="nv-conta-linha" style="border-bottom:2px solid var(--nv-rule-strong)">
-      <button type="button" class="nv-link-accent" data-acao="nova-conta" style="font-size:12px">ADICIONAR CONTA</button>
+      <button type="button" class="nv-link-accent" data-acao="nova-conta" style="font-size:12px">${I18N.t('config.adicionarConta', idioma)}</button>
       <span class="mais" style="color:var(--nv-accent)">+</span>
     </div>
-    <div class="nv-section-head" style="padding-bottom:8px"><span class="nv-section-label">DADOS</span></div>
-    <div class="nv-dado-linha"><span>Sincronização</span><span class="nv-item-meta" id="status-sincronizacao">verificando…</span></div>
+    <div class="nv-section-head" style="padding-bottom:8px"><span class="nv-section-label">${I18N.t('config.dados', idioma)}</span></div>
+    <div class="nv-dado-linha"><span>${I18N.t('config.sincronizacao', idioma)}</span><span class="nv-item-meta" id="status-sincronizacao">verificando…</span></div>
     <div class="nv-dado-linha">
-      <span>Ocultar valores</span>
+      <span>${I18N.t('config.ocultarValores', idioma)}</span>
       <label class="nv-switch-wrap">
         <input type="checkbox" id="campo-ocultar-valores" ${ocultar ? 'checked' : ''} />
         <span class="nv-switch"><span class="knob"></span></span>
       </label>
     </div>
-    <div class="nv-section-head" style="padding-top:8px;padding-bottom:8px;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">SEGURANÇA</span></div>
+    <div class="nv-section-head" style="padding-top:8px;padding-bottom:8px;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">${I18N.t('config.seguranca', idioma)}</span></div>
     <div class="nv-dado-linha">
-      <span>PIN de acesso</span>
+      <span>${I18N.t('config.pinAcesso', idioma)}</span>
       <span style="display:flex;gap:14px;align-items:center">
-        <span class="nv-item-meta">${temPin ? 'Ativado' : 'Desativado'}</span>
-        <button type="button" class="nv-link-accent" data-acao="definir-pin" style="font-size:11px">${temPin ? 'ALTERAR' : 'DEFINIR'}</button>
-        ${temPin ? '<button type="button" class="nv-link-muted" data-acao="remover-pin" style="font-size:11px;color:var(--nv-negative)">REMOVER</button>' : ''}
+        <span class="nv-item-meta">${temPin ? I18N.t('config.ativado', idioma) : I18N.t('config.desativado', idioma)}</span>
+        <button type="button" class="nv-link-accent" data-acao="definir-pin" style="font-size:11px">${temPin ? I18N.t('config.alterar', idioma) : I18N.t('config.definir', idioma)}</button>
+        ${temPin ? `<button type="button" class="nv-link-muted" data-acao="remover-pin" style="font-size:11px;color:var(--nv-negative)">${I18N.t('config.remover', idioma)}</button>` : ''}
       </span>
     </div>
     <div class="nv-rodape-versao">NUVRA 1.0.0</div>
@@ -1039,7 +1070,7 @@ function renderInvestimentos(state) {
     <p class="nv-item-meta" style="padding:0 20px 16px">Estimativa de apoio à decisão — não substitui o cálculo de um contador pra fins de DARF.</p>`
         : ''
     }
-    ${tabBar('carteira')}
+    ${tabBar('carteira', state.idioma)}
   `;
 }
 
@@ -1157,7 +1188,7 @@ function renderAtivoDetalhe(state, ativoId) {
       <button type="button" class="nv-link-accent" data-acao="novo-provento" data-id="${investimento.id}">+ NOVO PROVENTO</button>
     </div>
     <div>${listaProventos}</div>
-    ${tabBar('carteira')}
+    ${tabBar('carteira', state.idioma)}
   `;
 }
 

@@ -460,6 +460,7 @@ function estadoInicial() {
     tema: 'escuro',
     ocultarValores: false,
     alocacaoAlvo: null,
+    idioma: 'pt',
   };
 }
 
@@ -471,7 +472,8 @@ function applyAction(state, action) {
   const tema = state.tema || 'escuro';
   const ocultarValores = state.ocultarValores || false;
   const alocacaoAlvo = state.alocacaoAlvo || null;
-  const base = { lancamentos, investimentos, contas, metas, tema, ocultarValores, alocacaoAlvo };
+  const idioma = state.idioma || 'pt';
+  const base = { lancamentos, investimentos, contas, metas, tema, ocultarValores, alocacaoAlvo, idioma };
 
   switch (action.type) {
     case 'addLancamento':
@@ -510,6 +512,8 @@ function applyAction(state, action) {
       return { ...base, ocultarValores: !!action.valor };
     case 'setAlocacaoAlvo':
       return { ...base, alocacaoAlvo: action.alocacaoAlvo };
+    case 'setIdioma':
+      return { ...base, idioma: action.idioma };
     default:
       throw new Error(`Ação desconhecida: ${action.type}`);
   }
