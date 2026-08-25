@@ -260,9 +260,9 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   <form method="dialog" id="formulario-investimento">
     <h3>Investimento</h3>
     <input type="hidden" name="id" />
-    <label>Tipo</label>
+    <label for="campo-tipo-investimento">Tipo</label>
     <div id="combo-tipo-investimento"></div>
-    <label>Nome do ativo</label>
+    <label for="campo-nome-ativo">Nome do ativo</label>
     <div id="combo-nome-ativo"></div>
     <label>Preço atual por cota<input type="text" inputmode="decimal" name="precoAtual" class="nv-campo-moeda" required /></label>
     <div class="form-acoes">
@@ -277,7 +277,7 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   <form method="dialog" id="formulario-operacao">
     <h3>Nova operação</h3>
     <input type="hidden" name="ativoId" />
-    <label>Tipo</label>
+    <label for="campo-tipo-operacao">Tipo</label>
     <div id="combo-tipo-operacao"></div>
     <label>Data<input type="date" name="data" required /></label>
     <label>Quantidade (use 1 para Renda Fixa/Outro)<input type="number" name="quantidade" step="0.000001" min="0.000001" value="1" required /></label>
@@ -294,7 +294,7 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
     <h3>Conta ou cartão</h3>
     <input type="hidden" name="id" />
     <label>Nome<input type="text" name="nome" required maxlength="40" /></label>
-    <label>Tipo</label>
+    <label for="campo-tipo-conta">Tipo</label>
     <div id="combo-tipo-conta"></div>
     <label>Dia de fechamento (opcional, para cartão)<input type="number" name="fechamento" min="1" max="31" /></label>
     <div class="form-acoes">
@@ -322,7 +322,7 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   <form method="dialog" id="formulario-provento">
     <h3>Novo provento</h3>
     <input type="hidden" name="ativoId" />
-    <label>Tipo</label>
+    <label for="campo-tipo-provento">Tipo</label>
     <div id="combo-tipo-provento"></div>
     <label>Data<input type="date" name="data" required /></label>
     <label>Valor recebido<input type="text" inputmode="decimal" name="valor" class="nv-campo-moeda" required /></label>
@@ -337,7 +337,7 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   <form method="dialog" id="formulario-meta">
     <h3>Nova meta</h3>
     <input type="hidden" name="id" />
-    <label>Categoria</label>
+    <label for="campo-categoria-meta">Categoria</label>
     <div id="combo-categoria-meta"></div>
     <label>Nome (opcional)<input type="text" name="nome" maxlength="40" placeholder="ex.: Carro novo" /></label>
     <label>Limite mensal<input type="text" inputmode="decimal" name="limite" class="nv-campo-moeda" required /></label>

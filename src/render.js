@@ -94,12 +94,12 @@ function renderComboItens(opcoes, valorAtual) {
     : '<div class="nv-combo-vazio">Nenhuma opção encontrada.</div>';
 }
 
-function renderComboSelect(nomeCampo, opcoes, valorAtual) {
+function renderComboSelect(nomeCampo, opcoes, valorAtual, idElemento) {
   const atual = opcoes.find((o) => o.valor === valorAtual) || opcoes[0] || { valor: '', rotulo: '' };
   return `
     <div class="nv-combo" data-combo="${nomeCampo}">
       <input type="hidden" name="${nomeCampo}" value="${escapeHtml(atual.valor)}" />
-      <button type="button" class="nv-combo-gatilho" data-acao="abrir-combo">
+      <button type="button" ${idElemento ? `id="${idElemento}"` : ''} class="nv-combo-gatilho" data-acao="abrir-combo">
         <span class="nv-combo-valor">${escapeHtml(atual.rotulo)}</span>
         <svg class="nv-combo-seta" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </button>
@@ -107,10 +107,10 @@ function renderComboSelect(nomeCampo, opcoes, valorAtual) {
     </div>`;
 }
 
-function renderComboBusca(nomeCampo, valorInicial, sugestoes) {
+function renderComboBusca(nomeCampo, valorInicial, sugestoes, idElemento) {
   return `
     <div class="nv-combo" data-combo="${nomeCampo}">
-      <input type="text" name="${nomeCampo}" class="nv-combo-input" autocomplete="off" required maxlength="40" value="${escapeHtml(valorInicial || '')}" />
+      <input type="text" ${idElemento ? `id="${idElemento}"` : ''} name="${nomeCampo}" class="nv-combo-input" autocomplete="off" required maxlength="40" value="${escapeHtml(valorInicial || '')}" />
       <div class="nv-combo-lista" hidden>${(sugestoes || [])
         .map((t) => `<div class="nv-combo-item" data-acao="selecionar-combo-item" data-valor="${escapeHtml(t)}">${escapeHtml(t)}</div>`)
         .join('')}<div class="nv-combo-vazio" ${(sugestoes || []).length ? 'hidden' : ''}>Nenhuma sugestão — pode digitar o nome livremente.</div></div>
@@ -416,8 +416,8 @@ function renderNovoLancamento(state, dadosIniciais) {
         <input type="text" id="campo-descricao" name="descricao" required maxlength="80" value="${escapeHtml(d.descricao || '')}" />
       </div>
       <div class="nv-campo-linha">
-        <label class="nv-campo-label">CATEGORIA</label>
-        ${renderComboSelect('categoria', opcoesCategoria(tipo), d.categoria)}
+        <label class="nv-campo-label" for="campo-categoria-lancamento">CATEGORIA</label>
+        ${renderComboSelect('categoria', opcoesCategoria(tipo), d.categoria, 'campo-categoria-lancamento')}
       </div>
       <div class="nv-campo-dupla">
         <div>

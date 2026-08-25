@@ -245,6 +245,13 @@ test('renderComboBusca lista as sugestões e mantém o valor digitado', () => {
   assert.match(html, /data-valor="PETZ3"/);
 });
 
+test('renderComboSelect e renderComboBusca aceitam um id explícito, pra <label for="..."> conseguir focar o campo certo', () => {
+  const selectHtml = renderComboSelect('tipo', [{ valor: 'acao', rotulo: 'Ação' }], 'acao', 'campo-tipo-x');
+  assert.match(selectHtml, /id="campo-tipo-x"/);
+  const buscaHtml = renderComboBusca('nome', '', ['PETR4'], 'campo-nome-x');
+  assert.match(buscaHtml, /id="campo-nome-x"/);
+});
+
 test('renderComboBusca inclui uma mensagem de vazio (escondida) pro caso de filtro sem nenhum resultado', () => {
   const comSugestoes = renderComboBusca('nome', '', ['PETR4']);
   assert.match(comSugestoes, /nv-combo-vazio" hidden/);

@@ -195,14 +195,15 @@
   // Combos com opções fixas (não dependem de nenhum outro campo) — populados uma única vez no
   // início. O de nome do ativo (busca) é populado de novo sempre que o tipo de ativo muda.
   function inicializarCombosEstaticos() {
-    document.getElementById('combo-tipo-investimento').innerHTML = renderizacao.renderComboSelect('tipo', renderizacao.opcoesTipoInvestimento(), 'acao');
-    document.getElementById('combo-tipo-operacao').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_OPERACAO, 'compra');
-    document.getElementById('combo-tipo-conta').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_CONTA, 'conta');
-    document.getElementById('combo-tipo-provento').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_PROVENTO, 'dividendo');
+    document.getElementById('combo-tipo-investimento').innerHTML = renderizacao.renderComboSelect('tipo', renderizacao.opcoesTipoInvestimento(), 'acao', 'campo-tipo-investimento');
+    document.getElementById('combo-tipo-operacao').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_OPERACAO, 'compra', 'campo-tipo-operacao');
+    document.getElementById('combo-tipo-conta').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_CONTA, 'conta', 'campo-tipo-conta');
+    document.getElementById('combo-tipo-provento').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_PROVENTO, 'dividendo', 'campo-tipo-provento');
     document.getElementById('combo-categoria-meta').innerHTML = renderizacao.renderComboSelect(
       'categoria',
       CATEGORIAS_META.map((c) => ({ valor: c, rotulo: c })),
-      'Moradia'
+      'Moradia',
+      'campo-categoria-meta'
     );
     atualizarSugestoesAtivo('acao');
   }
@@ -215,7 +216,7 @@
     if (!container) return;
     const inputAnterior = container.querySelector('.nv-combo-input');
     const valorAtual = inputAnterior ? inputAnterior.value : '';
-    container.innerHTML = renderizacao.renderComboBusca('nome', valorAtual, logica.listaSugeridaPorTipo(tipo));
+    container.innerHTML = renderizacao.renderComboBusca('nome', valorAtual, logica.listaSugeridaPorTipo(tipo), 'campo-nome-ativo');
     // Reaplica o filtro do que já tinha sido digitado em cima da lista nova (a lista em si vem
     // fechada por padrão — só isso já evita mostrar sugestões de um tipo antigo se a pessoa
     // reabrir o campo depois de trocar o tipo).
