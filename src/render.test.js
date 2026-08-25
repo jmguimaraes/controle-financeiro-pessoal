@@ -202,6 +202,16 @@ test('renderConfiguracoes lista as contas cadastradas e o tema ativo', () => {
   assert.match(html, /data-tema="claro" class="ativo"/);
 });
 
+test('renderConfiguracoes mostra um ícone em cada opção de tema (claro/escuro/sistema), não só o texto', () => {
+  const html = renderConfiguracoes(estado({ tema: 'escuro' }));
+  const segmentado = html.match(/<div class="nv-segmentado-tema">[\s\S]*?<\/div>/)[0];
+  const botoes = segmentado.split('<button').slice(1);
+  assert.equal(botoes.length, 3);
+  for (const botao of botoes) {
+    assert.match(botao, /<svg/);
+  }
+});
+
 test('renderConfiguracoes mostra o PIN como desativado por padrão, com botão pra definir', () => {
   const html = renderConfiguracoes(estado(), false);
   assert.match(html, /Desativado/);
