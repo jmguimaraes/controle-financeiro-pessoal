@@ -121,6 +121,10 @@ function iconSearch() {
   return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>';
 }
 
+function iconCalculator(size = 18) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="8" y2="10.01"></line><line x1="12" y1="10" x2="12" y2="10.01"></line><line x1="16" y1="10" x2="16" y2="10.01"></line><line x1="8" y1="14" x2="8" y2="14.01"></line><line x1="12" y1="14" x2="12" y2="14.01"></line><line x1="16" y1="14" x2="16" y2="14.01"></line><line x1="8" y1="18" x2="8" y2="18.01"></line><line x1="12" y1="18" x2="12" y2="18.01"></line><line x1="16" y1="18" x2="16" y2="18.01"></line></svg>`;
+}
+
 function iconGear(size = 18) {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
 }
@@ -154,6 +158,7 @@ function headerResumo(ano, mes) {
         <button type="button" data-acao="mes-anterior" aria-label="Mês anterior">${'‹'}</button>
         <span>${MESES[mes - 1].slice(0, 3).toUpperCase()} ${ano}</span>
         <button type="button" data-acao="mes-seguinte" aria-label="Próximo mês">${'›'}</button>
+        <button type="button" class="nv-gear" data-acao="abrir-calculadoras" aria-label="Calculadoras">${iconCalculator(19)}</button>
         <button type="button" class="nv-gear" data-acao="abrir-configuracoes" aria-label="Configurações">${iconGear(19)}</button>
       </div>
     </div>`;
@@ -610,6 +615,178 @@ function renderPin(erro) {
     </div>`;
 }
 
+// --- Tela de calculadoras ---
+// Ferramentas de apoio, sem ligação com os dados do usuário (não lê nem grava lançamento,
+// investimento etc.) — por isso não recebe `state`. O cálculo em si roda no clique do botão
+// (em app.js), lendo os campos direto do DOM; esta função só desenha o formulário e a área de
+// resultado (vazia/oculta até o primeiro clique).
+
+function corpoJurosCompostos() {
+  return `
+    <div class="nv-section-head"><span class="nv-section-label">JUROS COMPOSTOS</span></div>
+    <div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-compostos-capital">CAPITAL INICIAL (R$)</label>
+      <input type="text" inputmode="decimal" id="campo-calc-compostos-capital" class="nv-campo-moeda" placeholder="0,00" />
+    </div>
+    <div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-compostos-aporte">APORTE MENSAL (R$)</label>
+      <input type="text" inputmode="decimal" id="campo-calc-compostos-aporte" class="nv-campo-moeda" placeholder="0,00" />
+    </div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-compostos-taxa">TAXA MENSAL (%)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-compostos-taxa" placeholder="1,00" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-compostos-meses">PERÍODO (MESES)</label>
+        <input type="number" min="0" id="campo-calc-compostos-meses" placeholder="12" />
+      </div>
+    </div>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-compostos"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-compostos" class="nv-list-plain" hidden></div>`;
+}
+
+function corpoJurosSimples() {
+  return `
+    <div class="nv-section-head"><span class="nv-section-label">JUROS SIMPLES</span></div>
+    <div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-simples-capital">CAPITAL INICIAL (R$)</label>
+      <input type="text" inputmode="decimal" id="campo-calc-simples-capital" class="nv-campo-moeda" placeholder="0,00" />
+    </div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-simples-taxa">TAXA MENSAL (%)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-simples-taxa" placeholder="1,00" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-simples-meses">PERÍODO (MESES)</label>
+        <input type="number" min="0" id="campo-calc-simples-meses" placeholder="12" />
+      </div>
+    </div>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-simples"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-simples" class="nv-list-plain" hidden></div>`;
+}
+
+function corpoPorcentagem() {
+  return `
+    <div class="nv-section-head"><span class="nv-section-label">QUANTO É X% DE UM VALOR</span></div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct1-percentual">PERCENTUAL (%)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct1-percentual" placeholder="15" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct1-valor">VALOR (R$)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct1-valor" class="nv-campo-moeda" placeholder="0,00" />
+      </div>
+    </div>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-pct1"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-pct1" class="nv-list-plain" hidden></div>
+
+    <div class="nv-section-head" style="border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">QUE PERCENTUAL UM VALOR REPRESENTA DE UM TOTAL</span></div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct2-valor">VALOR (R$)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct2-valor" class="nv-campo-moeda" placeholder="0,00" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct2-total">TOTAL (R$)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct2-total" class="nv-campo-moeda" placeholder="0,00" />
+      </div>
+    </div>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-pct2"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-pct2" class="nv-list-plain" hidden></div>
+
+    <div class="nv-section-head" style="border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">AUMENTAR OU DIMINUIR UM VALOR EM X%</span></div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct3-valor">VALOR (R$)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct3-valor" class="nv-campo-moeda" placeholder="0,00" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct3-percentual">PERCENTUAL (use negativo p/ diminuir)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct3-percentual" placeholder="10 ou -10" />
+      </div>
+    </div>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-pct3"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-pct3" class="nv-list-plain" hidden></div>`;
+}
+
+function corpoPrimeiroMilhao(modoMilhao) {
+  const modo = modoMilhao === 'aporte' ? 'aporte' : 'tempo';
+  return `
+    <div class="nv-section-head"><span class="nv-section-label">PRIMEIRO MILHÃO</span></div>
+    <div class="nv-segmentado">
+      <button type="button" data-acao="definir-modo-milhao" data-modomilhao="tempo" class="${modo === 'tempo' ? 'ativo' : ''}">TEMPO NECESSÁRIO</button>
+      <button type="button" data-acao="definir-modo-milhao" data-modomilhao="aporte" class="${modo === 'aporte' ? 'ativo' : ''}">APORTE NECESSÁRIO</button>
+    </div>
+    <div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-milhao-alvo">VALOR-ALVO (R$)</label>
+      <input type="text" inputmode="decimal" id="campo-calc-milhao-alvo" class="nv-campo-moeda" value="${formatNumero(1000000)}" />
+    </div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-milhao-capital">CAPITAL INICIAL (R$)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-milhao-capital" class="nv-campo-moeda" placeholder="0,00" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-milhao-taxa">TAXA MENSAL (%)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-milhao-taxa" placeholder="1,00" />
+      </div>
+    </div>
+    ${
+      modo === 'tempo'
+        ? `<div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-milhao-aporte">APORTE MENSAL (R$)</label>
+      <input type="text" inputmode="decimal" id="campo-calc-milhao-aporte" class="nv-campo-moeda" placeholder="0,00" />
+    </div>`
+        : `<div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-milhao-meses">PRAZO DESEJADO (MESES)</label>
+      <input type="number" min="1" id="campo-calc-milhao-meses" placeholder="120" />
+    </div>`
+    }
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-milhao"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-milhao" class="nv-list-plain" hidden></div>`;
+}
+
+function renderCalculadoras(modo = 'compostos', modoMilhao = 'tempo') {
+  const abas = [
+    { id: 'compostos', rotulo: 'COMPOSTOS' },
+    { id: 'simples', rotulo: 'SIMPLES' },
+    { id: 'porcentagem', rotulo: '%' },
+    { id: 'milhao', rotulo: '1º MILHÃO' },
+  ];
+  const corpos = {
+    compostos: corpoJurosCompostos,
+    simples: corpoJurosSimples,
+    porcentagem: corpoPorcentagem,
+    milhao: () => corpoPrimeiroMilhao(modoMilhao),
+  };
+  const corpo = (corpos[modo] || corpos.compostos)();
+  return `
+    ${headerVoltar('Calculadoras', 'fechar-calculadoras')}
+    <div class="nv-segmentado">
+      ${abas
+        .map(
+          (a) => `<button type="button" data-acao="definir-calculadora" data-calc="${a.id}" class="${a.id === modo ? 'ativo' : ''}">${a.rotulo}</button>`
+        )
+        .join('')}
+    </div>
+    <div id="corpo-calculadora">${corpo}</div>`;
+}
+
 function renderConfiguracoes(state, temPin) {
   const contas = state.contas || [];
   const tema = state.tema || 'escuro';
@@ -939,5 +1116,6 @@ if (typeof module !== 'undefined' && module.exports) {
     ROTULOS_TIPO_INVESTIMENTO,
     ROTULOS_TIPO_CONTA,
     MESES,
+    renderCalculadoras,
   };
 }

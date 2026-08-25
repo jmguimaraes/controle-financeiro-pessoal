@@ -342,6 +342,77 @@ function statusMeta(gastoAtual, limite) {
   return { percentual, excedeu, excedente: excedeu ? gastoAtual - limite : 0 };
 }
 
+// --- Calculadoras ---
+
+// Avança o saldo em um mês: primeiro aplica a taxa sobre o saldo já existente, depois soma o
+// aporte do mês (aporte entra "depois de render o mês", não antes). jurosCompostos e
+// mesesParaAtingirMeta reusam este passo pra ficarem sempre consistentes entre si; a fórmula
+// fechada de aporteNecessarioParaMeta foi deduzida a partir da mesma ordem (juros → aporte).
+function passoMesJurosCompostos(saldo, taxaMensal, aporteMensal) {
+  return saldo + saldo * taxaMensal + aporteMensal;
+}
+
+function jurosCompostos({ capitalInicial = 0, aporteMensal = 0, taxaMensal = 0, meses = 0 }) {
+  let saldo = capitalInicial;
+  for (let i = 0; i < meses; i += 1) {
+    saldo = passoMesJurosCompostos(saldo, taxaMensal, aporteMensal);
+  }
+  const totalInvestido = capitalInicial + aporteMensal * meses;
+  return { montanteFinal: saldo, totalInvestido, totalJuros: saldo - totalInvestido };
+}
+
+function jurosSimples({ capitalInicial = 0, taxaMensal = 0, meses = 0 }) {
+  const montanteFinal = capitalInicial * (1 + taxaMensal * meses);
+  return { montanteFinal, jurosTotal: montanteFinal - capitalInicial };
+}
+
+function percentualDeValor(percentual, valor) {
+  return (percentual / 100) * valor;
+}
+
+function valorEQuePercentualDoTotal(valor, total) {
+  if (total === 0) return 0;
+  return (valor / total) * 100;
+}
+
+// Percentual positivo aumenta o valor, negativo diminui — é a mesma conta nos dois casos.
+function aplicarVariacaoPercentual(valor, percentual) {
+  return valor * (1 + percentual / 100);
+}
+
+// Teto de segurança pra calculadora "primeiro milhão": sem aporte e sem taxa (ou com valor-alvo
+// já inatingível nesse horizonte), o saldo nunca cresce — sem este limite o laço giraria pra
+// sempre. 1200 meses = 100 anos é bem além de qualquer plano de vida realista.
+const LIMITE_MESES_PRIMEIRO_MILHAO = 1200;
+
+// Quantos meses faltam, com um aporte mensal fixo, pra sair do capital inicial e chegar no
+// valor-alvo. Usa o mesmo passo mês a mês de jurosCompostos, então os dois cálculos nunca
+// divergem entre si.
+function mesesParaAtingirMeta({ capitalInicial = 0, aporteMensal = 0, taxaMensal = 0, valorAlvo }) {
+  let saldo = capitalInicial;
+  if (saldo >= valorAlvo) return { meses: 0, anos: 0 };
+  let meses = 0;
+  while (saldo < valorAlvo) {
+    saldo = passoMesJurosCompostos(saldo, taxaMensal, aporteMensal);
+    meses += 1;
+    if (meses >= LIMITE_MESES_PRIMEIRO_MILHAO) return { meses: null, anos: null };
+  }
+  return { meses, anos: meses / 12 };
+}
+
+// Qual aporte mensal fixo, ao longo de um prazo definido, leva do capital inicial ao valor-alvo.
+// Fórmula fechada da anuidade ordinária (contribuição após o juro do mês), coerente com a mesma
+// ordem usada em passoMesJurosCompostos — por isso os dois cálculos se verificam um ao outro.
+function aporteNecessarioParaMeta({ capitalInicial = 0, meses, taxaMensal = 0, valorAlvo }) {
+  if (!meses || meses <= 0) return { aporteMensal: null };
+  if (taxaMensal === 0) {
+    return { aporteMensal: Math.max(0, (valorAlvo - capitalInicial) / meses) };
+  }
+  const capitalFuturo = capitalInicial * Math.pow(1 + taxaMensal, meses);
+  const fatorAnuidade = (Math.pow(1 + taxaMensal, meses) - 1) / taxaMensal;
+  return { aporteMensal: Math.max(0, (valorAlvo - capitalFuturo) / fatorAnuidade) };
+}
+
 function estadoInicial() {
   return {
     lancamentos: [],
@@ -433,5 +504,12 @@ if (typeof module !== 'undefined' && module.exports) {
     impostoEstimadoMes,
     hashSimples,
     listaSugeridaPorTipo,
+    jurosCompostos,
+    jurosSimples,
+    percentualDeValor,
+    valorEQuePercentualDoTotal,
+    aplicarVariacaoPercentual,
+    mesesParaAtingirMeta,
+    aporteNecessarioParaMeta,
   };
 }

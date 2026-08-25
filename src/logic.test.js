@@ -26,7 +26,16 @@ const {
   impostoEstimadoMes,
   hashSimples,
   listaSugeridaPorTipo,
+  jurosCompostos,
+  jurosSimples,
+  percentualDeValor,
+  valorEQuePercentualDoTotal,
+  aplicarVariacaoPercentual,
+  mesesParaAtingirMeta,
+  aporteNecessarioParaMeta,
 } = require('./logic.js');
+
+const arred = (x) => Math.round(x * 100) / 100;
 
 test('parcelaValor divide o valor total pelo número de parcelas', () => {
   assert.equal(parcelaValor({ valorTotal: 3600, parcelas: 12 }), 300);
@@ -538,4 +547,99 @@ test('applyAction preserva contas e metas existentes ao aplicar uma ação não 
   assert.deepEqual(novo.metas, [{ id: 'm1', categoria: 'Lazer', limite: 500 }]);
   assert.equal(novo.tema, 'claro');
   assert.equal(novo.ocultarValores, true);
+});
+
+// --- Calculadoras ---
+
+test('jurosCompostos calcula montante final com aporte mensal e juros mês a mês', () => {
+  const r = jurosCompostos({ capitalInicial: 1000, aporteMensal: 100, taxaMensal: 0.01, meses: 2 });
+  assert.equal(arred(r.montanteFinal), 1221.1);
+  assert.equal(r.totalInvestido, 1200);
+  assert.equal(arred(r.totalJuros), 21.1);
+});
+
+test('jurosCompostos sem taxa soma só capital inicial e aportes', () => {
+  const r = jurosCompostos({ capitalInicial: 0, aporteMensal: 100, taxaMensal: 0, meses: 12 });
+  assert.equal(r.montanteFinal, 1200);
+  assert.equal(r.totalJuros, 0);
+});
+
+test('jurosCompostos com meses=0 retorna o capital inicial sem alteração', () => {
+  const r = jurosCompostos({ capitalInicial: 500, aporteMensal: 100, taxaMensal: 0.02, meses: 0 });
+  assert.equal(r.montanteFinal, 500);
+  assert.equal(r.totalInvestido, 500);
+  assert.equal(r.totalJuros, 0);
+});
+
+test('jurosSimples calcula montante linear sobre o capital inicial', () => {
+  const r = jurosSimples({ capitalInicial: 1000, taxaMensal: 0.02, meses: 6 });
+  assert.equal(arred(r.montanteFinal), 1120);
+  assert.equal(arred(r.jurosTotal), 120);
+});
+
+test('jurosSimples com taxa zero retorna o capital inicial sem alteração', () => {
+  const r = jurosSimples({ capitalInicial: 800, taxaMensal: 0, meses: 10 });
+  assert.equal(r.montanteFinal, 800);
+  assert.equal(r.jurosTotal, 0);
+});
+
+test('percentualDeValor calcula quanto é X% de um valor', () => {
+  assert.equal(percentualDeValor(15, 200), 30);
+});
+
+test('valorEQuePercentualDoTotal calcula que percentual um valor representa do total', () => {
+  assert.equal(valorEQuePercentualDoTotal(50, 200), 25);
+});
+
+test('valorEQuePercentualDoTotal retorna 0 quando o total é zero, em vez de dividir por zero', () => {
+  assert.equal(valorEQuePercentualDoTotal(50, 0), 0);
+});
+
+test('aplicarVariacaoPercentual aumenta o valor com percentual positivo', () => {
+  assert.equal(arred(aplicarVariacaoPercentual(200, 10)), 220);
+});
+
+test('aplicarVariacaoPercentual diminui o valor com percentual negativo', () => {
+  assert.equal(aplicarVariacaoPercentual(200, -10), 180);
+});
+
+test('mesesParaAtingirMeta retorna 0 meses quando o capital inicial já atinge a meta', () => {
+  const r = mesesParaAtingirMeta({ capitalInicial: 1000, aporteMensal: 0, taxaMensal: 0.01, valorAlvo: 1000 });
+  assert.equal(r.meses, 0);
+  assert.equal(r.anos, 0);
+});
+
+test('mesesParaAtingirMeta calcula quantos meses faltam pra atingir o valor-alvo', () => {
+  const r = mesesParaAtingirMeta({ capitalInicial: 0, aporteMensal: 100, taxaMensal: 0, valorAlvo: 1000 });
+  assert.equal(r.meses, 10);
+  assert.equal(r.anos, 10 / 12);
+});
+
+test('mesesParaAtingirMeta retorna null quando a meta é inatingível dentro do teto de segurança', () => {
+  const r = mesesParaAtingirMeta({ capitalInicial: 0, aporteMensal: 0, taxaMensal: 0, valorAlvo: 1000 });
+  assert.equal(r.meses, null);
+  assert.equal(r.anos, null);
+});
+
+test('aporteNecessarioParaMeta calcula um aporte mensal que, aplicado de volta em jurosCompostos, atinge o valor-alvo', () => {
+  const meses = 24;
+  const entrada = { capitalInicial: 1000, meses, taxaMensal: 0.01, valorAlvo: 50000 };
+  const r = aporteNecessarioParaMeta(entrada);
+  const verificacao = jurosCompostos({ capitalInicial: 1000, aporteMensal: r.aporteMensal, taxaMensal: 0.01, meses });
+  assert.equal(arred(verificacao.montanteFinal), 50000);
+});
+
+test('aporteNecessarioParaMeta com taxa zero calcula um aporte linear', () => {
+  const r = aporteNecessarioParaMeta({ capitalInicial: 200, meses: 10, taxaMensal: 0, valorAlvo: 1200 });
+  assert.equal(r.aporteMensal, 100);
+});
+
+test('aporteNecessarioParaMeta retorna 0 quando o capital inicial já supera a meta sozinho', () => {
+  const r = aporteNecessarioParaMeta({ capitalInicial: 2000, meses: 12, taxaMensal: 0.01, valorAlvo: 1000 });
+  assert.equal(r.aporteMensal, 0);
+});
+
+test('aporteNecessarioParaMeta com prazo zero ou negativo retorna null', () => {
+  assert.equal(aporteNecessarioParaMeta({ capitalInicial: 100, meses: 0, taxaMensal: 0.01, valorAlvo: 1000 }).aporteMensal, null);
+  assert.equal(aporteNecessarioParaMeta({ capitalInicial: 100, meses: -3, taxaMensal: 0.01, valorAlvo: 1000 }).aporteMensal, null);
 });

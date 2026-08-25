@@ -16,6 +16,7 @@ const {
   renderComboSelect,
   renderComboBusca,
   opcoesTipoInvestimento,
+  renderCalculadoras,
 } = require('./render.js');
 const { estadoInicial } = require('./logic.js');
 const fs = require('node:fs');
@@ -449,4 +450,55 @@ test('o bundle concatenado pelo build é um script clássico válido (sem colis�
   assert.ok(match, 'dist/index.html deveria conter um bloco <script>');
   assert.doesNotThrow(() => new Script(match[1]), 'o script concatenado (logic.js + render.js + app.js) deve parsear sem SyntaxError — uma colisão de identificador top-level entre esses arquivos quebraria a página publicada inteira');
   assert.equal(html.includes('SCRIPT_INJECT'), false, 'o marcador <!-- SCRIPT_INJECT --> não deveria sobrar no HTML gerado');
+});
+
+// --- Tela de calculadoras ---
+
+test('renderCalculadoras mostra os campos de juros compostos por padrão, com a aba compostos ativa', () => {
+  const html = renderCalculadoras();
+  assert.match(html, /data-calc="compostos"\s+class="ativo"/);
+  assert.ok(html.includes('campo-calc-compostos-capital'));
+  assert.ok(html.includes('campo-calc-compostos-aporte'));
+  assert.ok(html.includes('campo-calc-compostos-taxa'));
+  assert.ok(html.includes('campo-calc-compostos-meses'));
+  assert.ok(!html.includes('campo-calc-simples-capital'));
+});
+
+test('renderCalculadoras("simples") mostra os campos de juros simples e marca a aba simples como ativa', () => {
+  const html = renderCalculadoras('simples');
+  assert.match(html, /data-calc="simples"\s+class="ativo"/);
+  assert.ok(html.includes('campo-calc-simples-capital'));
+  assert.ok(html.includes('campo-calc-simples-taxa'));
+  assert.ok(html.includes('campo-calc-simples-meses'));
+  assert.ok(!html.includes('campo-calc-compostos-capital'));
+});
+
+test('renderCalculadoras("porcentagem") mostra as três mini-calculadoras de porcentagem', () => {
+  const html = renderCalculadoras('porcentagem');
+  assert.ok(html.includes('campo-calc-pct1-percentual'));
+  assert.ok(html.includes('campo-calc-pct1-valor'));
+  assert.ok(html.includes('campo-calc-pct2-valor'));
+  assert.ok(html.includes('campo-calc-pct2-total'));
+  assert.ok(html.includes('campo-calc-pct3-valor'));
+  assert.ok(html.includes('campo-calc-pct3-percentual'));
+});
+
+test('renderCalculadoras("milhao") no modo tempo mostra o aporte mensal e esconde o prazo desejado', () => {
+  const html = renderCalculadoras('milhao', 'tempo');
+  assert.ok(html.includes('campo-calc-milhao-aporte'));
+  assert.ok(!html.includes('campo-calc-milhao-meses'));
+  assert.ok(html.includes('campo-calc-milhao-alvo'));
+  assert.ok(html.includes('campo-calc-milhao-capital'));
+  assert.ok(html.includes('campo-calc-milhao-taxa'));
+});
+
+test('renderCalculadoras("milhao") no modo aporte mostra o prazo desejado e esconde o aporte mensal', () => {
+  const html = renderCalculadoras('milhao', 'aporte');
+  assert.ok(html.includes('campo-calc-milhao-meses'));
+  assert.ok(!html.includes('campo-calc-milhao-aporte'));
+});
+
+test('renderCalculadoras("milhao") pré-preenche o valor-alvo padrão de R$1.000.000', () => {
+  const html = renderCalculadoras('milhao');
+  assert.ok(html.includes('1.000.000,00'));
 });

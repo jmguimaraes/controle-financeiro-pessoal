@@ -13,6 +13,7 @@
     renderInvestimentos,
     renderAtivoDetalhe,
     renderPin,
+    renderCalculadoras,
   } = renderizacao;
 
   const CHAVE_ONBOARDING = 'nuvra-onboarding-visto';
@@ -33,6 +34,8 @@
   let contaSelecionada = null;
   let rascunhoLancamento = null; // dados em edição na tela de novo lançamento
   let descricaoSincronizacao = 'Verificando…';
+  let calculadoraAtiva = 'compostos'; // compostos | simples | porcentagem | milhao
+  let modoMilhao = 'tempo'; // tempo | aporte — qual variável a calculadora "primeiro milhão" resolve
 
   async function iniciar() {
     const hoje = new Date();
@@ -270,8 +273,11 @@
       const statusEl = document.getElementById('status-sincronizacao');
       if (statusEl) statusEl.textContent = descricaoSincronizacao;
     }
+    if (telaAtual === 'calculadoras') {
+      document.getElementById('tela-calculadoras').innerHTML = renderCalculadoras(calculadoraAtiva, modoMilhao);
+    }
 
-    const telas = ['resumo', 'lancamentos', 'carteira', 'metas', 'categoria', 'ativo-detalhe', 'novo-lancamento', 'configuracoes'];
+    const telas = ['resumo', 'lancamentos', 'carteira', 'metas', 'categoria', 'ativo-detalhe', 'novo-lancamento', 'configuracoes', 'calculadoras'];
     for (const nome of telas) {
       document.getElementById(`tela-${nome}`).hidden = nome !== telaAtual;
     }
@@ -317,6 +323,115 @@
   function fecharConfiguracoes() {
     telaAtual = abaAtual;
     renderizarTudo();
+  }
+
+  function abrirCalculadoras() {
+    calculadoraAtiva = 'compostos';
+    modoMilhao = 'tempo';
+    telaAtual = 'calculadoras';
+    renderizarTudo();
+  }
+
+  function fecharCalculadoras() {
+    telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  // Lê um campo numérico em texto no padrão pt-BR (vírgula decimal) — mesma regra de
+  // numeroDoCampoMoeda, reaproveitada aqui pros campos de taxa/percentual da calculadora, que não
+  // são .nv-campo-moeda (não fazem sentido com formatação de milhar tipo "1.234,56").
+  function numeroPtBR(elemento) {
+    return elemento ? numeroDoCampoMoeda(elemento.value) : 0;
+  }
+
+  function mostrarResultadoCalculadora(idResultado, linhasHtml) {
+    const resultado = document.getElementById(idResultado);
+    resultado.hidden = false;
+    resultado.innerHTML = linhasHtml;
+  }
+
+  function linhaResultado(rotulo, valor) {
+    return `<div class="nv-row-plain"><span>${rotulo}</span><span>${valor}</span></div>`;
+  }
+
+  function calcularJurosCompostos() {
+    const r = logica.jurosCompostos({
+      capitalInicial: numeroPtBR(document.getElementById('campo-calc-compostos-capital')),
+      aporteMensal: numeroPtBR(document.getElementById('campo-calc-compostos-aporte')),
+      taxaMensal: numeroPtBR(document.getElementById('campo-calc-compostos-taxa')) / 100,
+      meses: Number(document.getElementById('campo-calc-compostos-meses').value) || 0,
+    });
+    mostrarResultadoCalculadora(
+      'resultado-calc-compostos',
+      linhaResultado('Montante final', renderizacao.formatCurrency(r.montanteFinal)) +
+        linhaResultado('Total investido', renderizacao.formatCurrency(r.totalInvestido)) +
+        linhaResultado('Total em juros', renderizacao.formatCurrency(r.totalJuros))
+    );
+  }
+
+  function calcularJurosSimples() {
+    const r = logica.jurosSimples({
+      capitalInicial: numeroPtBR(document.getElementById('campo-calc-simples-capital')),
+      taxaMensal: numeroPtBR(document.getElementById('campo-calc-simples-taxa')) / 100,
+      meses: Number(document.getElementById('campo-calc-simples-meses').value) || 0,
+    });
+    mostrarResultadoCalculadora(
+      'resultado-calc-simples',
+      linhaResultado('Montante final', renderizacao.formatCurrency(r.montanteFinal)) +
+        linhaResultado('Juros total', renderizacao.formatCurrency(r.jurosTotal))
+    );
+  }
+
+  function calcularPercentualDeValor() {
+    const percentual = numeroPtBR(document.getElementById('campo-calc-pct1-percentual'));
+    const valor = numeroPtBR(document.getElementById('campo-calc-pct1-valor'));
+    const r = logica.percentualDeValor(percentual, valor);
+    mostrarResultadoCalculadora(
+      'resultado-calc-pct1',
+      linhaResultado(`${renderizacao.formatNumero(percentual)}% de ${renderizacao.formatCurrency(valor)}`, renderizacao.formatCurrency(r))
+    );
+  }
+
+  function calcularValorEQuePercentualDoTotal() {
+    const valor = numeroPtBR(document.getElementById('campo-calc-pct2-valor'));
+    const total = numeroPtBR(document.getElementById('campo-calc-pct2-total'));
+    const r = logica.valorEQuePercentualDoTotal(valor, total);
+    mostrarResultadoCalculadora(
+      'resultado-calc-pct2',
+      linhaResultado(`${renderizacao.formatCurrency(valor)} de ${renderizacao.formatCurrency(total)}`, `${renderizacao.formatNumero(r)}%`)
+    );
+  }
+
+  function calcularVariacaoPercentual() {
+    const valor = numeroPtBR(document.getElementById('campo-calc-pct3-valor'));
+    const percentual = numeroPtBR(document.getElementById('campo-calc-pct3-percentual'));
+    const r = logica.aplicarVariacaoPercentual(valor, percentual);
+    mostrarResultadoCalculadora('resultado-calc-pct3', linhaResultado('Novo valor', renderizacao.formatCurrency(r)));
+  }
+
+  function calcularPrimeiroMilhao() {
+    const valorAlvo = numeroPtBR(document.getElementById('campo-calc-milhao-alvo'));
+    const capitalInicial = numeroPtBR(document.getElementById('campo-calc-milhao-capital'));
+    const taxaMensal = numeroPtBR(document.getElementById('campo-calc-milhao-taxa')) / 100;
+    if (modoMilhao === 'tempo') {
+      const aporteMensal = numeroPtBR(document.getElementById('campo-calc-milhao-aporte'));
+      const r = logica.mesesParaAtingirMeta({ capitalInicial, aporteMensal, taxaMensal, valorAlvo });
+      mostrarResultadoCalculadora(
+        'resultado-calc-milhao',
+        r.meses === null
+          ? linhaResultado('Tempo necessário', 'Não atingível nesse ritmo (teto de 100 anos)')
+          : linhaResultado('Tempo necessário', `${r.meses} meses (${r.anos.toFixed(1)} anos)`)
+      );
+    } else {
+      const meses = Number(document.getElementById('campo-calc-milhao-meses').value) || 0;
+      const r = logica.aporteNecessarioParaMeta({ capitalInicial, meses, taxaMensal, valorAlvo });
+      mostrarResultadoCalculadora(
+        'resultado-calc-milhao',
+        r.aporteMensal === null
+          ? linhaResultado('Aporte mensal necessário', 'Informe um prazo válido')
+          : linhaResultado('Aporte mensal necessário', renderizacao.formatCurrency(r.aporteMensal))
+      );
+    }
   }
 
   function abrirNovoLancamento(id) {
@@ -544,6 +659,22 @@
       if (acao === 'mes-seguinte') mudarMes(1);
       if (acao === 'abrir-configuracoes') abrirConfiguracoes();
       if (acao === 'fechar-configuracoes') fecharConfiguracoes();
+      if (acao === 'abrir-calculadoras') abrirCalculadoras();
+      if (acao === 'fechar-calculadoras') fecharCalculadoras();
+      if (acao === 'definir-calculadora') {
+        calculadoraAtiva = alvo.dataset.calc;
+        renderizarTudo();
+      }
+      if (acao === 'definir-modo-milhao') {
+        modoMilhao = alvo.dataset.modomilhao;
+        renderizarTudo();
+      }
+      if (acao === 'calcular-compostos') calcularJurosCompostos();
+      if (acao === 'calcular-simples') calcularJurosSimples();
+      if (acao === 'calcular-pct1') calcularPercentualDeValor();
+      if (acao === 'calcular-pct2') calcularValorEQuePercentualDoTotal();
+      if (acao === 'calcular-pct3') calcularVariacaoPercentual();
+      if (acao === 'calcular-milhao') calcularPrimeiroMilhao();
 
       if (acao === 'definir-pin') {
         document.getElementById('formulario-definir-pin').reset();
