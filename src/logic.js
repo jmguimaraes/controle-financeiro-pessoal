@@ -1,3 +1,14 @@
+// Hash não-criptográfico simples pra não guardar o PIN em claro no localStorage. Não é segurança
+// de verdade (é só uma trava de acesso casual, não protege contra alguém sofisticado) — serve
+// apenas pra não deixar o PIN legível de bandeja no localStorage.
+function hashSimples(texto) {
+  let hash = 0;
+  for (let i = 0; i < texto.length; i += 1) {
+    hash = (hash * 31 + texto.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(36);
+}
+
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -371,5 +382,6 @@ if (typeof module !== 'undefined' && module.exports) {
     totalProventos,
     historicoRealizado,
     impostoEstimadoMes,
+    hashSimples,
   };
 }

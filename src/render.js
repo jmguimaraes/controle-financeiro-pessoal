@@ -79,7 +79,7 @@ function headerResumo(ano, mes) {
   return `
     <div class="nv-header nv-header--brand">
       <div class="nv-brand">
-        ${iconSymbol(20)}
+        ${iconSymbol(26)}
         <span class="nv-wordmark">NUVRA</span>
       </div>
       <div class="nv-monthnav">

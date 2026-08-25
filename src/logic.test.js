@@ -24,6 +24,7 @@ const {
   totalProventos,
   historicoRealizado,
   impostoEstimadoMes,
+  hashSimples,
 } = require('./logic.js');
 
 test('parcelaValor divide o valor total pelo número de parcelas', () => {
@@ -490,6 +491,19 @@ test('impostoEstimadoMes ignora renda fixa/outro e meses sem vendas', () => {
     { id: '2', tipo: 'acao', precoAtual: 10, operacoes: [{ tipo: 'compra', data: '2026-01-01', quantidade: 10, precoUnitario: 10 }] },
   ];
   assert.deepEqual(impostoEstimadoMes(investimentos, 2026, 3), []);
+});
+
+test('hashSimples devolve o mesmo hash pro mesmo texto', () => {
+  assert.equal(hashSimples('1234'), hashSimples('1234'));
+});
+
+test('hashSimples devolve hashes diferentes pra PINs diferentes', () => {
+  assert.notEqual(hashSimples('1234'), hashSimples('4321'));
+  assert.notEqual(hashSimples('1234'), hashSimples('12345'));
+});
+
+test('hashSimples nunca devolve o texto original em claro', () => {
+  assert.notEqual(hashSimples('1234'), '1234');
 });
 
 test('applyAction preserva contas e metas existentes ao aplicar uma ação não relacionada', () => {
