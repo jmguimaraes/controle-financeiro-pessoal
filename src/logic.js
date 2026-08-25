@@ -1,16 +1,39 @@
-// Sugestões de nome/ticker por tipo de ativo — lista curada, não exaustiva nem uma fonte de dados
-// de mercado (não é atualizada nem vem de API nenhuma). Serve só de ponto de partida no
-// autocomplete; o campo continua aceitando qualquer texto digitado livremente. Renda fixa, fundo
-// de investimento e outro ficam sem lista porque não têm um "ticker" padronizado como esses.
+// Sugestões de nome/ticker por tipo de ativo — lista curada e ampliada, mas nunca vai ser
+// exaustiva nem é uma fonte de dados de mercado (não é atualizada nem vem de API nenhuma, e não
+// tem preço nenhum aqui). Serve só de ponto de partida no autocomplete; o campo continua
+// aceitando qualquer texto digitado livremente, esteja ou não nesta lista. Só "Outro" fica sem
+// lista de propósito — é o catch-all genérico.
 const ATIVOS_SUGERIDOS = {
-  acao: ['PETR4', 'VALE3', 'ITUB4', 'BBDC4', 'ABEV3', 'BBAS3', 'WEGE3', 'ITSA4', 'B3SA3', 'RENT3', 'SUZB3', 'JBSS3', 'RADL3', 'PRIO3', 'EQTL3'],
-  fii: ['HGLG11', 'KNRI11', 'MXRF11', 'XPML11', 'VISC11', 'BCFF11', 'HGRE11', 'VILG11', 'BTLG11', 'RECT11'],
-  criptomoeda: ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC'],
-  stock: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK.B', 'JPM', 'V'],
-  reit: ['O', 'PLD', 'AMT', 'SPG', 'PSA', 'EQIX', 'WELL', 'DLR'],
-  bdr: ['AAPL34', 'GOGL34', 'AMZO34', 'MSFT34', 'TSLA34', 'NVDC34', 'META34', 'DISB34'],
-  etf: ['BOVA11', 'IVVB11', 'SMAL11', 'DIVO11', 'BOVV11', 'XFIX11'],
-  etf_internacional: ['SPY', 'QQQ', 'VOO', 'VTI', 'IWM', 'DIA'],
+  acao: [
+    'PETR4', 'PETR3', 'VALE3', 'ITUB4', 'ITUB3', 'BBDC4', 'BBDC3', 'ABEV3', 'BBAS3', 'WEGE3',
+    'ITSA4', 'B3SA3', 'RENT3', 'SUZB3', 'JBSS3', 'RADL3', 'PRIO3', 'EQTL3', 'ELET3', 'ELET6',
+    'GGBR4', 'CSNA3', 'USIM5', 'CPLE6', 'CMIG4', 'SBSP3', 'VIVT3', 'TIMS3', 'TOTS3', 'LREN3',
+    'RAIL3', 'CCRO3', 'EMBR3', 'BRFS3', 'MRFG3', 'KLBN11', 'HAPV3', 'NTCO3', 'CYRE3', 'MULT3',
+    'CSAN3', 'UGPA3', 'CRFB3', 'AZUL4', 'GOLL4', 'CVCB3', 'YDUQ3', 'COGN3', 'MRVE3', 'HYPE3',
+    'PETZ3', 'ARZZ3',
+  ],
+  fii: [
+    'HGLG11', 'KNRI11', 'MXRF11', 'XPML11', 'VISC11', 'BCFF11', 'HGRE11', 'VILG11', 'BTLG11', 'RECT11',
+    'XPLG11', 'HGBS11', 'IRDM11', 'KNCR11', 'RBRF11', 'VGIP11', 'HFOF11', 'BRCO11', 'GGRC11', 'JSRE11',
+    'ALZR11', 'VINO11', 'HSML11', 'RECR11', 'KNIP11', 'PVBI11', 'HGRU11', 'RBRP11', 'HCTR11',
+  ],
+  criptomoeda: [
+    'BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC',
+    'LINK', 'LTC', 'TRX', 'ATOM', 'UNI', 'XLM', 'ETC', 'FIL', 'APT', 'ARB',
+    'OP', 'NEAR', 'ICP', 'SHIB', 'TON',
+  ],
+  stock: [
+    'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK.B', 'JPM',
+    'V', 'MA', 'UNH', 'HD', 'PG', 'JNJ', 'XOM', 'WMT', 'DIS', 'NFLX',
+    'KO', 'PEP', 'ADBE', 'CRM', 'INTC', 'AMD', 'CSCO', 'ORCL', 'IBM', 'NKE',
+  ],
+  reit: ['O', 'PLD', 'AMT', 'SPG', 'PSA', 'EQIX', 'WELL', 'DLR', 'AVB', 'EQR', 'VTR', 'ARE', 'EXR', 'CCI'],
+  bdr: [
+    'AAPL34', 'GOGL34', 'AMZO34', 'MSFT34', 'TSLA34', 'NVDC34', 'META34', 'DISB34',
+    'NFLX34', 'JPMC34', 'COCA34', 'WALM34', 'PGCO34', 'JNJB34',
+  ],
+  etf: ['BOVA11', 'IVVB11', 'SMAL11', 'DIVO11', 'BOVV11', 'XFIX11', 'BBSD11', 'ECOO11', 'GOLD11', 'HASH11', 'ISUS11'],
+  etf_internacional: ['SPY', 'QQQ', 'VOO', 'VTI', 'IWM', 'DIA', 'EFA', 'EEM', 'GLD', 'AGG', 'VEA', 'VWO'],
   tesouro_direto: ['Tesouro Selic', 'Tesouro IPCA+', 'Tesouro Prefixado', 'Tesouro IPCA+ com Juros Semestrais', 'Tesouro Prefixado com Juros Semestrais'],
   // Fundo de investimento não tem "ticker" (não é negociado em bolsa como ação/FII) — sugere as
   // categorias padronizadas pela CVM, que são estáveis e não ficam desatualizadas como um nome
