@@ -65,6 +65,10 @@ function iconSearch() {
   return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>';
 }
 
+function iconGear(size = 18) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
+}
+
 function tabBar(abaAtiva) {
   const itens = [
     { id: 'resumo', rotulo: 'RESUMO' },
@@ -94,7 +98,7 @@ function headerResumo(ano, mes) {
         <button type="button" data-acao="mes-anterior" aria-label="Mês anterior">${'‹'}</button>
         <span>${MESES[mes - 1].slice(0, 3).toUpperCase()} ${ano}</span>
         <button type="button" data-acao="mes-seguinte" aria-label="Próximo mês">${'›'}</button>
-        <button type="button" class="nv-gear" data-acao="abrir-configuracoes" aria-label="Configurações">⚙</button>
+        <button type="button" class="nv-gear" data-acao="abrir-configuracoes" aria-label="Configurações">${iconGear(19)}</button>
       </div>
     </div>`;
 }
@@ -785,7 +789,7 @@ function renderAtivoDetalhe(state, ativoId) {
     <div class="nv-header nv-header--back">
       <button type="button" class="nv-back" data-acao="fechar-ativo" aria-label="Voltar">${'‹'}</button>
       <span class="nv-title">${escapeHtml(investimento.nome)}</span>
-      <button type="button" class="nv-gear" data-acao="editar-investimento" data-id="${investimento.id}" aria-label="Editar ativo" style="margin-left:auto">⚙</button>
+      <button type="button" class="nv-gear" data-acao="editar-investimento" data-id="${investimento.id}" aria-label="Editar ativo" style="margin-left:auto">${iconGear(19)}</button>
     </div>
     <div class="nv-hero" style="border-bottom:1px solid var(--nv-rule-soft)">
       <div class="nv-hero-label">VALOR ATUAL</div>
