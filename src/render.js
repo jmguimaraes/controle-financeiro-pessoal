@@ -369,7 +369,7 @@ function renderLancamentos(state, ano, mes, opcoes = {}) {
             return `
         <div class="nv-item-lanc" data-id="${l.id}" data-acao="editar-lancamento">
           <div>
-            <div class="nv-item-nome">${escapeHtml(l.descricao)}${tag}</div>
+            <div class="nv-item-nome">${escapeHtml(l.descricao || l.categoria)}${tag}</div>
             <div class="nv-item-meta">${escapeHtml(l.categoria)}${metaConta}</div>
           </div>
           <div class="nv-item-valor ${classe}">${sinal} ${mascarar(formatNumero(L.parcelaValor(l)), ocultar)}</div>
@@ -453,7 +453,7 @@ function renderNovoLancamento(state, dadosIniciais) {
       </div>
       <div class="nv-campo-linha">
         <label class="nv-campo-label" for="campo-descricao">DESCRIÇÃO</label>
-        <input type="text" id="campo-descricao" name="descricao" required maxlength="80" value="${escapeHtml(d.descricao || '')}" />
+        <input type="text" id="campo-descricao" name="descricao" maxlength="80" value="${escapeHtml(d.descricao || '')}" />
       </div>
       <div class="nv-campo-linha">
         <label class="nv-campo-label" for="campo-categoria-lancamento">CATEGORIA</label>
@@ -533,7 +533,7 @@ function renderCategoriaDetalhe(state, categoria, ano, mes) {
           return `
         <div class="nv-item-lanc" data-id="${l.id}" data-acao="editar-lancamento">
           <div>
-            <div class="nv-item-nome">${escapeHtml(l.descricao)}</div>
+            <div class="nv-item-nome">${escapeHtml(l.descricao || l.categoria)}</div>
             <div class="nv-item-meta">${dataFmt}${conta ? ` · ${escapeHtml(conta.nome)}` : ''}</div>
           </div>
           <div class="nv-item-valor">${mascarar(formatNumero(L.parcelaValor(l)), ocultar)}</div>

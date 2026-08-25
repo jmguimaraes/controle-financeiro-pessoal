@@ -36,6 +36,7 @@ const {
   proximosDividendosPrevistos,
   iniciaisAtivo,
   corIndiceAtivo,
+  numeroDecimalFlexivel,
 } = require('./logic.js');
 
 const arred = (x) => Math.round(x * 100) / 100;
@@ -716,4 +717,33 @@ test('corIndiceAtivo devolve sempre um índice dentro do tamanho da paleta', () 
     const indice = corIndiceAtivo(nome, 8);
     assert.ok(indice >= 0 && indice < 8);
   }
+});
+
+// --- numeroDecimalFlexivel (parser de taxa/percentual — aceita ponto OU vírgula como decimal) ---
+// Bug real: o teclado numérico de celular normalmente digita ponto, não vírgula; campos de
+// taxa/percentual da calculadora (que não são .nv-campo-moeda) precisam aceitar os dois sem
+// interpretar "1.5" como 15.
+
+test('numeroDecimalFlexivel aceita vírgula como decimal (padrão brasileiro)', () => {
+  assert.equal(numeroDecimalFlexivel('1,5'), 1.5);
+});
+
+test('numeroDecimalFlexivel aceita ponto como decimal (teclado numérico de celular)', () => {
+  assert.equal(numeroDecimalFlexivel('1.5'), 1.5);
+});
+
+test('numeroDecimalFlexivel trata o separador mais à direita como decimal, mesmo com os dois presentes', () => {
+  assert.equal(numeroDecimalFlexivel('1.234,56'), 1234.56); // estilo brasileiro: ponto de milhar, vírgula decimal
+  assert.equal(numeroDecimalFlexivel('1,234.56'), 1234.56); // estilo americano: vírgula de milhar, ponto decimal
+});
+
+test('numeroDecimalFlexivel lida com número negativo e sem separador', () => {
+  assert.equal(numeroDecimalFlexivel('-10'), -10);
+  assert.equal(numeroDecimalFlexivel('10'), 10);
+});
+
+test('numeroDecimalFlexivel devolve 0 pra texto vazio ou inválido', () => {
+  assert.equal(numeroDecimalFlexivel(''), 0);
+  assert.equal(numeroDecimalFlexivel(undefined), 0);
+  assert.equal(numeroDecimalFlexivel('abc'), 0);
 });

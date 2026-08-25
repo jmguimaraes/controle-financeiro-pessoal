@@ -451,6 +451,29 @@ function corIndiceAtivo(nome, quantidadeCores) {
   return parseInt(hashSimples(nome || ''), 36) % quantidadeCores;
 }
 
+// Parser de taxa/percentual pros campos de texto da calculadora que NÃO são .nv-campo-moeda —
+// esses aceitam tanto vírgula (padrão brasileiro) quanto ponto (o que o teclado numérico de
+// celular normalmente digita) como separador decimal, sem exigir formatação. Bug real que isso
+// corrige: antes, "1.5" virava silenciosamente 15 (o parser de moeda trata ponto como separador de
+// milhar) — aqui o separador mais à direita na string é sempre tratado como o decimal, e qualquer
+// outro antes dele como agrupador de milhar, então funciona com os dois estilos.
+function numeroDecimalFlexivel(texto) {
+  const limpo = String(texto || '').trim();
+  if (!limpo) return 0;
+  const ultimaVirgula = limpo.lastIndexOf(',');
+  const ultimoPonto = limpo.lastIndexOf('.');
+  let normalizado;
+  if (ultimaVirgula === -1 && ultimoPonto === -1) {
+    normalizado = limpo;
+  } else if (ultimaVirgula > ultimoPonto) {
+    normalizado = limpo.replace(/\./g, '').replace(',', '.');
+  } else {
+    normalizado = limpo.replace(/,/g, '');
+  }
+  const numero = Number(normalizado);
+  return Number.isFinite(numero) ? numero : 0;
+}
+
 function estadoInicial() {
   return {
     lancamentos: [],
@@ -556,5 +579,6 @@ if (typeof module !== 'undefined' && module.exports) {
     proximosDividendosPrevistos,
     iniciaisAtivo,
     corIndiceAtivo,
+    numeroDecimalFlexivel,
   };
 }

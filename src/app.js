@@ -344,6 +344,13 @@
     return elemento ? numeroDoCampoMoeda(elemento.value) : 0;
   }
 
+  // Campos de taxa/percentual (não são .nv-campo-moeda) usam um parser mais tolerante: aceita
+  // ponto OU vírgula como decimal, porque o teclado numérico de celular normalmente digita ponto —
+  // com numeroPtBR (que trata ponto como separador de milhar), digitar "1.5" virava 15 em silêncio.
+  function numeroTaxa(elemento) {
+    return elemento ? logica.numeroDecimalFlexivel(elemento.value) : 0;
+  }
+
   function mostrarResultadoCalculadora(idResultado, linhasHtml) {
     const resultado = document.getElementById(idResultado);
     resultado.hidden = false;
@@ -358,7 +365,7 @@
     const r = logica.jurosCompostos({
       capitalInicial: numeroPtBR(document.getElementById('campo-calc-compostos-capital')),
       aporteMensal: numeroPtBR(document.getElementById('campo-calc-compostos-aporte')),
-      taxaMensal: numeroPtBR(document.getElementById('campo-calc-compostos-taxa')) / 100,
+      taxaMensal: numeroTaxa(document.getElementById('campo-calc-compostos-taxa')) / 100,
       meses: Number(document.getElementById('campo-calc-compostos-meses').value) || 0,
     });
     mostrarResultadoCalculadora(
@@ -372,7 +379,7 @@
   function calcularJurosSimples() {
     const r = logica.jurosSimples({
       capitalInicial: numeroPtBR(document.getElementById('campo-calc-simples-capital')),
-      taxaMensal: numeroPtBR(document.getElementById('campo-calc-simples-taxa')) / 100,
+      taxaMensal: numeroTaxa(document.getElementById('campo-calc-simples-taxa')) / 100,
       meses: Number(document.getElementById('campo-calc-simples-meses').value) || 0,
     });
     mostrarResultadoCalculadora(
@@ -383,7 +390,7 @@
   }
 
   function calcularPercentualDeValor() {
-    const percentual = numeroPtBR(document.getElementById('campo-calc-pct1-percentual'));
+    const percentual = numeroTaxa(document.getElementById('campo-calc-pct1-percentual'));
     const valor = numeroPtBR(document.getElementById('campo-calc-pct1-valor'));
     const r = logica.percentualDeValor(percentual, valor);
     mostrarResultadoCalculadora(
@@ -404,7 +411,7 @@
 
   function calcularVariacaoPercentual() {
     const valor = numeroPtBR(document.getElementById('campo-calc-pct3-valor'));
-    const percentual = numeroPtBR(document.getElementById('campo-calc-pct3-percentual'));
+    const percentual = numeroTaxa(document.getElementById('campo-calc-pct3-percentual'));
     const r = logica.aplicarVariacaoPercentual(valor, percentual);
     mostrarResultadoCalculadora('resultado-calc-pct3', linhaResultado('Novo valor', renderizacao.formatCurrency(r)));
   }
@@ -412,7 +419,7 @@
   function calcularPrimeiroMilhao() {
     const valorAlvo = numeroPtBR(document.getElementById('campo-calc-milhao-alvo'));
     const capitalInicial = numeroPtBR(document.getElementById('campo-calc-milhao-capital'));
-    const taxaMensal = numeroPtBR(document.getElementById('campo-calc-milhao-taxa')) / 100;
+    const taxaMensal = numeroTaxa(document.getElementById('campo-calc-milhao-taxa')) / 100;
     if (modoMilhao === 'tempo') {
       const aporteMensal = numeroPtBR(document.getElementById('campo-calc-milhao-aporte'));
       const r = logica.mesesParaAtingirMeta({ capitalInicial, aporteMensal, taxaMensal, valorAlvo });

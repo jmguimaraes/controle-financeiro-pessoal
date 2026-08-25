@@ -127,6 +127,16 @@ test('renderLancamentos escapa HTML da descrição para evitar injeção', () =>
   assert.match(html, /&lt;script&gt;/);
 });
 
+test('renderLancamentos usa a categoria como nome do lançamento quando a descrição fica vazia', () => {
+  const state = estado({
+    lancamentos: [
+      { id: '1', data: '2026-08-01', descricao: '', tipo: 'despesa', categoria: 'Lazer', valorTotal: 10, parcelas: 1 },
+    ],
+  });
+  const html = renderLancamentos(state, 2026, 8);
+  assert.match(html, /<div class="nv-item-nome">Lazer/);
+});
+
 test('renderLancamentos mostra a tag de parcela quando o lançamento é parcelado', () => {
   const state = estado({
     lancamentos: [
