@@ -323,13 +323,11 @@ function renderLancamentos(state, ano, mes, opcoes = {}) {
   `;
 }
 
-function renderCategoriasOptions(categoriaSelecionada) {
+function renderCategoriasOptions(categoriaSelecionada, tipo) {
   const receitas = ['Salário', 'Freelance', 'Investimentos', 'Outras Receitas'];
   const despesas = ['Moradia', 'Alimentação', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Vestuário', 'Outras Despesas'];
   const opt = (c) => `<option value="${escapeHtml(c)}" ${c === categoriaSelecionada ? 'selected' : ''}>${escapeHtml(c)}</option>`;
-  return `
-    <optgroup label="Receita">${receitas.map(opt).join('')}</optgroup>
-    <optgroup label="Despesa">${despesas.map(opt).join('')}</optgroup>`;
+  return (tipo === 'receita' ? receitas : despesas).map(opt).join('');
 }
 
 function renderNovoLancamento(state, dadosIniciais) {
@@ -364,7 +362,7 @@ function renderNovoLancamento(state, dadosIniciais) {
       </div>
       <div class="nv-campo-linha">
         <label class="nv-campo-label" for="campo-categoria">CATEGORIA</label>
-        <select id="campo-categoria" name="categoria" required>${renderCategoriasOptions(d.categoria)}</select>
+        <select id="campo-categoria" name="categoria" required>${renderCategoriasOptions(d.categoria, tipo)}</select>
       </div>
       <div class="nv-campo-dupla">
         <div>

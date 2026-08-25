@@ -127,6 +127,18 @@ test('renderNovoLancamento pré-preenche os campos ao editar e mostra o botão d
   assert.match(html, /excluir-lancamento-atual/);
 });
 
+test('renderNovoLancamento só lista categorias de despesa quando o tipo é despesa', () => {
+  const html = renderNovoLancamento(estado(), { tipo: 'despesa' });
+  assert.match(html, /Moradia/);
+  assert.doesNotMatch(html, /Salário/);
+});
+
+test('renderNovoLancamento só lista categorias de receita quando o tipo é receita', () => {
+  const html = renderNovoLancamento(estado(), { tipo: 'receita' });
+  assert.match(html, /Salário/);
+  assert.doesNotMatch(html, /Moradia/);
+});
+
 test('renderNovoLancamento não mostra o botão de excluir para um lançamento novo', () => {
   const html = renderNovoLancamento(estado(), { tipo: 'despesa', parcelas: 1 });
   assert.equal(html.includes('excluir-lancamento-atual'), false);
