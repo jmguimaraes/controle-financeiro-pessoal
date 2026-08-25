@@ -519,6 +519,11 @@ test('listaSugeridaPorTipo devolve lista vazia pra um tipo desconhecido ou sem s
   assert.deepEqual(listaSugeridaPorTipo('outro'), []);
 });
 
+test('listaSugeridaPorTipo tem sugestões pra fundo de investimento e renda fixa também, não só ação/FII', () => {
+  assert.ok(listaSugeridaPorTipo('fundo_investimento').length > 0);
+  assert.ok(listaSugeridaPorTipo('renda_fixa').includes('CDB'));
+});
+
 test('applyAction preserva contas e metas existentes ao aplicar uma ação não relacionada', () => {
   const estado = {
     lancamentos: [],

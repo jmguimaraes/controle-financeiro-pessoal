@@ -137,6 +137,12 @@ select option{background-color:var(--nv-bg);color:var(--nv-fg);}
 .nv-combo-gatilho{background:none;border:none;color:inherit;font:inherit;padding:0;outline:none;cursor:pointer;width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;}
 .nv-combo-gatilho .nv-combo-seta{flex:none;color:var(--nv-muted);}
 .nv-combo-input{font-size:15px;font-weight:500;background:none;border:none;color:inherit;width:100%;font-family:inherit;padding:0;outline:none;}
+/* Dentro de um dialog (Investimento, Operação, Conta, Provento, Meta) o combo precisa da mesma
+   caixa com borda dos outros campos (dialog input) e de espaço embaixo — sem isso, o rótulo
+   seguinte fica colado na caixa e tudo parece uma coisa só, difícil de tocar certo. */
+dialog .nv-combo{margin-bottom:14px;}
+dialog .nv-combo-gatilho,
+dialog .nv-combo-input{font-family:inherit;font-size:1rem;padding:8px;border-radius:8px;border:1px solid var(--nv-rule-soft);background:var(--nv-bg);color:var(--nv-fg);}
 .nv-combo-lista{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--nv-bg);border:1px solid var(--nv-rule-soft);border-radius:var(--nv-radius-control);max-height:240px;overflow-y:auto;z-index:30;box-shadow:0 10px 28px rgba(0,0,0,.4);}
 .nv-combo-lista[hidden]{display:none;}
 .nv-combo-item{padding:11px 14px;font-size:14px;font-weight:500;cursor:pointer;}

@@ -12,6 +12,12 @@ const ATIVOS_SUGERIDOS = {
   etf: ['BOVA11', 'IVVB11', 'SMAL11', 'DIVO11', 'BOVV11', 'XFIX11'],
   etf_internacional: ['SPY', 'QQQ', 'VOO', 'VTI', 'IWM', 'DIA'],
   tesouro_direto: ['Tesouro Selic', 'Tesouro IPCA+', 'Tesouro Prefixado', 'Tesouro IPCA+ com Juros Semestrais', 'Tesouro Prefixado com Juros Semestrais'],
+  // Fundo de investimento não tem "ticker" (não é negociado em bolsa como ação/FII) — sugere as
+  // categorias padronizadas pela CVM, que são estáveis e não ficam desatualizadas como um nome
+  // de produto específico ficaria.
+  fundo_investimento: ['Fundo Multimercado', 'Fundo de Ações', 'Fundo Cambial', 'Fundo de Renda Fixa', 'Fundo Imobiliário Não Listado', 'Fundo de Previdência (PGBL)', 'Fundo de Previdência (VGBL)'],
+  // Renda fixa "bancária" também não tem ticker — sugere os tipos de instrumento mais comuns.
+  renda_fixa: ['CDB', 'LCI', 'LCA', 'CRI', 'CRA', 'Debênture', 'Poupança', 'COE'],
 };
 
 function listaSugeridaPorTipo(tipo) {
