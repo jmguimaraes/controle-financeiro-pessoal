@@ -242,6 +242,81 @@ test('renderAtivoDetalhe mostra estado vazio quando o ativo ainda não tem opera
   assert.match(html, /Nenhuma opera/);
 });
 
+test('renderInvestimentos mostra a sugestão de próximo aporte quando há alocação-alvo definida', () => {
+  const state = estado({
+    alocacaoAlvo: { acao: 50, fii: 50 },
+    investimentos: [
+      { id: '1', nome: 'ITSA4', tipo: 'acao', precoAtual: 10, operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-01', quantidade: 80, precoUnitario: 10 }] },
+      { id: '2', nome: 'HGLG11', tipo: 'fii', precoAtual: 10, operacoes: [{ id: 'o2', tipo: 'compra', data: '2026-01-01', quantidade: 20, precoUnitario: 10 }] },
+    ],
+  });
+  const html = renderInvestimentos(state);
+  assert.match(html, /PRÓXIMO APORTE/);
+  assert.match(html, /Fundo Imobiliário/); // fii está abaixo da meta, deve aparecer primeiro
+});
+
+test('renderInvestimentos não mostra sugestão de aporte quando não há alocação-alvo definida', () => {
+  const html = renderInvestimentos(estado({ investimentos: [{ id: '1', nome: 'ITSA4', tipo: 'acao', precoAtual: 10, operacoes: [] }] }));
+  assert.doesNotMatch(html, /PRÓXIMO APORTE/);
+});
+
+test('renderAtivoDetalhe mostra o total de proventos recebidos e a lista, mais recente primeiro', () => {
+  const state = estado({
+    investimentos: [
+      {
+        id: '1',
+        nome: 'ITSA4',
+        tipo: 'acao',
+        precoAtual: 10,
+        operacoes: [],
+        proventos: [
+          { id: 'p1', data: '2026-01-10', tipo: 'dividendo', valor: 10 },
+          { id: 'p2', data: '2026-02-10', tipo: 'jcp', valor: 5 },
+        ],
+      },
+    ],
+  });
+  const html = renderAtivoDetalhe(state, '1');
+  assert.match(html, /PROVENTOS/);
+  assert.match(html, /R\$\s*15,00/); // total recebido
+  const posP1 = html.indexOf('p1');
+  const posP2 = html.indexOf('p2');
+  assert.ok(posP2 !== -1 && posP1 !== -1 && posP2 < posP1);
+});
+
+test('renderAtivoDetalhe mostra estado vazio de proventos quando o ativo ainda não recebeu nenhum', () => {
+  const html = renderAtivoDetalhe(estado({ investimentos: [{ id: '1', nome: 'X', tipo: 'acao', precoAtual: 0, operacoes: [], proventos: [] }] }), '1');
+  assert.match(html, /Nenhum provento recebido ainda/);
+});
+
+test('renderInvestimentos mostra o imposto estimado do mês atual quando há venda tributável', () => {
+  const hoje = new Date();
+  const dataVenda = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-05`;
+  const state = estado({
+    investimentos: [
+      {
+        id: '1',
+        nome: 'HGLG11',
+        tipo: 'fii',
+        precoAtual: 12,
+        operacoes: [
+          { id: 'o1', tipo: 'compra', data: '2026-01-01', quantidade: 100, precoUnitario: 10 },
+          { id: 'o2', tipo: 'venda', data: dataVenda, quantidade: 100, precoUnitario: 12 },
+        ],
+      },
+    ],
+  });
+  const html = renderInvestimentos(state);
+  assert.match(html, /IMPOSTO ESTIMADO/);
+  assert.match(html, /R\$\s*40,00/); // 20% sobre lucro de 200
+  assert.match(html, /não substitui/i);
+});
+
+test('renderInvestimentos não mostra o card de imposto quando não há venda tributável no mês', () => {
+  const html = renderInvestimentos(estado({ investimentos: [{ id: '1', nome: 'ITSA4', tipo: 'acao', precoAtual: 10, operacoes: [] }] }));
+  assert.doesNotMatch(html, /IMPOSTO ESTIMADO/);
+});
+
 test('o bundle concatenado pelo build é um script clássico válido (sem colisão de identificadores)', () => {
   const raiz = path.join(__dirname, '..');
   execSync('node build.js', { cwd: raiz });

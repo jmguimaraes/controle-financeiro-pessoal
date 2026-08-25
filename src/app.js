@@ -342,6 +342,24 @@
     document.getElementById('form-operacao').showModal();
   }
 
+  function abrirFormularioAlocacao() {
+    const form = document.getElementById('formulario-alocacao');
+    form.reset();
+    const alvo = state.alocacaoAlvo || {};
+    for (const tipo of ['acao', 'fii', 'renda_fixa', 'outro']) {
+      form.elements[tipo].value = alvo[tipo] || '';
+    }
+    document.getElementById('form-alocacao').showModal();
+  }
+
+  function abrirFormularioProvento(ativoId) {
+    const form = document.getElementById('formulario-provento');
+    form.reset();
+    form.elements.ativoId.value = ativoId;
+    form.elements.data.value = `${anoAtual}-${String(mesAtual).padStart(2, '0')}-01`;
+    document.getElementById('form-provento').showModal();
+  }
+
   function abrirFormularioConta(id) {
     const form = document.getElementById('formulario-conta');
     form.reset();
@@ -445,6 +463,16 @@
         const migrado = logica.migrarInvestimentoLegado(item);
         const operacoes = migrado.operacoes.filter((op) => op.id !== alvo.dataset.id);
         despachar({ type: 'editInvestimento', id: ativoAberto, changes: { operacoes, precoAtual: migrado.precoAtual } });
+      }
+
+      if (acao === 'editar-alocacao') abrirFormularioAlocacao();
+
+      if (acao === 'novo-provento') abrirFormularioProvento(alvo.dataset.id);
+      if (acao === 'excluir-provento') {
+        if (!ativoAberto || !confirm('Excluir este provento?')) return;
+        const item = state.investimentos.find((i) => i.id === ativoAberto);
+        const proventos = (item.proventos || []).filter((p) => p.id !== alvo.dataset.id);
+        despachar({ type: 'editInvestimento', id: ativoAberto, changes: { proventos } });
       }
 
       if (acao === 'nova-conta') abrirFormularioConta();
@@ -568,6 +596,37 @@
         });
         evento.target.reset();
         document.getElementById('form-operacao').close();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-alocacao') {
+        const dados = new FormData(evento.target);
+        const alocacaoAlvo = {};
+        for (const tipo of ['acao', 'fii', 'renda_fixa', 'outro']) {
+          const valor = Number(dados.get(tipo));
+          if (valor > 0) alocacaoAlvo[tipo] = valor;
+        }
+        despachar({ type: 'setAlocacaoAlvo', alocacaoAlvo: Object.keys(alocacaoAlvo).length ? alocacaoAlvo : null });
+        evento.target.reset();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-provento') {
+        const dados = new FormData(evento.target);
+        const ativoId = dados.get('ativoId');
+        const item = state.investimentos.find((i) => i.id === ativoId);
+        const novoProvento = {
+          id: uid(),
+          tipo: dados.get('tipo'),
+          data: dados.get('data'),
+          valor: Number(dados.get('valor')),
+        };
+        despachar({
+          type: 'editInvestimento',
+          id: ativoId,
+          changes: { proventos: [...(item.proventos || []), novoProvento] },
+        });
+        evento.target.reset();
         return;
       }
 

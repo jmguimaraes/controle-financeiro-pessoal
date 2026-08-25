@@ -57,12 +57,14 @@ function rendimento(investido, atual) {
   return { valor, percentual };
 }
 
-// Calcula quantidade e preço médio ponderado de um ativo a partir do histórico de operações.
-// Vendas reduzem a quantidade mas não alteram o preço médio (custo proporcional é retirado).
-function posicaoAtivo(operacoes) {
+// Reprocessa o histórico de operações em ordem cronológica, mantendo quantidade e custo total
+// acumulados, e registrando cada venda com o lucro realizado (preço de venda − preço médio
+// naquele momento). posicaoAtivo e historicoRealizado são só recortes deste resultado.
+function processarOperacoes(operacoes) {
   const ordenadas = [...(operacoes || [])].sort((a, b) => a.data.localeCompare(b.data));
   let quantidade = 0;
   let custoTotal = 0;
+  const vendas = [];
   for (const op of ordenadas) {
     if (op.tipo === 'compra') {
       quantidade += op.quantidade;
@@ -71,12 +73,34 @@ function posicaoAtivo(operacoes) {
       if (op.quantidade > quantidade) {
         throw new Error(`Venda de ${op.quantidade} unidades excede a posição atual de ${quantidade}.`);
       }
-      const precoMedioAtual = quantidade === 0 ? 0 : custoTotal / quantidade;
-      custoTotal -= op.quantidade * precoMedioAtual;
+      const precoMedioNaVenda = quantidade === 0 ? 0 : custoTotal / quantidade;
+      custoTotal -= op.quantidade * precoMedioNaVenda;
       quantidade -= op.quantidade;
+      vendas.push({
+        operacaoId: op.id,
+        data: op.data,
+        quantidade: op.quantidade,
+        precoVenda: op.precoUnitario,
+        precoMedioNaVenda,
+        valorVendido: op.quantidade * op.precoUnitario,
+        lucro: (op.precoUnitario - precoMedioNaVenda) * op.quantidade,
+      });
     }
   }
-  return { quantidade, precoMedio: quantidade === 0 ? 0 : custoTotal / quantidade, custoTotal };
+  return { quantidade, precoMedio: quantidade === 0 ? 0 : custoTotal / quantidade, custoTotal, vendas };
+}
+
+// Calcula quantidade e preço médio ponderado de um ativo a partir do histórico de operações.
+// Vendas reduzem a quantidade mas não alteram o preço médio (custo proporcional é retirado).
+function posicaoAtivo(operacoes) {
+  const { quantidade, precoMedio, custoTotal } = processarOperacoes(operacoes);
+  return { quantidade, precoMedio, custoTotal };
+}
+
+// Lista o lucro realizado de cada venda (preço de venda − preço médio no momento da venda),
+// na ordem cronológica das operações — base pro cálculo de imposto estimado.
+function historicoRealizado(operacoes) {
+  return processarOperacoes(operacoes).vendas;
 }
 
 // Converte um investimento no formato antigo (valorInvestido/valorAtual fixos) numa 1ª operação
@@ -108,6 +132,74 @@ function totalCarteira(investimentos) {
   const totalAtual = resumos.reduce((s, r) => s + r.valorAtual, 0);
   const { valor, percentual } = rendimento(totalInvestido, totalAtual);
   return { totalInvestido, totalAtual, rendimentoValor: valor, rendimentoPercentual: percentual };
+}
+
+// Soma o valor atual da carteira agrupado por tipo de ativo (ação/fii/renda_fixa/outro),
+// do maior para o menor.
+function composicaoPorTipo(investimentos) {
+  const composicao = [];
+  for (const inv of investimentos) {
+    const { valorAtual } = resumoInvestimento(inv);
+    const existente = composicao.find((c) => c.tipo === inv.tipo);
+    if (existente) existente.valor += valorAtual;
+    else composicao.push({ tipo: inv.tipo, valor: valorAtual });
+  }
+  return composicao.sort((a, b) => b.valor - a.valor);
+}
+
+// Compara a composição atual da carteira com a alocação-alvo (% por tipo) e devolve, pra cada
+// tipo com meta definida, o quanto falta em R$ pra chegar nela — do maior déficit pro menor.
+// Um valor de "diferenca" negativo indica que o tipo já está acima da meta.
+function sugestaoAporte(investimentos, alocacaoAlvo) {
+  if (!alocacaoAlvo) return [];
+  const composicao = composicaoPorTipo(investimentos);
+  const totalAtual = composicao.reduce((s, c) => s + c.valor, 0);
+  return Object.keys(alocacaoAlvo)
+    .map((tipo) => {
+      const atual = (composicao.find((c) => c.tipo === tipo) || { valor: 0 }).valor;
+      const ideal = (alocacaoAlvo[tipo] / 100) * totalAtual;
+      return { tipo, atual, ideal, diferenca: ideal - atual };
+    })
+    .sort((a, b) => b.diferenca - a.diferenca);
+}
+
+function totalProventos(proventos) {
+  return (proventos || []).reduce((s, p) => s + p.valor, 0);
+}
+
+// Estimativa de imposto de renda sobre ganho de capital em ações e FIIs, mês a mês.
+// Ações: isentas se o total vendido no mês (todos os ativos do tipo, somados) não passar de
+// R$20.000; senão, 15% sobre o lucro líquido do mês. FIIs: sempre 20% sobre o lucro líquido do
+// mês, sem isenção por valor vendido. Day-trade e renda fixa/outro ficam fora (regras diferentes).
+// É uma estimativa de apoio à decisão — não substitui cálculo de contador pra fins de DARF.
+const REGRAS_IMPOSTO_CARTEIRA = {
+  acao: { aliquota: 0.15, limiteIsencaoVendas: 20000 },
+  fii: { aliquota: 0.2, limiteIsencaoVendas: 0 },
+};
+
+function impostoEstimadoMes(investimentos, ano, mes) {
+  const porTipo = {};
+  for (const inv of investimentos) {
+    const regra = REGRAS_IMPOSTO_CARTEIRA[inv.tipo];
+    if (!regra) continue;
+    const investimentoMigrado = migrarInvestimentoLegado(inv);
+    const vendasDoMes = historicoRealizado(investimentoMigrado.operacoes).filter((v) => {
+      const [anoVenda, mesVenda] = v.data.split('-').map(Number);
+      return anoVenda === ano && mesVenda === mes;
+    });
+    if (!vendasDoMes.length) continue;
+    if (!porTipo[inv.tipo]) porTipo[inv.tipo] = { tipo: inv.tipo, totalVendido: 0, lucroLiquido: 0 };
+    for (const venda of vendasDoMes) {
+      porTipo[inv.tipo].totalVendido += venda.valorVendido;
+      porTipo[inv.tipo].lucroLiquido += venda.lucro;
+    }
+  }
+  return Object.values(porTipo).map((item) => {
+    const regra = REGRAS_IMPOSTO_CARTEIRA[item.tipo];
+    const isento = regra.limiteIsencaoVendas > 0 && item.totalVendido <= regra.limiteIsencaoVendas;
+    const lucroTributavel = isento ? 0 : Math.max(0, item.lucroLiquido);
+    return { ...item, isento, lucroTributavel, aliquota: regra.aliquota, impostoEstimado: lucroTributavel * regra.aliquota };
+  });
 }
 
 function indiceMes(ano, mes) {
@@ -198,6 +290,7 @@ function estadoInicial() {
     metas: [],
     tema: 'escuro',
     ocultarValores: false,
+    alocacaoAlvo: null,
   };
 }
 
@@ -208,7 +301,8 @@ function applyAction(state, action) {
   const metas = state.metas ? state.metas.slice() : [];
   const tema = state.tema || 'escuro';
   const ocultarValores = state.ocultarValores || false;
-  const base = { lancamentos, investimentos, contas, metas, tema, ocultarValores };
+  const alocacaoAlvo = state.alocacaoAlvo || null;
+  const base = { lancamentos, investimentos, contas, metas, tema, ocultarValores, alocacaoAlvo };
 
   switch (action.type) {
     case 'addLancamento':
@@ -245,6 +339,8 @@ function applyAction(state, action) {
       return { ...base, tema: action.tema };
     case 'setOcultarValores':
       return { ...base, ocultarValores: !!action.valor };
+    case 'setAlocacaoAlvo':
+      return { ...base, alocacaoAlvo: action.alocacaoAlvo };
     default:
       throw new Error(`Ação desconhecida: ${action.type}`);
   }
@@ -270,5 +366,10 @@ if (typeof module !== 'undefined' && module.exports) {
     posicaoAtivo,
     migrarInvestimentoLegado,
     resumoInvestimento,
+    composicaoPorTipo,
+    sugestaoAporte,
+    totalProventos,
+    historicoRealizado,
+    impostoEstimadoMes,
   };
 }

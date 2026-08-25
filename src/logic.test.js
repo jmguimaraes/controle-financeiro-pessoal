@@ -19,6 +19,11 @@ const {
   posicaoAtivo,
   migrarInvestimentoLegado,
   resumoInvestimento,
+  composicaoPorTipo,
+  sugestaoAporte,
+  totalProventos,
+  historicoRealizado,
+  impostoEstimadoMes,
 } = require('./logic.js');
 
 test('parcelaValor divide o valor total pelo número de parcelas', () => {
@@ -179,7 +184,7 @@ test('statusMeta indica excedente quando o gasto passa do limite', () => {
   assert.deepEqual(statusMeta(100, 0), { percentual: 0, excedeu: false, excedente: 0 });
 });
 
-test('estadoInicial começa com listas vazias, tema escuro e valores visíveis', () => {
+test('estadoInicial começa com listas vazias, tema escuro, valores visíveis e sem alocação-alvo', () => {
   const estado = estadoInicial();
   assert.deepEqual(estado.lancamentos, []);
   assert.deepEqual(estado.investimentos, []);
@@ -187,6 +192,13 @@ test('estadoInicial começa com listas vazias, tema escuro e valores visíveis',
   assert.deepEqual(estado.metas, []);
   assert.equal(estado.tema, 'escuro');
   assert.equal(estado.ocultarValores, false);
+  assert.equal(estado.alocacaoAlvo, null);
+});
+
+test('applyAction setAlocacaoAlvo grava as metas de % por tipo de ativo', () => {
+  let estado = estadoInicial();
+  estado = applyAction(estado, { type: 'setAlocacaoAlvo', alocacaoAlvo: { acao: 60, fii: 40 } });
+  assert.deepEqual(estado.alocacaoAlvo, { acao: 60, fii: 40 });
 });
 
 test('applyAction addLancamento acrescenta sem mutar o estado original', () => {
@@ -348,6 +360,136 @@ test('resumoInvestimento migra investimentos legados automaticamente', () => {
   assert.equal(resumo.quantidade, 1);
   assert.equal(resumo.valorInvestido, 1000);
   assert.equal(resumo.valorAtual, 1200);
+});
+
+test('composicaoPorTipo soma o valor atual dos ativos agrupado por tipo, ordenado do maior para o menor', () => {
+  const investimentos = [
+    { id: '1', tipo: 'acao', precoAtual: 10, operacoes: [{ tipo: 'compra', data: '2026-01-01', quantidade: 10, precoUnitario: 10 }] },
+    { id: '2', tipo: 'fii', precoAtual: 5, operacoes: [{ tipo: 'compra', data: '2026-01-01', quantidade: 100, precoUnitario: 5 }] },
+    { id: '3', tipo: 'acao', precoAtual: 20, operacoes: [{ tipo: 'compra', data: '2026-01-01', quantidade: 5, precoUnitario: 20 }] },
+  ];
+  assert.deepEqual(composicaoPorTipo(investimentos), [
+    { tipo: 'fii', valor: 500 },
+    { tipo: 'acao', valor: 200 },
+  ]);
+});
+
+test('sugestaoAporte devolve vazio quando não há alocação-alvo definida', () => {
+  assert.deepEqual(sugestaoAporte([], null), []);
+});
+
+test('sugestaoAporte ordena os tipos do maior déficit pro menor em relação à meta', () => {
+  const investimentos = [
+    { id: '1', tipo: 'acao', precoAtual: 10, operacoes: [{ tipo: 'compra', data: '2026-01-01', quantidade: 80, precoUnitario: 10 }] }, // 800
+    { id: '2', tipo: 'fii', precoAtual: 10, operacoes: [{ tipo: 'compra', data: '2026-01-01', quantidade: 20, precoUnitario: 10 }] }, // 200
+  ];
+  // total = 1000; alvo 50/50 -> ideal 500 cada; ação está 300 acima (déficit -300), fii está 300 abaixo (déficit +300)
+  const sugestao = sugestaoAporte(investimentos, { acao: 50, fii: 50 });
+  assert.equal(sugestao[0].tipo, 'fii');
+  assert.equal(sugestao[0].diferenca, 300);
+  assert.equal(sugestao[1].tipo, 'acao');
+  assert.equal(sugestao[1].diferenca, -300);
+});
+
+test('totalProventos soma o valor recebido em dividendos e JCP', () => {
+  assert.equal(totalProventos([{ valor: 10.5 }, { valor: 5 }]), 15.5);
+  assert.equal(totalProventos([]), 0);
+  assert.equal(totalProventos(undefined), 0);
+});
+
+test('historicoRealizado calcula o lucro de cada venda em relação ao preço médio no momento', () => {
+  const operacoes = [
+    { id: 'c1', tipo: 'compra', data: '2026-01-10', quantidade: 10, precoUnitario: 20 },
+    { id: 'v1', tipo: 'venda', data: '2026-03-10', quantidade: 4, precoUnitario: 30 },
+  ];
+  const vendas = historicoRealizado(operacoes);
+  assert.equal(vendas.length, 1);
+  assert.equal(vendas[0].quantidade, 4);
+  assert.equal(vendas[0].precoMedioNaVenda, 20);
+  assert.equal(vendas[0].valorVendido, 120);
+  assert.equal(vendas[0].lucro, 40);
+});
+
+test('historicoRealizado devolve lista vazia quando não há vendas', () => {
+  assert.deepEqual(historicoRealizado([{ id: 'c1', tipo: 'compra', data: '2026-01-10', quantidade: 10, precoUnitario: 20 }]), []);
+});
+
+test('impostoEstimadoMes isenta ações quando o total vendido no mês não passa de R$20.000', () => {
+  const investimentos = [
+    {
+      id: '1',
+      tipo: 'acao',
+      precoAtual: 25,
+      operacoes: [
+        { tipo: 'compra', data: '2026-01-01', quantidade: 100, precoUnitario: 100 },
+        { tipo: 'venda', data: '2026-03-05', quantidade: 100, precoUnitario: 150 }, // vendeu 15.000, lucro 5.000
+      ],
+    },
+  ];
+  const resultado = impostoEstimadoMes(investimentos, 2026, 3);
+  assert.equal(resultado.length, 1);
+  assert.equal(resultado[0].isento, true);
+  assert.equal(resultado[0].impostoEstimado, 0);
+});
+
+test('impostoEstimadoMes tributa ações em 15% do lucro do mês quando as vendas passam de R$20.000', () => {
+  const investimentos = [
+    {
+      id: '1',
+      tipo: 'acao',
+      precoAtual: 25,
+      operacoes: [
+        { tipo: 'compra', data: '2026-01-01', quantidade: 200, precoUnitario: 100 },
+        { tipo: 'venda', data: '2026-03-05', quantidade: 200, precoUnitario: 150 }, // vendeu 30.000, lucro 10.000
+      ],
+    },
+  ];
+  const resultado = impostoEstimadoMes(investimentos, 2026, 3);
+  assert.equal(resultado[0].isento, false);
+  assert.equal(resultado[0].lucroTributavel, 10000);
+  assert.equal(resultado[0].impostoEstimado, 1500);
+});
+
+test('impostoEstimadoMes tributa FIIs em 20% do lucro do mês sem nenhuma isenção por valor vendido', () => {
+  const investimentos = [
+    {
+      id: '1',
+      tipo: 'fii',
+      precoAtual: 12,
+      operacoes: [
+        { tipo: 'compra', data: '2026-01-01', quantidade: 100, precoUnitario: 10 },
+        { tipo: 'venda', data: '2026-03-05', quantidade: 100, precoUnitario: 12 }, // vendeu 1.200, lucro 200
+      ],
+    },
+  ];
+  const resultado = impostoEstimadoMes(investimentos, 2026, 3);
+  assert.equal(resultado[0].isento, false);
+  assert.equal(resultado[0].impostoEstimado, 40);
+});
+
+test('impostoEstimadoMes não tributa lucro líquido negativo no mês', () => {
+  const investimentos = [
+    {
+      id: '1',
+      tipo: 'fii',
+      precoAtual: 8,
+      operacoes: [
+        { tipo: 'compra', data: '2026-01-01', quantidade: 100, precoUnitario: 10 },
+        { tipo: 'venda', data: '2026-03-05', quantidade: 100, precoUnitario: 8 }, // prejuízo de 200
+      ],
+    },
+  ];
+  const resultado = impostoEstimadoMes(investimentos, 2026, 3);
+  assert.equal(resultado[0].lucroTributavel, 0);
+  assert.equal(resultado[0].impostoEstimado, 0);
+});
+
+test('impostoEstimadoMes ignora renda fixa/outro e meses sem vendas', () => {
+  const investimentos = [
+    { id: '1', tipo: 'renda_fixa', precoAtual: 100, operacoes: [{ tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: 100 }, { tipo: 'venda', data: '2026-03-05', quantidade: 1, precoUnitario: 120 }] },
+    { id: '2', tipo: 'acao', precoAtual: 10, operacoes: [{ tipo: 'compra', data: '2026-01-01', quantidade: 10, precoUnitario: 10 }] },
+  ];
+  assert.deepEqual(impostoEstimadoMes(investimentos, 2026, 3), []);
 });
 
 test('applyAction preserva contas e metas existentes ao aplicar uma ação não relacionada', () => {

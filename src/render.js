@@ -602,18 +602,11 @@ function renderInvestimentos(state) {
 
   const cores = ['var(--nv-accent)', 'var(--nv-bar-neutral-strong)', 'var(--nv-bar-neutral)', 'var(--nv-rule-soft)'];
   const resumos = investimentos.map((i) => ({ investimento: i, resumo: L.resumoInvestimento(i) }));
-  const composicao = resumos.length
-    ? resumos
-        .map(({ investimento: i, resumo: r }) => ({ tipo: ROTULOS_TIPO_INVESTIMENTO[i.tipo] || i.tipo, valor: r.valorAtual }))
-        .reduce((acc, item) => {
-          const existente = acc.find((a) => a.tipo === item.tipo);
-          if (existente) existente.valor += item.valor;
-          else acc.push({ ...item });
-          return acc;
-        }, [])
-        .sort((a, b) => b.valor - a.valor)
-    : [];
+  const composicao = L.composicaoPorTipo(investimentos);
   const totalComposicao = composicao.reduce((s, c) => s + c.valor, 0) || 1;
+  const sugestao = L.sugestaoAporte(investimentos, state.alocacaoAlvo).filter((s) => s.diferenca > 0);
+  const hoje = new Date();
+  const imposto = L.impostoEstimadoMes(investimentos, hoje.getFullYear(), hoje.getMonth() + 1);
 
   const itens = resumos.length
     ? resumos
@@ -659,8 +652,21 @@ function renderInvestimentos(state) {
         ${composicao.map((c, i) => `<div class="nv-composicao-seg" style="width:${((c.valor / totalComposicao) * 100).toFixed(1)}%;background:${cores[i % cores.length]}"></div>`).join('')}
       </div>
       <div class="nv-composicao-legenda">
-        ${composicao.map((c) => `<span>${escapeHtml(c.tipo).toUpperCase()} ${Math.round((c.valor / totalComposicao) * 100)}%</span>`).join('')}
+        ${composicao.map((c) => `<span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[c.tipo] || c.tipo).toUpperCase()} ${Math.round((c.valor / totalComposicao) * 100)}%</span>`).join('')}
       </div>
+      <button type="button" class="nv-link-accent" data-acao="editar-alocacao" style="margin-top:10px;font-size:10px">METAS DE ALOCAÇÃO</button>
+    </div>`
+        : ''
+    }
+    ${
+      sugestao.length
+        ? `<div class="nv-section-head"><span class="nv-section-label">PRÓXIMO APORTE</span></div>
+    <div class="nv-list-plain">
+      ${sugestao
+        .map(
+          (s) => `<div class="nv-row-plain"><span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[s.tipo] || s.tipo)}</span><span>faltam ${mascarar(formatCurrency(s.diferenca), ocultar)}</span></div>`
+        )
+        .join('')}
     </div>`
         : ''
     }
@@ -670,6 +676,19 @@ function renderInvestimentos(state) {
         <span>NOVO ATIVO</span><span class="mais">+</span>
       </button>
     </div>
+    ${
+      imposto.length
+        ? `<div class="nv-section-head"><span class="nv-section-label">IMPOSTO ESTIMADO — ${MESES[hoje.getMonth()].toUpperCase()}</span></div>
+    <div class="nv-list-plain">
+      ${imposto
+        .map(
+          (i) => `<div class="nv-row-plain"><span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[i.tipo] || i.tipo)}${i.isento ? ' (isento)' : ` · ${Math.round(i.aliquota * 100)}%`}</span><span>${mascarar(formatCurrency(i.impostoEstimado), ocultar)}</span></div>`
+        )
+        .join('')}
+    </div>
+    <p class="nv-item-meta" style="padding:0 20px 16px">Estimativa de apoio à decisão — não substitui o cálculo de um contador pra fins de DARF.</p>`
+        : ''
+    }
     ${tabBar('carteira')}
   `;
 }
@@ -681,7 +700,28 @@ function renderAtivoDetalhe(state, ativoId) {
 
   const resumo = L.resumoInvestimento(investimento);
   const operacoes = investimento.operacoes || [];
+  const proventos = investimento.proventos || [];
+  const totalProventos = L.totalProventos(proventos);
   const classeRend = resumo.rendimentoValor > 0 ? 'positivo' : resumo.rendimentoValor < 0 ? 'negativo' : '';
+
+  const listaProventos = proventos.length
+    ? [...proventos]
+        .sort((a, b) => b.data.localeCompare(a.data))
+        .map((p) => {
+          const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
+          return `
+        <div class="nv-conta-linha" data-id="${p.id}">
+          <div>
+            <div class="nv-item-nome">${p.tipo === 'jcp' ? 'JCP' : 'DIVIDENDO'} · ${dataFmt}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="nv-item-valor">${mascarar(formatCurrency(p.valor), ocultar)}</div>
+            <button type="button" class="nv-link-muted" data-acao="excluir-provento" data-id="${p.id}" aria-label="Excluir provento" style="color:var(--nv-negative)">✕</button>
+          </div>
+        </div>`;
+        })
+        .join('')
+    : '<p class="nv-vazio">Nenhum provento recebido ainda.</p>';
 
   const listaOperacoes = operacoes.length
     ? [...operacoes]
@@ -720,6 +760,7 @@ function renderAtivoDetalhe(state, ativoId) {
         <span class="nv-carteira-badge">${formatPercent(resumo.rendimentoPercentual)}</span>
         <span class="nv-item-meta ${classeRend}">${resumo.rendimentoValor >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(resumo.rendimentoValor)), ocultar)} sobre ${mascarar(formatCurrency(resumo.valorInvestido), ocultar)}</span>
       </div>
+      ${totalProventos ? `<div class="nv-hero-sub">Proventos recebidos: ${mascarar(formatCurrency(totalProventos), ocultar)}</div>` : ''}
     </div>
     <div class="nv-cells">
       <div class="nv-cell">
@@ -736,6 +777,11 @@ function renderAtivoDetalhe(state, ativoId) {
       <button type="button" class="nv-link-accent" data-acao="nova-operacao" data-id="${investimento.id}">+ NOVA OPERAÇÃO</button>
     </div>
     <div>${listaOperacoes}</div>
+    <div class="nv-section-head">
+      <span class="nv-section-label">PROVENTOS</span>
+      <button type="button" class="nv-link-accent" data-acao="novo-provento" data-id="${investimento.id}">+ NOVO PROVENTO</button>
+    </div>
+    <div>${listaProventos}</div>
     ${tabBar('carteira')}
   `;
 }

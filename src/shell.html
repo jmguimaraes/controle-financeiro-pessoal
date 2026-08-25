@@ -292,6 +292,39 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   </form>
 </dialog>
 
+<dialog id="form-alocacao">
+  <form method="dialog" id="formulario-alocacao">
+    <h3>Metas de alocação (%)</h3>
+    <label>Ação<input type="number" name="acao" min="0" max="100" step="1" /></label>
+    <label>Fundo Imobiliário<input type="number" name="fii" min="0" max="100" step="1" /></label>
+    <label>Renda Fixa<input type="number" name="renda_fixa" min="0" max="100" step="1" /></label>
+    <label>Outro<input type="number" name="outro" min="0" max="100" step="1" /></label>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-provento">
+  <form method="dialog" id="formulario-provento">
+    <h3>Novo provento</h3>
+    <input type="hidden" name="ativoId" />
+    <label>Tipo
+      <select name="tipo" required>
+        <option value="dividendo">Dividendo</option>
+        <option value="jcp">JCP</option>
+      </select>
+    </label>
+    <label>Data<input type="date" name="data" required /></label>
+    <label>Valor recebido<input type="number" name="valor" step="0.01" min="0" required /></label>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="form-meta">
   <form method="dialog" id="formulario-meta">
     <h3>Nova meta</h3>
