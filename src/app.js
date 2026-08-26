@@ -357,8 +357,12 @@
     resultado.innerHTML = linhasHtml;
   }
 
+  // Escapa mesmo só recebendo rótulo fixo e número formatado hoje: o retorno vai direto pro
+  // innerHTML em mostrarResultadoCalculadora, então no dia em que alguém passar texto digitado
+  // pelo usuário (o nome de uma meta, por exemplo) isso viraria XSS sem ninguém perceber.
   function linhaResultado(rotulo, valor) {
-    return `<div class="nv-row-plain"><span>${rotulo}</span><span>${valor}</span></div>`;
+    const esc = renderizacao.escapeHtml;
+    return `<div class="nv-row-plain"><span>${esc(rotulo)}</span><span>${esc(valor)}</span></div>`;
   }
 
   function calcularJurosCompostos() {
