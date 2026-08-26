@@ -116,6 +116,10 @@
       // sem dado publicado ainda, ou sem rede — segue com estado vazio/local
     }
     if (!carregado) carregado = lerBackupLocal();
+    // Semente da build de demonstração (ver build-demo.js): entra por último, então quem abrir a
+    // demo e mexer nos dados continua vendo as próprias alterações nas visitas seguintes. Na build
+    // normal window.NUVRA_SEED não existe e esta linha não faz nada.
+    if (!carregado && typeof window !== 'undefined' && window.NUVRA_SEED) carregado = window.NUVRA_SEED;
     if (carregado) state = { ...estadoInicial(), ...carregado };
   }
 
@@ -508,6 +512,13 @@
   }
 
   async function salvarNoServidor(acao, tentativa = 1) {
+    // Na build de demonstração nada é publicado: cada visitante mexe numa cópia que vive só no
+    // navegador dele (salvarBackupLocal já rodou), então ninguém altera o que os outros veem e
+    // nenhum dado sai do aparelho. Na build normal esta condição é sempre falsa.
+    if (typeof window !== 'undefined' && window.NUVRA_DEMO) {
+      descricaoSincronizacao = 'Demonstração — dados só neste aparelho';
+      return;
+    }
     if (!artifactApi) {
       descricaoSincronizacao = 'Indisponível neste dispositivo';
       mostrarBanner('Sincronização indisponível nesta visualização — os dados ficam só neste aparelho.');

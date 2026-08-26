@@ -1,0 +1,3726 @@
+<title>Nuvra</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --nv-radius-control:12px;--nv-radius-avatar:16px;--nv-radius-stepper:9px;--nv-radius-badge:8px;--nv-radius-pill:999px;
+  --nv-bg:#f3f2f2;--nv-fg:#201e1d;--nv-fg-inverse:#fff;--nv-accent:#ec3013;--nv-on-accent:#fff;
+  --nv-positive:#201e1d;--nv-negative:#ec3013;--nv-negative-soft:#ec3013;
+  --nv-muted:rgba(32,30,29,.55);--nv-muted-2:rgba(32,30,29,.5);
+  --nv-rule-strong:#201e1d;--nv-rule-soft:rgba(32,30,29,.16);--nv-hairline:rgba(32,30,29,.14);
+  --nv-track:rgba(32,30,29,.14);--nv-bar-neutral:rgba(32,30,29,.2);--nv-bar-neutral-strong:#201e1d;
+  --nv-group-bg:rgba(32,30,29,.05);--nv-alert-bg:rgba(236,48,19,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --nv-bg:#201e1d;--nv-fg:#f3f2f2;--nv-fg-inverse:#201e1d;
+    --nv-positive:#7fd6a3;--nv-negative:#ff6a4d;--nv-negative-soft:#ff8f78;
+    --nv-muted:rgba(243,242,242,.55);--nv-muted-2:rgba(243,242,242,.5);
+    --nv-rule-strong:rgba(243,242,242,.3);--nv-rule-soft:rgba(243,242,242,.2);--nv-hairline:rgba(243,242,242,.14);
+    --nv-track:rgba(243,242,242,.18);--nv-bar-neutral:rgba(243,242,242,.28);--nv-bar-neutral-strong:rgba(243,242,242,.8);
+    --nv-group-bg:rgba(243,242,242,.06);--nv-alert-bg:rgba(236,48,19,.14);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --nv-bg:#201e1d;--nv-fg:#f3f2f2;--nv-fg-inverse:#201e1d;
+  --nv-positive:#7fd6a3;--nv-negative:#ff6a4d;--nv-negative-soft:#ff8f78;
+  --nv-muted:rgba(243,242,242,.55);--nv-muted-2:rgba(243,242,242,.5);
+  --nv-rule-strong:rgba(243,242,242,.3);--nv-rule-soft:rgba(243,242,242,.2);--nv-hairline:rgba(243,242,242,.14);
+  --nv-track:rgba(243,242,242,.18);--nv-bar-neutral:rgba(243,242,242,.28);--nv-bar-neutral-strong:rgba(243,242,242,.8);
+  --nv-group-bg:rgba(243,242,242,.06);--nv-alert-bg:rgba(236,48,19,.14);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{background:var(--nv-bg);color:var(--nv-fg);font-family:Archivo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+button,input,select{font-family:inherit;}
+/* color-scheme (declarado no :root acima) nem sempre é suficiente pro popup nativo do <select> —
+   alguns navegadores (Chrome no Windows, em particular) só respeitam o tema escuro no popup
+   quando as <option> também têm cor explícita, não herdada. */
+select option{background-color:var(--nv-bg);color:var(--nv-fg);}
+:focus-visible{outline:2px solid var(--nv-accent);outline-offset:2px;}
+:focus:not(:focus-visible){outline:none;}
+
+.nv-tela{display:flex;flex-direction:column;min-height:100dvh;max-width:480px;margin:0 auto;}
+.nv-tela[hidden]{display:none;}
+
+.nv-header{padding:14px 20px 12px;border-bottom:2px solid var(--nv-rule-strong);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.nv-header--back{justify-content:flex-start;gap:12px;}
+.nv-brand{display:flex;align-items:center;gap:9px;}
+.nv-wordmark{font-size:16px;font-weight:600;letter-spacing:.2em;}
+.nv-monthnav{display:flex;align-items:center;gap:10px;}
+.nv-monthnav button{background:none;border:none;color:var(--nv-accent);font-size:20px;line-height:1;cursor:pointer;padding:4px;}
+.nv-monthnav span{font-size:13px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted);white-space:nowrap;}
+.nv-gear{background:none;border:none;color:var(--nv-muted);cursor:pointer;padding:4px;line-height:1;display:inline-flex;align-items:center;}
+.nv-title{font-size:22px;font-weight:600;letter-spacing:-.02em;}
+.nv-month-label{font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted);}
+.nv-back{background:none;border:none;color:var(--nv-accent);font-size:20px;line-height:1;cursor:pointer;padding:0;}
+.nv-link-muted{font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted);background:none;border:none;cursor:pointer;padding:0;}
+.nv-link-accent{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--nv-accent);background:none;border:none;cursor:pointer;padding:0;}
+
+
+/* Teste de perfil de investidor */
+.nv-perfil-convite{margin:16px 20px 0;padding:18px;border:1px solid var(--nv-rule-soft);border-radius:14px;}
+.nv-perfil-convite-titulo{font-size:15px;font-weight:600;margin-bottom:6px;}
+.nv-perfil-convite p{font-size:12px;color:var(--nv-muted);line-height:1.5;margin:0 0 14px;}
+.nv-perfil-cta{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--nv-bg);background:var(--nv-accent);border:none;border-radius:999px;padding:10px 18px;cursor:pointer;}
+.nv-perfil-bloco{border:none;border-top:1px solid var(--nv-rule-soft);padding:14px 0 4px;margin:0;}
+.nv-perfil-bloco legend{font-size:12px;font-weight:600;padding:0;margin-bottom:10px;}
+.nv-perfil-opcao{display:flex;flex-direction:row;align-items:center;gap:10px;font-size:12px;color:var(--nv-muted);padding:5px 0;margin:0;cursor:pointer;}
+.nv-perfil-opcao input{accent-color:var(--nv-accent);flex:none;margin:0;}
+.nv-perfil-nome{font-size:30px;font-weight:600;letter-spacing:-.02em;margin-top:6px;}
+.nv-perfil-pontos{font-size:11px;color:var(--nv-muted);margin-top:4px;}
+.nv-perfil-resumo{font-size:12px;color:var(--nv-muted);line-height:1.5;margin:12px 0 0;}
+.nv-perfil-aviso{font-size:10px;line-height:1.5;color:var(--nv-muted);margin:18px 0 0;padding-top:12px;border-top:1px solid var(--nv-rule-soft);}
+
+.nv-hero{padding:22px 20px 18px;border-bottom:2px solid var(--nv-rule-strong);}
+.nv-hero-label{font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--nv-muted);}
+.nv-hero-value{display:flex;align-items:baseline;gap:6px;margin-top:8px;}
+.nv-hero-value .cifrao{font-size:20px;font-weight:600;color:var(--nv-muted);}
+.nv-hero-value .numero{font-size:52px;font-weight:600;letter-spacing:-.035em;line-height:.9;font-variant-numeric:tabular-nums;}
+.nv-hero-value input{font-family:inherit;background:none;border:none;color:inherit;outline:none;padding:0;width:100%;font-size:52px;font-weight:600;letter-spacing:-.035em;font-variant-numeric:tabular-nums;}
+.nv-hero-sub{margin-top:12px;font-size:11px;font-weight:600;color:var(--nv-muted);}
+
+.nv-sparkline{padding:16px 20px 14px;border-bottom:1px solid var(--nv-rule-soft);}
+.nv-sparkline-axis{display:flex;justify-content:space-between;margin-top:8px;font-size:9px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted);}
+
+.nv-cells{display:flex;border-bottom:1px solid var(--nv-rule-soft);}
+.nv-cells--linha{border-top:1px solid var(--nv-rule-soft);border-bottom:2px solid var(--nv-rule-strong);}
+.nv-cell{flex:1;padding:14px 20px;}
+.nv-cell+.nv-cell{border-left:1px solid var(--nv-rule-soft);}
+.nv-cell-label{font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--nv-muted);}
+.nv-cell-valor{font-size:17px;font-weight:600;margin-top:5px;font-variant-numeric:tabular-nums;}
+.nv-select-inline{margin-top:3px;font-size:12px;font-weight:600;background:none;border:none;color:inherit;padding:0;width:100%;}
+
+.nv-section-head{padding:16px 20px 8px;display:flex;justify-content:space-between;align-items:baseline;}
+.nv-section-label{font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--nv-muted);}
+.nv-bars{padding:0 20px 4px;display:flex;flex-direction:column;gap:11px;}
+.nv-bar-row{display:flex;flex-direction:column;gap:5px;background:none;border:none;text-align:left;padding:0;font:inherit;color:inherit;cursor:pointer;width:100%;}
+.nv-bar-top{display:flex;justify-content:space-between;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
+.nv-bar-track{height:6px;border-radius:var(--nv-radius-pill);background:var(--nv-track);}
+.nv-bar-fill{height:6px;border-radius:var(--nv-radius-pill);}
+
+.nv-list-plain{padding:0 20px 8px;}
+.nv-row-plain{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--nv-hairline);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
+.nv-row-plain:last-child{border-bottom:none;}
+.nv-row-plain small{color:var(--nv-muted-2);font-weight:600;margin-left:4px;}
+
+.nv-vazio{color:var(--nv-muted);text-align:center;padding:16px 20px;font-size:.9rem;}
+
+.nv-tabbar{display:flex;border-top:2px solid var(--nv-rule-strong);margin-top:auto;}
+.nv-tabbar button{flex:1;padding:12px 0;text-align:center;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted-2);background:none;border:none;cursor:pointer;font-family:inherit;}
+.nv-tabbar button.ativo{color:var(--nv-accent);border-top:3px solid var(--nv-accent);margin-top:-3px;}
+
+.nv-search{padding:12px 20px 0;}
+.nv-search-box{display:flex;align-items:center;gap:8px;border:2px solid var(--nv-rule-soft);border-radius:var(--nv-radius-control);padding:9px 13px;}
+.nv-search-box input{border:none;background:none;outline:none;font:inherit;color:inherit;width:100%;}
+.nv-search-box svg{flex:none;color:var(--nv-muted);}
+.nv-chips{display:flex;gap:6px;padding:12px 20px;overflow-x:auto;}
+.nv-chip{font-size:10px;font-weight:600;letter-spacing:.1em;padding:6px 12px;border-radius:var(--nv-radius-pill);border:1px solid var(--nv-rule-soft);background:none;color:inherit;cursor:pointer;white-space:nowrap;font-family:inherit;}
+.nv-chip.ativo{background:var(--nv-accent);border-color:var(--nv-accent);color:var(--nv-on-accent);}
+
+.nv-grupo-lista{flex:1;display:flex;flex-direction:column;}
+.nv-grupo-data{padding:9px 20px 6px;font-size:9px;font-weight:600;letter-spacing:.14em;color:var(--nv-muted-2);background:var(--nv-group-bg);}
+.nv-item-lanc{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--nv-hairline);cursor:pointer;background:none;width:100%;text-align:left;border-left:none;border-right:none;border-top:none;font-family:inherit;color:inherit;}
+.nv-item-nome{font-size:13px;font-weight:600;}
+.nv-item-meta{font-size:11px;color:var(--nv-muted-2);margin-top:2px;}
+.nv-item-valor{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.nv-item-valor.positivo{color:var(--nv-positive);}
+.nv-item-valor.negativo{color:var(--nv-negative);}
+.nv-tag-parcela{font-size:9px;font-weight:600;letter-spacing:.04em;border:1px solid var(--nv-rule-soft);padding:1px 5px;border-radius:var(--nv-radius-pill);margin-left:6px;color:var(--nv-muted);}
+
+.nv-acao-fixa{padding:14px 20px;}
+.nv-btn-cheio{background:var(--nv-accent);color:var(--nv-on-accent);padding:14px 18px;border-radius:var(--nv-radius-control);display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;letter-spacing:.12em;border:none;cursor:pointer;width:100%;font-family:inherit;}
+.nv-btn-contorno{border:2px solid var(--nv-rule-strong);border-radius:var(--nv-radius-control);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;letter-spacing:.12em;background:none;color:inherit;cursor:pointer;width:100%;font-family:inherit;}
+.nv-btn-cheio .mais,.nv-btn-contorno .mais{font-size:18px;line-height:1;}
+.nv-btn-contorno .mais{color:var(--nv-accent);}
+
+.nv-segmentado{display:flex;border-bottom:2px solid var(--nv-rule-strong);}
+.nv-segmentado button{flex:1;padding:11px 0;text-align:center;font-size:11px;font-weight:600;letter-spacing:.1em;background:none;border:none;cursor:pointer;color:inherit;font-family:inherit;border-left:1px solid var(--nv-rule-soft);}
+.nv-valor-grande{padding:18px 20px 4px;}
+.nv-segmentado button:first-child{border-left:none;}
+.nv-segmentado button.ativo{background:var(--nv-accent);color:var(--nv-on-accent);}
+
+.nv-campo-linha{padding:12px 20px;border-bottom:1px solid var(--nv-rule-soft);display:flex;flex-direction:column;}
+.nv-campo-label{font-size:9px;font-weight:600;letter-spacing:.14em;color:var(--nv-muted);}
+
+/* Combobox custom — substitui <select>/<datalist> nativos, cuja aparência de popup (fundo,
+   cor de item selecionado) o navegador não deixa a página controlar de forma confiável. */
+.nv-combo{position:relative;}
+.nv-combo-gatilho{background:none;border:none;color:inherit;font:inherit;padding:0;outline:none;cursor:pointer;width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.nv-combo-gatilho .nv-combo-seta{flex:none;color:var(--nv-muted);}
+.nv-combo-input{font-size:15px;font-weight:500;background:none;border:none;color:inherit;width:100%;font-family:inherit;padding:0;outline:none;}
+/* Dentro de um dialog (Investimento, Operação, Conta, Provento, Meta) o combo precisa da mesma
+   caixa com borda dos outros campos (dialog input) e de espaço embaixo — sem isso, o rótulo
+   seguinte fica colado na caixa e tudo parece uma coisa só, difícil de tocar certo. */
+dialog .nv-combo{margin-bottom:14px;}
+dialog .nv-combo-gatilho,
+dialog .nv-combo-input{font-family:inherit;font-size:1rem;padding:8px;border-radius:8px;border:1px solid var(--nv-rule-soft);background:var(--nv-bg);color:var(--nv-fg);}
+.nv-combo-lista{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--nv-bg);border:1px solid var(--nv-rule-soft);border-radius:var(--nv-radius-control);max-height:240px;overflow-y:auto;z-index:30;box-shadow:0 10px 28px rgba(0,0,0,.4);}
+.nv-combo-lista[hidden]{display:none;}
+.nv-combo-item{padding:11px 14px;font-size:14px;font-weight:500;cursor:pointer;}
+.nv-combo-item:hover,.nv-combo-item.ativo{background:var(--nv-accent);color:var(--nv-on-accent);}
+.nv-combo-item[hidden]{display:none;}
+.nv-combo-vazio{padding:11px 14px;font-size:12px;color:var(--nv-muted);}
+.nv-campo-linha input,.nv-campo-linha select{font-size:15px;font-weight:500;margin-top:4px;background:none;border:none;color:inherit;width:100%;font-family:inherit;padding:0;outline:none;}
+.nv-campo-dupla{display:flex;border-bottom:1px solid var(--nv-rule-soft);}
+.nv-campo-dupla>div{flex:1;padding:12px 20px;display:flex;flex-direction:column;}
+.nv-campo-dupla>div:first-child{border-right:1px solid var(--nv-rule-soft);}
+.nv-campo-dupla input,.nv-campo-dupla select{font-size:15px;font-weight:500;margin-top:4px;background:none;border:none;color:inherit;width:100%;font-family:inherit;padding:0;outline:none;}
+
+.nv-linha-toggle{padding:14px 20px;border-bottom:1px solid var(--nv-rule-soft);display:flex;justify-content:space-between;align-items:center;}
+.nv-stepper-linha.desabilitado{opacity:.4;pointer-events:none;}
+.nv-switch-wrap{position:relative;display:inline-flex;cursor:pointer;}
+.nv-switch-wrap input{position:absolute;opacity:0;width:44px;height:24px;margin:0;cursor:pointer;}
+.nv-switch{width:44px;height:24px;border:2px solid var(--nv-muted);border-radius:var(--nv-radius-pill);display:flex;align-items:center;padding:2px;}
+.nv-switch .knob{width:16px;height:16px;border-radius:var(--nv-radius-pill);background:var(--nv-muted);transition:transform .15s ease,background .15s ease;}
+.nv-switch-wrap input:checked+.nv-switch{border-color:var(--nv-accent);}
+.nv-switch-wrap input:checked+.nv-switch .knob{transform:translateX(20px);background:var(--nv-accent);}
+.nv-stepper{display:flex;align-items:center;}
+.nv-stepper button{width:30px;height:30px;border:1px solid var(--nv-muted);border-radius:var(--nv-radius-stepper);background:none;color:inherit;font-size:15px;cursor:pointer;font-family:inherit;}
+.nv-stepper span{width:40px;height:30px;border-top:1px solid var(--nv-muted);border-bottom:1px solid var(--nv-muted);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;}
+.nv-rodape-form{margin-top:auto;padding:16px 20px 20px;display:flex;flex-direction:column;gap:10px;}
+.nv-rodape-saldo{border-top:2px solid var(--nv-rule-strong);padding-top:14px;display:flex;justify-content:space-between;font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted);}
+.nv-rodape-saldo span:last-child{color:var(--nv-fg);font-variant-numeric:tabular-nums;}
+
+.nv-barras-meses{padding:18px 20px 14px;border-bottom:1px solid var(--nv-rule-soft);}
+.nv-barras-meses-grid{display:flex;align-items:flex-end;gap:10px;height:120px;border-bottom:2px solid var(--nv-rule-strong);}
+.nv-barra-mes{flex:1;border-radius:5px 5px 0 0;background:var(--nv-bar-neutral);}
+.nv-barra-mes.atual{background:var(--nv-accent);}
+.nv-barras-eixo{display:flex;gap:10px;margin-top:8px;font-size:9px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted);}
+.nv-barras-eixo span{flex:1;text-align:center;}
+.nv-meta-linha{padding:14px 20px;border-bottom:1px solid var(--nv-rule-soft);display:flex;justify-content:space-between;align-items:center;}
+.nv-badge{font-size:12px;font-weight:600;padding:4px 9px;border-radius:var(--nv-radius-badge);background:var(--nv-fg);color:var(--nv-bg);}
+
+.nv-orcamento{padding:22px 20px 18px;border-bottom:2px solid var(--nv-rule-strong);}
+.nv-orcamento-num{display:flex;align-items:baseline;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.nv-orcamento-num .grande{font-size:46px;font-weight:600;letter-spacing:-.03em;line-height:.9;font-variant-numeric:tabular-nums;}
+.nv-orcamento-num .pct{font-size:22px;font-weight:600;}
+.nv-orcamento-num .detalhe{font-size:12px;font-weight:600;color:var(--nv-muted);margin-left:6px;}
+.nv-orcamento-track{height:8px;border-radius:var(--nv-radius-pill);background:var(--nv-track);margin-top:14px;}
+.nv-orcamento-fill{height:8px;border-radius:var(--nv-radius-pill);background:var(--nv-fg);}
+.nv-orcamento-sub{margin-top:8px;font-size:11px;font-weight:600;color:var(--nv-muted);}
+.nv-meta-item{padding:15px 20px;border-bottom:1px solid var(--nv-rule-soft);cursor:pointer;}
+.nv-meta-item.excedida{background:var(--nv-alert-bg);}
+.nv-meta-topo{display:flex;justify-content:space-between;align-items:baseline;}
+.nv-meta-nome{font-size:14px;font-weight:600;}
+.nv-meta-valores{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
+.nv-meta-valores.excedida{color:var(--nv-negative-soft);}
+.nv-meta-track{height:6px;border-radius:var(--nv-radius-pill);background:var(--nv-track);margin-top:9px;}
+.nv-meta-fill{height:6px;border-radius:var(--nv-radius-pill);background:var(--nv-fg);}
+.nv-meta-fill.excedida{background:var(--nv-accent);}
+.nv-meta-excesso{margin-top:8px;font-size:11px;font-weight:600;color:var(--nv-negative-soft);}
+
+.nv-perfil{padding:18px 20px;border-bottom:2px solid var(--nv-rule-strong);display:flex;align-items:center;gap:14px;}
+.nv-avatar{width:52px;height:52px;border-radius:var(--nv-radius-avatar);background:var(--nv-fg);color:var(--nv-bg);display:flex;align-items:center;justify-content:center;}
+.nv-perfil-nome{font-size:16px;font-weight:600;}
+.nv-perfil-sub{font-size:11px;color:var(--nv-muted);margin-top:3px;}
+.nv-segmentado-tema{display:flex;border:2px solid var(--nv-muted);border-radius:var(--nv-radius-control);overflow:hidden;}
+.nv-segmentado-tema button{flex:1;padding:10px 0;text-align:center;font-size:11px;font-weight:600;letter-spacing:.1em;background:none;border:none;cursor:pointer;color:inherit;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.nv-segmentado-tema button.ativo{background:var(--nv-fg);color:var(--nv-bg);}
+.nv-conta-linha{display:flex;justify-content:space-between;align-items:center;padding:11px 20px;border-bottom:1px solid var(--nv-hairline);}
+.nv-conta-marcador{width:30px;height:30px;border-radius:var(--nv-radius-stepper);border:1px dashed var(--nv-muted-2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--nv-muted);}
+.nv-monograma{border-radius:50%;color:#f3f2f2;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex:none;letter-spacing:-.02em;}
+.nv-dado-linha{display:flex;justify-content:space-between;align-items:center;padding:13px 20px;border-bottom:1px solid var(--nv-hairline);}
+.nv-rodape-versao{margin-top:auto;padding:16px 20px;font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted-2);}
+
+.nv-abertura{display:flex;flex-direction:column;min-height:100dvh;max-width:480px;margin:0 auto;background:#201e1d;color:#f3f2f2;padding:56px 24px 28px;}
+.nv-abertura-frase{margin-top:16px;border-top:2px solid rgba(243,242,242,.45);padding-top:16px;font-size:15px;font-weight:500;line-height:1.45;max-width:280px;color:rgba(243,242,242,.85);}
+.nv-abertura-progress{display:flex;gap:6px;margin-bottom:24px;}
+.nv-abertura-progress span{width:26px;height:3px;background:rgba(243,242,242,.3);}
+.nv-abertura-progress span.ativo{background:var(--nv-accent);}
+.nv-abertura-cta{background:var(--nv-accent);color:#fff;padding:16px 18px;border-radius:var(--nv-radius-control);font-size:12px;font-weight:600;letter-spacing:.14em;text-align:center;border:none;cursor:pointer;width:100%;font-family:inherit;}
+
+.nv-carteira-badge-row{margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.nv-carteira-badge{font-size:12px;font-weight:600;background:var(--nv-accent);color:var(--nv-on-accent);padding:4px 8px;border-radius:var(--nv-radius-badge);}
+.nv-composicao{padding:16px 20px 12px;}
+.nv-composicao-grafico{display:flex;align-items:center;gap:20px;}
+.nv-composicao-legenda{display:flex;flex-direction:column;gap:9px;flex:1;min-width:0;}
+.nv-composicao-item{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--nv-muted);display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nv-composicao-item b{color:var(--nv-fg);font-weight:600;margin-left:auto;padding-left:8px;}
+.nv-composicao-bolinha{width:9px;height:9px;border-radius:50%;flex:none;}
+.nv-ativo-linha{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--nv-hairline);cursor:pointer;background:none;width:100%;text-align:left;border-left:none;border-right:none;border-top:none;font-family:inherit;color:inherit;}
+.nv-ativo-valor{text-align:right;}
+.nv-ativo-rend{font-size:11px;font-weight:600;margin-top:3px;}
+.nv-ativo-rend.positivo{color:var(--nv-positive);}
+.nv-ativo-rend.negativo{color:var(--nv-negative);}
+
+.banner{position:sticky;top:0;background:var(--nv-accent);color:#fff;text-align:center;padding:8px;font-size:.85rem;z-index:10;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
+.banner-retry{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:6px;padding:3px 10px;font-size:.8rem;cursor:pointer;font-family:inherit;}
+.somente-leitura [data-somente-leitura-esconde]{display:none !important;}
+
+dialog{border:none;border-radius:var(--nv-radius-control);padding:20px;width:min(420px,90vw);background:var(--nv-bg);color:var(--nv-fg);}
+dialog::backdrop{background:rgba(20,18,14,.55);}
+dialog h3{font-weight:600;margin:0 0 12px;font-size:1.1rem;}
+dialog label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;margin-bottom:10px;color:var(--nv-muted);}
+dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border-radius:8px;border:1px solid var(--nv-rule-soft);background:var(--nv-bg);color:var(--nv-fg);}
+.form-acoes{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
+.form-acoes button{padding:8px 16px;border-radius:8px;border:1px solid var(--nv-rule-soft);background:var(--nv-bg);color:var(--nv-fg);cursor:pointer;font-family:inherit;}
+.form-acoes button.primario{background:var(--nv-accent);border-color:var(--nv-accent);color:var(--nv-on-accent);}
+</style>
+
+<div id="banner-sync" class="banner" hidden></div>
+
+<div id="tela-abertura" hidden></div>
+
+<div id="tela-pin" hidden></div>
+
+<div id="app-shell" hidden>
+  <main id="tela-resumo" class="nv-tela"></main>
+  <main id="tela-lancamentos" class="nv-tela" hidden></main>
+  <main id="tela-carteira" class="nv-tela" hidden></main>
+  <main id="tela-metas" class="nv-tela" hidden></main>
+  <main id="tela-categoria" class="nv-tela" hidden></main>
+  <main id="tela-ativo-detalhe" class="nv-tela" hidden></main>
+  <main id="tela-novo-lancamento" class="nv-tela" hidden></main>
+  <main id="tela-configuracoes" class="nv-tela" hidden></main>
+  <main id="tela-calculadoras" class="nv-tela" hidden></main>
+</div>
+
+<dialog id="form-investimento">
+  <form method="dialog" id="formulario-investimento">
+    <h3>Investimento</h3>
+    <input type="hidden" name="id" />
+    <label for="campo-tipo-investimento">Tipo</label>
+    <div id="combo-tipo-investimento"></div>
+    <label for="campo-nome-ativo">Nome do ativo</label>
+    <div id="combo-nome-ativo"></div>
+    <label>Preço atual por cota<input type="text" inputmode="decimal" name="precoAtual" class="nv-campo-moeda" required /></label>
+    <div class="form-acoes">
+      <button type="button" id="botao-excluir-investimento" data-acao="excluir-investimento-atual" hidden style="margin-right:auto;color:var(--nv-negative);border-color:var(--nv-negative)">Excluir</button>
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-operacao">
+  <form method="dialog" id="formulario-operacao">
+    <h3>Nova operação</h3>
+    <input type="hidden" name="ativoId" />
+    <label for="campo-tipo-operacao">Tipo</label>
+    <div id="combo-tipo-operacao"></div>
+    <label>Data<input type="date" name="data" required /></label>
+    <label>Quantidade (use 1 para Renda Fixa/Outro)<input type="number" name="quantidade" step="0.000001" min="0.000001" value="1" required /></label>
+    <label>Preço unitário<input type="text" inputmode="decimal" name="precoUnitario" class="nv-campo-moeda" required /></label>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-conta">
+  <form method="dialog" id="formulario-conta">
+    <h3>Conta ou cartão</h3>
+    <input type="hidden" name="id" />
+    <label>Nome<input type="text" name="nome" required maxlength="40" /></label>
+    <label for="campo-tipo-conta">Tipo</label>
+    <div id="combo-tipo-conta"></div>
+    <label>Dia de fechamento (opcional, para cartão)<input type="number" name="fechamento" min="1" max="31" /></label>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-alocacao">
+  <form method="dialog" id="formulario-alocacao">
+    <h3>Metas de alocação (%)</h3>
+    <label>Ação<input type="number" name="acao" min="0" max="100" step="1" /></label>
+    <label>Fundo Imobiliário<input type="number" name="fii" min="0" max="100" step="1" /></label>
+    <label>ETF Internacional<input type="number" name="etf_internacional" min="0" max="100" step="1" /></label>
+    <label>Tesouro Direto<input type="number" name="tesouro_direto" min="0" max="100" step="1" /></label>
+    <label>Renda Fixa<input type="number" name="renda_fixa" min="0" max="100" step="1" /></label>
+    <label>Criptomoeda<input type="number" name="criptomoeda" min="0" max="100" step="1" /></label>
+    <label>Outro<input type="number" name="outro" min="0" max="100" step="1" /></label>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-perfil">
+  <form method="dialog" id="formulario-perfil">
+    <h3>Perfil de investidor</h3>
+    <div id="perfil-perguntas"></div>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Ver resultado</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="resultado-perfil">
+  <div>
+    <div id="perfil-resultado-conteudo"></div>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Fechar</button>
+      <button type="button" class="primario" data-acao="aplicar-alocacao-perfil">Usar como minha meta</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="form-provento">
+  <form method="dialog" id="formulario-provento">
+    <h3>Novo provento</h3>
+    <input type="hidden" name="ativoId" />
+    <label for="campo-tipo-provento">Tipo</label>
+    <div id="combo-tipo-provento"></div>
+    <label>Data<input type="date" name="data" required /></label>
+    <label>Valor recebido<input type="text" inputmode="decimal" name="valor" class="nv-campo-moeda" required /></label>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-provento-previsto">
+  <form method="dialog" id="formulario-provento-previsto">
+    <h3>Dividendo previsto</h3>
+    <input type="hidden" name="ativoId" />
+    <label>Data prevista<input type="date" name="data" required /></label>
+    <label>Valor esperado<input type="text" inputmode="decimal" name="valor" class="nv-campo-moeda" required /></label>
+    <label>Descrição (opcional)<input type="text" name="descricao" maxlength="60" placeholder="ex.: dividendo trimestral" /></label>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-meta">
+  <form method="dialog" id="formulario-meta">
+    <h3>Nova meta</h3>
+    <input type="hidden" name="id" />
+    <label for="campo-categoria-meta">Categoria</label>
+    <div id="combo-categoria-meta"></div>
+    <label>Nome (opcional)<input type="text" name="nome" maxlength="40" placeholder="ex.: Carro novo" /></label>
+    <label>Limite mensal<input type="text" inputmode="decimal" name="limite" class="nv-campo-moeda" required /></label>
+    <div class="form-acoes">
+      <button type="button" id="botao-excluir-meta" data-acao="excluir-meta-atual" hidden style="margin-right:auto;color:var(--nv-negative);border-color:var(--nv-negative)">Excluir</button>
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-pin">
+  <form method="dialog" id="formulario-definir-pin">
+    <h3>Definir PIN</h3>
+    <label>PIN (4 a 6 dígitos)<input type="password" inputmode="numeric" pattern="[0-9]*" name="pin" minlength="4" maxlength="6" required /></label>
+    <label>Confirmar PIN<input type="password" inputmode="numeric" pattern="[0-9]*" name="confirmarPin" minlength="4" maxlength="6" required /></label>
+    <div id="erro-definir-pin" style="color:var(--nv-negative);font-size:.8rem;display:none">Os PINs não coincidem.</div>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+window.NUVRA_DEMO = true;
+window.NUVRA_SEED = {"tema":"escuro","idioma":"pt","ocultarValores":false,"lancamentos":[{"id":"d1","data":"2026-08-05","tipo":"receita","categoria":"Salário","descricao":"Salário","valorTotal":4500,"parcelas":1},{"id":"d2","data":"2026-08-06","tipo":"despesa","categoria":"Moradia","descricao":"Aluguel","valorTotal":1450,"parcelas":1},{"id":"d3","data":"2026-08-09","tipo":"despesa","categoria":"Alimentação","descricao":"Mercado","valorTotal":890,"parcelas":1},{"id":"d4","data":"2026-08-14","tipo":"despesa","categoria":"Lazer","descricao":"Cinema e jantar","valorTotal":500,"parcelas":1},{"id":"d5","data":"2026-08-18","tipo":"despesa","categoria":"Transporte","descricao":"Combustível","valorTotal":420,"parcelas":1},{"id":"d6","data":"2026-06-12","tipo":"despesa","categoria":"Outras Despesas","descricao":"Notebook","valorTotal":3600,"parcelas":12}],"investimentos":[{"id":"i1","nome":"PETR4","tipo":"acao","precoAtual":41.04,"operacoes":[{"id":"o1","tipo":"compra","data":"2026-03-10","quantidade":100,"precoUnitario":34.5},{"id":"o2","tipo":"compra","data":"2026-06-04","quantidade":100,"precoUnitario":37.2}],"proventos":[{"id":"p1","tipo":"dividendo","data":"2026-07-15","valor":148.5}],"proventosPrevistos":[]},{"id":"i2","nome":"HGLG11","tipo":"fii","precoAtual":182.4,"operacoes":[{"id":"o3","tipo":"compra","data":"2026-02-20","quantidade":25,"precoUnitario":152}],"proventos":[{"id":"p2","tipo":"dividendo","data":"2026-08-15","valor":84}],"proventosPrevistos":[{"id":"pp1","data":"2026-09-15","valor":84,"descricao":"Rendimento mensal"}]},{"id":"i3","nome":"Tesouro Selic","tipo":"tesouro_direto","precoAtual":3648,"operacoes":[{"id":"o4","tipo":"compra","data":"2026-01-15","quantidade":1,"precoUnitario":3400}],"proventos":[],"proventosPrevistos":[]},{"id":"i4","nome":"BTC","tipo":"criptomoeda","precoAtual":1824,"operacoes":[{"id":"o5","tipo":"compra","data":"2026-05-08","quantidade":1,"precoUnitario":1630}],"proventos":[],"proventosPrevistos":[]}],"contas":[{"id":"c1","nome":"Conta corrente","tipo":"conta","fechamento":""},{"id":"c2","nome":"Cartão","tipo":"cartao","fechamento":"10"}],"metas":[{"id":"m1","categoria":"Alimentação","nome":"Mercado do mês","limite":1000},{"id":"m2","categoria":"Lazer","nome":"","limite":400}],"alocacaoAlvo":{"acao":30,"fii":25,"tesouro_direto":20,"renda_fixa":20,"criptomoeda":5}};
+</script>
+<script>
+// Sugestões de nome/ticker por tipo de ativo — lista curada e ampliada, mas nunca vai ser
+// exaustiva nem é uma fonte de dados de mercado (não é atualizada nem vem de API nenhuma, e não
+// tem preço nenhum aqui). Serve só de ponto de partida no autocomplete; o campo continua
+// aceitando qualquer texto digitado livremente, esteja ou não nesta lista. Só "Outro" fica sem
+// lista de propósito — é o catch-all genérico.
+const ATIVOS_SUGERIDOS = {
+  acao: [
+    'PETR4', 'PETR3', 'VALE3', 'ITUB4', 'ITUB3', 'BBDC4', 'BBDC3', 'ABEV3', 'BBAS3', 'WEGE3',
+    'ITSA4', 'B3SA3', 'RENT3', 'SUZB3', 'JBSS3', 'RADL3', 'PRIO3', 'EQTL3', 'ELET3', 'ELET6',
+    'GGBR4', 'CSNA3', 'USIM5', 'CPLE6', 'CMIG4', 'SBSP3', 'VIVT3', 'TIMS3', 'TOTS3', 'LREN3',
+    'RAIL3', 'CCRO3', 'EMBR3', 'BRFS3', 'MRFG3', 'KLBN11', 'HAPV3', 'NTCO3', 'CYRE3', 'MULT3',
+    'CSAN3', 'UGPA3', 'CRFB3', 'AZUL4', 'GOLL4', 'CVCB3', 'YDUQ3', 'COGN3', 'MRVE3', 'HYPE3',
+    'PETZ3', 'ARZZ3',
+  ],
+  fii: [
+    'HGLG11', 'KNRI11', 'MXRF11', 'XPML11', 'VISC11', 'BCFF11', 'HGRE11', 'VILG11', 'BTLG11', 'RECT11',
+    'XPLG11', 'HGBS11', 'IRDM11', 'KNCR11', 'RBRF11', 'VGIP11', 'HFOF11', 'BRCO11', 'GGRC11', 'JSRE11',
+    'ALZR11', 'VINO11', 'HSML11', 'RECR11', 'KNIP11', 'PVBI11', 'HGRU11', 'RBRP11', 'HCTR11',
+  ],
+  criptomoeda: [
+    'BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC',
+    'LINK', 'LTC', 'TRX', 'ATOM', 'UNI', 'XLM', 'ETC', 'FIL', 'APT', 'ARB',
+    'OP', 'NEAR', 'ICP', 'SHIB', 'TON',
+  ],
+  stock: [
+    'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK.B', 'JPM',
+    'V', 'MA', 'UNH', 'HD', 'PG', 'JNJ', 'XOM', 'WMT', 'DIS', 'NFLX',
+    'KO', 'PEP', 'ADBE', 'CRM', 'INTC', 'AMD', 'CSCO', 'ORCL', 'IBM', 'NKE',
+  ],
+  reit: ['O', 'PLD', 'AMT', 'SPG', 'PSA', 'EQIX', 'WELL', 'DLR', 'AVB', 'EQR', 'VTR', 'ARE', 'EXR', 'CCI'],
+  bdr: [
+    'AAPL34', 'GOGL34', 'AMZO34', 'MSFT34', 'TSLA34', 'NVDC34', 'META34', 'DISB34',
+    'NFLX34', 'JPMC34', 'COCA34', 'WALM34', 'PGCO34', 'JNJB34',
+  ],
+  etf: ['BOVA11', 'IVVB11', 'SMAL11', 'DIVO11', 'BOVV11', 'XFIX11', 'BBSD11', 'ECOO11', 'GOLD11', 'HASH11', 'ISUS11'],
+  etf_internacional: ['SPY', 'QQQ', 'VOO', 'VTI', 'IWM', 'DIA', 'EFA', 'EEM', 'GLD', 'AGG', 'VEA', 'VWO'],
+  tesouro_direto: ['Tesouro Selic', 'Tesouro IPCA+', 'Tesouro Prefixado', 'Tesouro IPCA+ com Juros Semestrais', 'Tesouro Prefixado com Juros Semestrais'],
+  // Fundo de investimento não tem "ticker" (não é negociado em bolsa como ação/FII) — sugere as
+  // categorias padronizadas pela CVM, que são estáveis e não ficam desatualizadas como um nome
+  // de produto específico ficaria.
+  fundo_investimento: ['Fundo Multimercado', 'Fundo de Ações', 'Fundo Cambial', 'Fundo de Renda Fixa', 'Fundo Imobiliário Não Listado', 'Fundo de Previdência (PGBL)', 'Fundo de Previdência (VGBL)'],
+  // Renda fixa "bancária" também não tem ticker — sugere os tipos de instrumento mais comuns.
+  renda_fixa: ['CDB', 'LCI', 'LCA', 'CRI', 'CRA', 'Debênture', 'Poupança', 'COE'],
+};
+
+function listaSugeridaPorTipo(tipo) {
+  return ATIVOS_SUGERIDOS[tipo] || [];
+}
+
+// Hash não-criptográfico simples pra não guardar o PIN em claro no localStorage. Não é segurança
+// de verdade (é só uma trava de acesso casual, não protege contra alguém sofisticado) — serve
+// apenas pra não deixar o PIN legível de bandeja no localStorage.
+function hashSimples(texto) {
+  let hash = 0;
+  for (let i = 0; i < texto.length; i += 1) {
+    hash = (hash * 31 + texto.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(36);
+}
+
+function uid() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function parcelaValor(lancamento) {
+  const parcelas = lancamento.parcelas || 1;
+  return lancamento.valorTotal / parcelas;
+}
+
+function parcelaNoMes(lancamento, ano, mes) {
+  const [anoIni, mesIni] = lancamento.data.split('-').map(Number);
+  const inicioIndex = anoIni * 12 + (mesIni - 1);
+  const alvoIndex = ano * 12 + (mes - 1);
+  const diff = alvoIndex - inicioIndex;
+  const parcelas = lancamento.parcelas || 1;
+  if (diff < 0 || diff >= parcelas) {
+    return { noMes: false, numeroParcela: null };
+  }
+  return { noMes: true, numeroParcela: diff + 1 };
+}
+
+function resumoMensal(lancamentos, ano, mes) {
+  let receitas = 0;
+  let despesas = 0;
+  for (const l of lancamentos) {
+    const { noMes } = parcelaNoMes(l, ano, mes);
+    if (!noMes) continue;
+    const valor = parcelaValor(l);
+    if (l.tipo === 'receita') receitas += valor;
+    else if (l.tipo === 'despesa') despesas += valor;
+  }
+  return { receitas, despesas, saldo: receitas - despesas };
+}
+
+function parcelasEmAberto(lancamentos, ano, mes) {
+  const resultado = [];
+  for (const l of lancamentos) {
+    const parcelas = l.parcelas || 1;
+    if (parcelas <= 1) continue;
+    const { noMes, numeroParcela } = parcelaNoMes(l, ano, mes);
+    if (!noMes) continue;
+    resultado.push({
+      id: l.id,
+      descricao: l.descricao,
+      valorParcela: parcelaValor(l),
+      numeroParcela,
+      parcelas,
+      restantes: parcelas - numeroParcela,
+    });
+  }
+  return resultado;
+}
+
+function rendimento(investido, atual) {
+  const valor = atual - investido;
+  const percentual = investido === 0 ? 0 : (valor / investido) * 100;
+  return { valor, percentual };
+}
+
+// Reprocessa o histórico de operações em ordem cronológica, mantendo quantidade e custo total
+// acumulados, e registrando cada venda com o lucro realizado (preço de venda − preço médio
+// naquele momento). posicaoAtivo e historicoRealizado são só recortes deste resultado.
+function processarOperacoes(operacoes) {
+  const ordenadas = [...(operacoes || [])].sort((a, b) => a.data.localeCompare(b.data));
+  let quantidade = 0;
+  let custoTotal = 0;
+  const vendas = [];
+  for (const op of ordenadas) {
+    if (op.tipo === 'compra') {
+      quantidade += op.quantidade;
+      custoTotal += op.quantidade * op.precoUnitario;
+    } else if (op.tipo === 'venda') {
+      if (op.quantidade > quantidade) {
+        throw new Error(`Venda de ${op.quantidade} unidades excede a posição atual de ${quantidade}.`);
+      }
+      const precoMedioNaVenda = quantidade === 0 ? 0 : custoTotal / quantidade;
+      custoTotal -= op.quantidade * precoMedioNaVenda;
+      quantidade -= op.quantidade;
+      vendas.push({
+        operacaoId: op.id,
+        data: op.data,
+        quantidade: op.quantidade,
+        precoVenda: op.precoUnitario,
+        precoMedioNaVenda,
+        valorVendido: op.quantidade * op.precoUnitario,
+        lucro: (op.precoUnitario - precoMedioNaVenda) * op.quantidade,
+      });
+    }
+  }
+  return { quantidade, precoMedio: quantidade === 0 ? 0 : custoTotal / quantidade, custoTotal, vendas };
+}
+
+// Calcula quantidade e preço médio ponderado de um ativo a partir do histórico de operações.
+// Vendas reduzem a quantidade mas não alteram o preço médio (custo proporcional é retirado).
+function posicaoAtivo(operacoes) {
+  const { quantidade, precoMedio, custoTotal } = processarOperacoes(operacoes);
+  return { quantidade, precoMedio, custoTotal };
+}
+
+// Lista o lucro realizado de cada venda (preço de venda − preço médio no momento da venda),
+// na ordem cronológica das operações — base pro cálculo de imposto estimado.
+function historicoRealizado(operacoes) {
+  return processarOperacoes(operacoes).vendas;
+}
+
+// Converte um investimento no formato antigo (valorInvestido/valorAtual fixos) numa 1ª operação
+// de compra sintética com quantidade=1, preservando o dado sem exigir migração manual do usuário.
+function migrarInvestimentoLegado(investimento) {
+  if (investimento.operacoes) return investimento;
+  const { valorInvestido, valorAtual, ...resto } = investimento;
+  const data = investimento.atualizadoEm || new Date().toISOString().slice(0, 10);
+  return {
+    ...resto,
+    precoAtual: valorAtual || 0,
+    operacoes: [{ id: uid(), tipo: 'compra', data, quantidade: 1, precoUnitario: valorInvestido || 0 }],
+  };
+}
+
+function resumoInvestimento(investimentoBruto) {
+  const investimento = migrarInvestimentoLegado(investimentoBruto);
+  const { quantidade, precoMedio } = posicaoAtivo(investimento.operacoes);
+  const precoAtual = investimento.precoAtual || 0;
+  const valorInvestido = quantidade * precoMedio;
+  const valorAtual = quantidade * precoAtual;
+  const { valor, percentual } = rendimento(valorInvestido, valorAtual);
+  return { quantidade, precoMedio, precoAtual, valorInvestido, valorAtual, rendimentoValor: valor, rendimentoPercentual: percentual };
+}
+
+function totalCarteira(investimentos) {
+  const resumos = investimentos.map(resumoInvestimento);
+  const totalInvestido = resumos.reduce((s, r) => s + r.valorInvestido, 0);
+  const totalAtual = resumos.reduce((s, r) => s + r.valorAtual, 0);
+  const { valor, percentual } = rendimento(totalInvestido, totalAtual);
+  return { totalInvestido, totalAtual, rendimentoValor: valor, rendimentoPercentual: percentual };
+}
+
+// Soma o valor atual da carteira agrupado por tipo de ativo (ação/fii/renda_fixa/outro),
+// do maior para o menor.
+function composicaoPorTipo(investimentos) {
+  const composicao = [];
+  for (const inv of investimentos) {
+    const { valorAtual } = resumoInvestimento(inv);
+    const existente = composicao.find((c) => c.tipo === inv.tipo);
+    if (existente) existente.valor += valorAtual;
+    else composicao.push({ tipo: inv.tipo, valor: valorAtual });
+  }
+  return composicao.sort((a, b) => b.valor - a.valor);
+}
+
+// Compara a composição atual da carteira com a alocação-alvo (% por tipo) e devolve, pra cada
+// tipo com meta definida, o quanto falta em R$ pra chegar nela — do maior déficit pro menor.
+// Um valor de "diferenca" negativo indica que o tipo já está acima da meta.
+function sugestaoAporte(investimentos, alocacaoAlvo) {
+  if (!alocacaoAlvo) return [];
+  const composicao = composicaoPorTipo(investimentos);
+  const totalAtual = composicao.reduce((s, c) => s + c.valor, 0);
+  return Object.keys(alocacaoAlvo)
+    .map((tipo) => {
+      const atual = (composicao.find((c) => c.tipo === tipo) || { valor: 0 }).valor;
+      const ideal = (alocacaoAlvo[tipo] / 100) * totalAtual;
+      return { tipo, atual, ideal, diferenca: ideal - atual };
+    })
+    .sort((a, b) => b.diferenca - a.diferenca);
+}
+
+function totalProventos(proventos) {
+  return (proventos || []).reduce((s, p) => s + p.valor, 0);
+}
+
+// Estimativa de imposto de renda sobre ganho de capital em ações e FIIs, mês a mês.
+// Ações: isentas se o total vendido no mês (todos os ativos do tipo, somados) não passar de
+// R$20.000; senão, 15% sobre o lucro líquido do mês. FIIs: sempre 20% sobre o lucro líquido do
+// mês, sem isenção por valor vendido. Day-trade e renda fixa/outro ficam fora (regras diferentes).
+// É uma estimativa de apoio à decisão — não substitui cálculo de contador pra fins de DARF.
+const REGRAS_IMPOSTO_CARTEIRA = {
+  acao: { aliquota: 0.15, limiteIsencaoVendas: 20000 },
+  fii: { aliquota: 0.2, limiteIsencaoVendas: 0 },
+};
+
+function impostoEstimadoMes(investimentos, ano, mes) {
+  const porTipo = {};
+  for (const inv of investimentos) {
+    const regra = REGRAS_IMPOSTO_CARTEIRA[inv.tipo];
+    if (!regra) continue;
+    const investimentoMigrado = migrarInvestimentoLegado(inv);
+    const vendasDoMes = historicoRealizado(investimentoMigrado.operacoes).filter((v) => {
+      const [anoVenda, mesVenda] = v.data.split('-').map(Number);
+      return anoVenda === ano && mesVenda === mes;
+    });
+    if (!vendasDoMes.length) continue;
+    if (!porTipo[inv.tipo]) porTipo[inv.tipo] = { tipo: inv.tipo, totalVendido: 0, lucroLiquido: 0 };
+    for (const venda of vendasDoMes) {
+      porTipo[inv.tipo].totalVendido += venda.valorVendido;
+      porTipo[inv.tipo].lucroLiquido += venda.lucro;
+    }
+  }
+  return Object.values(porTipo).map((item) => {
+    const regra = REGRAS_IMPOSTO_CARTEIRA[item.tipo];
+    const isento = regra.limiteIsencaoVendas > 0 && item.totalVendido <= regra.limiteIsencaoVendas;
+    const lucroTributavel = isento ? 0 : Math.max(0, item.lucroLiquido);
+    return { ...item, isento, lucroTributavel, aliquota: regra.aliquota, impostoEstimado: lucroTributavel * regra.aliquota };
+  });
+}
+
+function indiceMes(ano, mes) {
+  return ano * 12 + (mes - 1);
+}
+
+function mesPorIndice(indice) {
+  return { ano: Math.floor(indice / 12), mes: (((indice % 12) + 12) % 12) + 1 };
+}
+
+function filtrarLancamentos(lancamentos, ano, mes, opcoes = {}) {
+  const { busca = '', filtro = 'todos', contaId = null } = opcoes;
+  const buscaNormalizada = busca.trim().toLowerCase();
+
+  return lancamentos
+    .map((l) => ({ lancamento: l, parcela: parcelaNoMes(l, ano, mes) }))
+    .filter((item) => item.parcela.noMes)
+    .filter((item) => {
+      if (filtro === 'receitas') return item.lancamento.tipo === 'receita';
+      if (filtro === 'despesas') return item.lancamento.tipo === 'despesa';
+      if (filtro === 'parcelados') return (item.lancamento.parcelas || 1) > 1;
+      return true;
+    })
+    .filter((item) => !contaId || item.lancamento.contaId === contaId)
+    .filter((item) => {
+      if (!buscaNormalizada) return true;
+      const alvo = `${item.lancamento.descricao} ${item.lancamento.categoria}`.toLowerCase();
+      return alvo.includes(buscaNormalizada);
+    })
+    .map((item) => ({ ...item.lancamento, numeroParcela: item.parcela.numeroParcela }))
+    .sort((a, b) => b.data.localeCompare(a.data));
+}
+
+function totalFiltrado(itensFiltrados) {
+  return itensFiltrados.reduce(
+    (soma, l) => soma + (l.tipo === 'receita' ? parcelaValor(l) : -parcelaValor(l)),
+    0
+  );
+}
+
+function resumoUltimosMeses(lancamentos, ano, mes, quantidade = 7) {
+  const alvo = indiceMes(ano, mes);
+  const resultado = [];
+  for (let i = quantidade - 1; i >= 0; i -= 1) {
+    const { ano: anoAlvo, mes: mesAlvo } = mesPorIndice(alvo - i);
+    const { saldo } = resumoMensal(lancamentos, anoAlvo, mesAlvo);
+    resultado.push({ ano: anoAlvo, mes: mesAlvo, saldo });
+  }
+  return resultado;
+}
+
+function gastosPorCategoria(lancamentos, ano, mes) {
+  const totais = new Map();
+  for (const l of lancamentos) {
+    if (l.tipo !== 'despesa') continue;
+    const { noMes } = parcelaNoMes(l, ano, mes);
+    if (!noMes) continue;
+    totais.set(l.categoria, (totais.get(l.categoria) || 0) + parcelaValor(l));
+  }
+  return [...totais.entries()]
+    .map(([categoria, valor]) => ({ categoria, valor }))
+    .sort((a, b) => b.valor - a.valor);
+}
+
+function gastoCategoriaUltimosMeses(lancamentos, categoria, ano, mes, quantidade = 6) {
+  const alvo = indiceMes(ano, mes);
+  const resultado = [];
+  for (let i = quantidade - 1; i >= 0; i -= 1) {
+    const { ano: anoAlvo, mes: mesAlvo } = mesPorIndice(alvo - i);
+    const item = gastosPorCategoria(lancamentos, anoAlvo, mesAlvo).find((c) => c.categoria === categoria);
+    resultado.push({ ano: anoAlvo, mes: mesAlvo, valor: item ? item.valor : 0 });
+  }
+  return resultado;
+}
+
+function statusMeta(gastoAtual, limite) {
+  if (!limite || limite <= 0) return { percentual: 0, excedeu: false, excedente: 0 };
+  const percentual = (gastoAtual / limite) * 100;
+  const excedeu = gastoAtual > limite;
+  return { percentual, excedeu, excedente: excedeu ? gastoAtual - limite : 0 };
+}
+
+// --- Calculadoras ---
+
+// Avança o saldo em um mês: primeiro aplica a taxa sobre o saldo já existente, depois soma o
+// aporte do mês (aporte entra "depois de render o mês", não antes). jurosCompostos e
+// mesesParaAtingirMeta reusam este passo pra ficarem sempre consistentes entre si; a fórmula
+// fechada de aporteNecessarioParaMeta foi deduzida a partir da mesma ordem (juros → aporte).
+function passoMesJurosCompostos(saldo, taxaMensal, aporteMensal) {
+  return saldo + saldo * taxaMensal + aporteMensal;
+}
+
+function jurosCompostos({ capitalInicial = 0, aporteMensal = 0, taxaMensal = 0, meses = 0 }) {
+  let saldo = capitalInicial;
+  for (let i = 0; i < meses; i += 1) {
+    saldo = passoMesJurosCompostos(saldo, taxaMensal, aporteMensal);
+  }
+  const totalInvestido = capitalInicial + aporteMensal * meses;
+  return { montanteFinal: saldo, totalInvestido, totalJuros: saldo - totalInvestido };
+}
+
+function jurosSimples({ capitalInicial = 0, taxaMensal = 0, meses = 0 }) {
+  const montanteFinal = capitalInicial * (1 + taxaMensal * meses);
+  return { montanteFinal, jurosTotal: montanteFinal - capitalInicial };
+}
+
+function percentualDeValor(percentual, valor) {
+  return (percentual / 100) * valor;
+}
+
+function valorEQuePercentualDoTotal(valor, total) {
+  if (total === 0) return 0;
+  return (valor / total) * 100;
+}
+
+// Percentual positivo aumenta o valor, negativo diminui — é a mesma conta nos dois casos.
+function aplicarVariacaoPercentual(valor, percentual) {
+  return valor * (1 + percentual / 100);
+}
+
+// Teto de segurança pra calculadora "primeiro milhão": sem aporte e sem taxa (ou com valor-alvo
+// já inatingível nesse horizonte), o saldo nunca cresce — sem este limite o laço giraria pra
+// sempre. 1200 meses = 100 anos é bem além de qualquer plano de vida realista.
+const LIMITE_MESES_PRIMEIRO_MILHAO = 1200;
+
+// Quantos meses faltam, com um aporte mensal fixo, pra sair do capital inicial e chegar no
+// valor-alvo. Usa o mesmo passo mês a mês de jurosCompostos, então os dois cálculos nunca
+// divergem entre si.
+function mesesParaAtingirMeta({ capitalInicial = 0, aporteMensal = 0, taxaMensal = 0, valorAlvo }) {
+  let saldo = capitalInicial;
+  if (saldo >= valorAlvo) return { meses: 0, anos: 0 };
+  let meses = 0;
+  while (saldo < valorAlvo) {
+    saldo = passoMesJurosCompostos(saldo, taxaMensal, aporteMensal);
+    meses += 1;
+    if (meses >= LIMITE_MESES_PRIMEIRO_MILHAO) return { meses: null, anos: null };
+  }
+  return { meses, anos: meses / 12 };
+}
+
+// Qual aporte mensal fixo, ao longo de um prazo definido, leva do capital inicial ao valor-alvo.
+// Fórmula fechada da anuidade ordinária (contribuição após o juro do mês), coerente com a mesma
+// ordem usada em passoMesJurosCompostos — por isso os dois cálculos se verificam um ao outro.
+function aporteNecessarioParaMeta({ capitalInicial = 0, meses, taxaMensal = 0, valorAlvo }) {
+  if (!meses || meses <= 0) return { aporteMensal: null };
+  if (taxaMensal === 0) {
+    return { aporteMensal: Math.max(0, (valorAlvo - capitalInicial) / meses) };
+  }
+  const capitalFuturo = capitalInicial * Math.pow(1 + taxaMensal, meses);
+  const fatorAnuidade = (Math.pow(1 + taxaMensal, meses) - 1) / taxaMensal;
+  return { aporteMensal: Math.max(0, (valorAlvo - capitalFuturo) / fatorAnuidade) };
+}
+
+// --- Perfil de investidor ---
+
+// Questionário de suitability no formato padrão do mercado: mede tolerância a perda, prazo,
+// experiência e colchão de emergência. As opções vêm sempre da mais conservadora (0) pra mais
+// arrojada (3), então a soma bruta já é a pontuação — não precisa de tabela de conversão.
+const PERGUNTAS_PERFIL = [
+  {
+    id: 'reacaoQueda',
+    pergunta: 'Se sua carteira caísse 20% em um mês, o que você faria?',
+    opcoes: [
+      { pontos: 0, texto: 'Venderia tudo pra não perder mais' },
+      { pontos: 1, texto: 'Venderia uma parte' },
+      { pontos: 2, texto: 'Não faria nada e esperaria' },
+      { pontos: 3, texto: 'Aproveitaria pra comprar mais' },
+    ],
+  },
+  {
+    id: 'prazo',
+    pergunta: 'Em quanto tempo você pretende usar esse dinheiro?',
+    opcoes: [
+      { pontos: 0, texto: 'Menos de 1 ano' },
+      { pontos: 1, texto: 'De 1 a 3 anos' },
+      { pontos: 2, texto: 'De 3 a 10 anos' },
+      { pontos: 3, texto: 'Mais de 10 anos' },
+    ],
+  },
+  {
+    id: 'experiencia',
+    pergunta: 'Qual sua experiência com investimentos?',
+    opcoes: [
+      { pontos: 0, texto: 'Nunca investi' },
+      { pontos: 1, texto: 'Só poupança ou renda fixa' },
+      { pontos: 2, texto: 'Já invisto em ações ou fundos imobiliários' },
+      { pontos: 3, texto: 'Invisto há anos, inclusive fora do Brasil' },
+    ],
+  },
+  {
+    id: 'reserva',
+    pergunta: 'Você tem reserva de emergência?',
+    opcoes: [
+      { pontos: 0, texto: 'Não tenho' },
+      { pontos: 1, texto: 'Tenho, mas dá pra menos de 3 meses' },
+      { pontos: 2, texto: 'Tenho de 3 a 6 meses de despesa guardados' },
+      { pontos: 3, texto: 'Tenho mais de 6 meses guardados' },
+    ],
+  },
+];
+
+// Soma as respostas (0-12) e corta em três faixas. Resposta faltando conta zero, então um
+// questionário incompleto cai pro lado conservador em vez de quebrar.
+function perguntasPerfil() {
+  return PERGUNTAS_PERFIL;
+}
+
+function perfilDeInvestidor(respostas = {}) {
+  let pontos = 0;
+  for (const p of PERGUNTAS_PERFIL) pontos += Number(respostas[p.id]) || 0;
+  const perfil = pontos <= 4 ? 'conservador' : pontos <= 8 ? 'moderado' : 'arrojado';
+  return { pontos, perfil };
+}
+
+// IMPORTANTE — isto é deliberadamente uma sugestão de proporção por CLASSE de ativo, nunca de
+// ativo específico: recomendar um papel a uma pessoa é atividade regulada pela CVM (consultoria
+// de valores mobiliários) e exige credenciamento, coisa que um aviso de isenção não substitui.
+// Distribuir percentual entre classes é conteúdo educativo, e alimenta a meta de alocação que o
+// app já tinha. Cada perfil soma exatamente 100 (coberto por teste).
+// Fonte única dos tipos que participam da meta de alocação — o formulário manual (shell.html /
+// app.js) e a sugestão por perfil leem daqui. Se as duas listas divergissem, o usuário perderia
+// em silêncio os tipos definidos pelo perfil ao salvar o formulário manual.
+const TIPOS_ALOCACAO = ['acao', 'fii', 'etf_internacional', 'tesouro_direto', 'renda_fixa', 'criptomoeda', 'outro'];
+
+const ALOCACAO_POR_PERFIL = {
+  conservador: { tesouro_direto: 45, renda_fixa: 35, fii: 15, acao: 5 },
+  moderado: { tesouro_direto: 20, renda_fixa: 20, fii: 25, acao: 30, etf_internacional: 5 },
+  arrojado: { renda_fixa: 10, fii: 20, acao: 40, etf_internacional: 20, criptomoeda: 10 },
+};
+
+function tiposAlocacao() {
+  return TIPOS_ALOCACAO;
+}
+
+function alocacaoSugeridaPorPerfil(perfil) {
+  const alocacao = ALOCACAO_POR_PERFIL[perfil];
+  return alocacao ? { ...alocacao } : null;
+}
+
+// Junta os dividendos previstos (cadastrados manualmente pelo usuário, não vêm de nenhuma fonte
+// de mercado — ver restrição de plataforma) de todos os ativos numa única agenda, ignorando datas
+// já passadas em relação a dataReferencia e ordenando do mais próximo pro mais distante.
+function proximosDividendosPrevistos(investimentos, dataReferencia) {
+  const hoje = dataReferencia || new Date().toISOString().slice(0, 10);
+  const todos = [];
+  for (const inv of investimentos) {
+    for (const p of inv.proventosPrevistos || []) {
+      todos.push({ investimentoId: inv.id, nome: inv.nome, ...p });
+    }
+  }
+  return todos.filter((p) => p.data >= hoje).sort((a, b) => a.data.localeCompare(b.data));
+}
+
+// --- Monograma do ativo (ícone) ---
+// O app não pode carregar logo de marca de fora (CSP do Artifact) nem reproduzir a arte de uma
+// empresa sem licença — em vez disso, cada ativo ganha um "monograma": duas letras + uma cor
+// derivada do próprio nome, sempre a mesma pra um dado ativo. A escolha da paleta de cores em si
+// é responsabilidade de render.js (é uma questão de apresentação); aqui só fica o cálculo puro
+// das iniciais e do índice na paleta.
+
+function iniciaisAtivo(nome) {
+  const texto = (nome || '').trim();
+  if (!texto) return '?';
+  const palavras = texto.split(/\s+/);
+  if (palavras.length > 1) {
+    return (palavras[0][0] + palavras[1][0]).toUpperCase();
+  }
+  return texto.slice(0, 2).toUpperCase();
+}
+
+// Reaproveita hashSimples (já usado pro PIN) só como gerador determinístico de índice — não tem
+// nenhuma relação com segurança aqui, é só "sempre o mesmo ativo cai na mesma cor".
+function corIndiceAtivo(nome, quantidadeCores) {
+  if (!quantidadeCores) return 0;
+  return parseInt(hashSimples(nome || ''), 36) % quantidadeCores;
+}
+
+// Parser de taxa/percentual pros campos de texto da calculadora que NÃO são .nv-campo-moeda —
+// esses aceitam tanto vírgula (padrão brasileiro) quanto ponto (o que o teclado numérico de
+// celular normalmente digita) como separador decimal, sem exigir formatação. Bug real que isso
+// corrige: antes, "1.5" virava silenciosamente 15 (o parser de moeda trata ponto como separador de
+// milhar) — aqui o separador mais à direita na string é sempre tratado como o decimal, e qualquer
+// outro antes dele como agrupador de milhar, então funciona com os dois estilos.
+function numeroDecimalFlexivel(texto) {
+  const limpo = String(texto || '').trim();
+  if (!limpo) return 0;
+  const ultimaVirgula = limpo.lastIndexOf(',');
+  const ultimoPonto = limpo.lastIndexOf('.');
+  let normalizado;
+  if (ultimaVirgula === -1 && ultimoPonto === -1) {
+    normalizado = limpo;
+  } else if (ultimaVirgula > ultimoPonto) {
+    normalizado = limpo.replace(/\./g, '').replace(',', '.');
+  } else {
+    normalizado = limpo.replace(/,/g, '');
+  }
+  const numero = Number(normalizado);
+  return Number.isFinite(numero) ? numero : 0;
+}
+
+function estadoInicial() {
+  return {
+    lancamentos: [],
+    investimentos: [],
+    contas: [],
+    metas: [],
+    tema: 'escuro',
+    ocultarValores: false,
+    alocacaoAlvo: null,
+    idioma: 'pt',
+  };
+}
+
+function applyAction(state, action) {
+  const lancamentos = state.lancamentos ? state.lancamentos.slice() : [];
+  const investimentos = state.investimentos ? state.investimentos.slice() : [];
+  const contas = state.contas ? state.contas.slice() : [];
+  const metas = state.metas ? state.metas.slice() : [];
+  const tema = state.tema || 'escuro';
+  const ocultarValores = state.ocultarValores || false;
+  const alocacaoAlvo = state.alocacaoAlvo || null;
+  const idioma = state.idioma || 'pt';
+  const base = { lancamentos, investimentos, contas, metas, tema, ocultarValores, alocacaoAlvo, idioma };
+
+  switch (action.type) {
+    case 'addLancamento':
+      return { ...base, lancamentos: [...lancamentos, action.lancamento] };
+    case 'editLancamento':
+      return {
+        ...base,
+        lancamentos: lancamentos.map((l) => (l.id === action.id ? { ...l, ...action.changes } : l)),
+      };
+    case 'deleteLancamento':
+      return { ...base, lancamentos: lancamentos.filter((l) => l.id !== action.id) };
+    case 'addInvestimento':
+      return { ...base, investimentos: [...investimentos, action.investimento] };
+    case 'editInvestimento':
+      return {
+        ...base,
+        investimentos: investimentos.map((i) => (i.id === action.id ? { ...i, ...action.changes } : i)),
+      };
+    case 'deleteInvestimento':
+      return { ...base, investimentos: investimentos.filter((i) => i.id !== action.id) };
+    case 'addConta':
+      return { ...base, contas: [...contas, action.conta] };
+    case 'editConta':
+      return { ...base, contas: contas.map((c) => (c.id === action.id ? { ...c, ...action.changes } : c)) };
+    case 'deleteConta':
+      return { ...base, contas: contas.filter((c) => c.id !== action.id) };
+    case 'addMeta':
+      return { ...base, metas: [...metas, action.meta] };
+    case 'editMeta':
+      return { ...base, metas: metas.map((m) => (m.id === action.id ? { ...m, ...action.changes } : m)) };
+    case 'deleteMeta':
+      return { ...base, metas: metas.filter((m) => m.id !== action.id) };
+    case 'setTema':
+      return { ...base, tema: action.tema };
+    case 'setOcultarValores':
+      return { ...base, ocultarValores: !!action.valor };
+    case 'setAlocacaoAlvo':
+      return { ...base, alocacaoAlvo: action.alocacaoAlvo };
+    case 'setIdioma':
+      return { ...base, idioma: action.idioma };
+    default:
+      throw new Error(`Ação desconhecida: ${action.type}`);
+  }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    uid,
+    parcelaValor,
+    parcelaNoMes,
+    resumoMensal,
+    parcelasEmAberto,
+    rendimento,
+    totalCarteira,
+    filtrarLancamentos,
+    totalFiltrado,
+    resumoUltimosMeses,
+    gastosPorCategoria,
+    gastoCategoriaUltimosMeses,
+    statusMeta,
+    estadoInicial,
+    applyAction,
+    posicaoAtivo,
+    migrarInvestimentoLegado,
+    resumoInvestimento,
+    composicaoPorTipo,
+    sugestaoAporte,
+    totalProventos,
+    historicoRealizado,
+    impostoEstimadoMes,
+    hashSimples,
+    listaSugeridaPorTipo,
+    jurosCompostos,
+    jurosSimples,
+    percentualDeValor,
+    valorEQuePercentualDoTotal,
+    aplicarVariacaoPercentual,
+    mesesParaAtingirMeta,
+    aporteNecessarioParaMeta,
+    proximosDividendosPrevistos,
+    iniciaisAtivo,
+    corIndiceAtivo,
+    numeroDecimalFlexivel,
+    PERGUNTAS_PERFIL,
+    perfilDeInvestidor,
+    alocacaoSugeridaPorPerfil,
+    TIPOS_ALOCACAO,
+    perguntasPerfil,
+    tiposAlocacao,
+  };
+}
+
+// Tradução da interface (fase 1: Resumo, abas e Configurações — ver memória do projeto pro
+// escopo combinado). Cada chave é namespaced pela tela onde é usada, pra não colidir sentidos
+// diferentes que por acaso teriam o mesmo texto em português (ex.: "Carteira" a aba de
+// investimentos vs. "Carteira" o tipo de conta em dinheiro — tabs.carteira e conta.tipoCarteira
+// são chaves separadas de propósito, mesmo com o mesmo texto em pt).
+
+const IDIOMA_PADRAO = 'pt';
+const IDIOMAS = ['pt', 'en', 'es'];
+
+const MESES_POR_IDIOMA = {
+  pt: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  es: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+};
+
+// Locale do Intl usado em formatCurrency/formatNumero — mantém o valor sempre em R$ (é sempre
+// real brasileiro, nunca conversão de moeda), mas adapta separador de milhar/decimal e a posição
+// do símbolo à convenção de cada idioma.
+const LOCALE_POR_IDIOMA = { pt: 'pt-BR', en: 'en-US', es: 'es-419' };
+
+const TRADUCOES = {
+  pt: {
+    'resumo.saldoDoMes': 'SALDO DO MÊS',
+    'resumo.emRelacaoA': 'em relação a',
+    'resumo.receitas': 'RECEITAS',
+    'resumo.despesas': 'DESPESAS',
+    'resumo.carteira': 'CARTEIRA',
+    'resumo.gastosPorCategoria': 'GASTOS POR CATEGORIA',
+    'resumo.verTudo': 'VER TUDO',
+    'resumo.parcelasEmAberto': 'PARCELAS EM ABERTO',
+    'resumo.semDespesas': 'Nenhuma despesa neste mês ainda.',
+    'resumo.semParcelas': 'Nenhuma parcela em aberto neste mês.',
+    'tabs.resumo': 'RESUMO',
+    'tabs.lancamentos': 'LANÇAM.',
+    'tabs.carteira': 'CARTEIRA',
+    'tabs.metas': 'METAS',
+    'header.mesAnterior': 'Mês anterior',
+    'header.mesSeguinte': 'Próximo mês',
+    'header.calculadoras': 'Calculadoras',
+    'header.configuracoes': 'Configurações',
+    'config.titulo': 'Configurações',
+    'config.minhaConta': 'Minha conta',
+    'config.dadosSincronizados': 'dados sincronizados neste Artifact',
+    'config.aparencia': 'APARÊNCIA',
+    'config.claro': 'CLARO',
+    'config.escuro': 'ESCURO',
+    'config.sistema': 'SISTEMA',
+    'config.idioma': 'IDIOMA',
+    'config.contasCartoes': 'CONTAS E CARTÕES',
+    'config.adicionarConta': 'ADICIONAR CONTA',
+    'config.dados': 'DADOS',
+    'config.sincronizacao': 'Sincronização',
+    'config.sincronizacaoAtiva': 'Ativa',
+    'config.sincronizacaoIndisponivel': 'Indisponível neste dispositivo',
+    'config.ocultarValores': 'Ocultar valores',
+    'config.seguranca': 'SEGURANÇA',
+    'config.pinAcesso': 'PIN de acesso',
+    'config.ativado': 'Ativado',
+    'config.desativado': 'Desativado',
+    'config.definir': 'DEFINIR',
+    'config.alterar': 'ALTERAR',
+    'config.remover': 'REMOVER',
+    'config.fechaDia': 'fecha dia',
+    'conta.tipoCartao': 'Cartão',
+    'conta.tipoContaCorrente': 'Conta corrente',
+    'conta.tipoCarteira': 'Carteira',
+  },
+  en: {
+    'resumo.saldoDoMes': 'MONTH BALANCE',
+    'resumo.emRelacaoA': 'vs.',
+    'resumo.receitas': 'INCOME',
+    'resumo.despesas': 'EXPENSES',
+    'resumo.carteira': 'PORTFOLIO',
+    'resumo.gastosPorCategoria': 'EXPENSES BY CATEGORY',
+    'resumo.verTudo': 'SEE ALL',
+    'resumo.parcelasEmAberto': 'OPEN INSTALLMENTS',
+    'resumo.semDespesas': 'No expenses this month yet.',
+    'resumo.semParcelas': 'No open installments this month.',
+    'tabs.resumo': 'SUMMARY',
+    'tabs.lancamentos': 'ENTRIES',
+    'tabs.carteira': 'PORTFOLIO',
+    'tabs.metas': 'GOALS',
+    'header.mesAnterior': 'Previous month',
+    'header.mesSeguinte': 'Next month',
+    'header.calculadoras': 'Calculators',
+    'header.configuracoes': 'Settings',
+    'config.titulo': 'Settings',
+    'config.minhaConta': 'My account',
+    'config.dadosSincronizados': 'data synced in this Artifact',
+    'config.aparencia': 'APPEARANCE',
+    'config.claro': 'LIGHT',
+    'config.escuro': 'DARK',
+    'config.sistema': 'SYSTEM',
+    'config.idioma': 'LANGUAGE',
+    'config.contasCartoes': 'ACCOUNTS & CARDS',
+    'config.adicionarConta': 'ADD ACCOUNT',
+    'config.dados': 'DATA',
+    'config.sincronizacao': 'Sync',
+    'config.sincronizacaoAtiva': 'Active',
+    'config.sincronizacaoIndisponivel': 'Unavailable on this device',
+    'config.ocultarValores': 'Hide values',
+    'config.seguranca': 'SECURITY',
+    'config.pinAcesso': 'Access PIN',
+    'config.ativado': 'Enabled',
+    'config.desativado': 'Disabled',
+    'config.definir': 'SET',
+    'config.alterar': 'CHANGE',
+    'config.remover': 'REMOVE',
+    'config.fechaDia': 'closes on day',
+    'conta.tipoCartao': 'Card',
+    'conta.tipoContaCorrente': 'Checking account',
+    'conta.tipoCarteira': 'Wallet',
+  },
+  es: {
+    'resumo.saldoDoMes': 'SALDO DEL MES',
+    'resumo.emRelacaoA': 'respecto a',
+    'resumo.receitas': 'INGRESOS',
+    'resumo.despesas': 'GASTOS',
+    'resumo.carteira': 'CARTERA',
+    'resumo.gastosPorCategoria': 'GASTOS POR CATEGORÍA',
+    'resumo.verTudo': 'VER TODO',
+    'resumo.parcelasEmAberto': 'CUOTAS PENDIENTES',
+    'resumo.semDespesas': 'Aún no hay gastos este mes.',
+    'resumo.semParcelas': 'No hay cuotas pendientes este mes.',
+    'tabs.resumo': 'RESUMEN',
+    'tabs.lancamentos': 'MOVIM.',
+    'tabs.carteira': 'CARTERA',
+    'tabs.metas': 'METAS',
+    'header.mesAnterior': 'Mes anterior',
+    'header.mesSeguinte': 'Mes siguiente',
+    'header.calculadoras': 'Calculadoras',
+    'header.configuracoes': 'Configuración',
+    'config.titulo': 'Configuración',
+    'config.minhaConta': 'Mi cuenta',
+    'config.dadosSincronizados': 'datos sincronizados en este Artifact',
+    'config.aparencia': 'APARIENCIA',
+    'config.claro': 'CLARO',
+    'config.escuro': 'OSCURO',
+    'config.sistema': 'SISTEMA',
+    'config.idioma': 'IDIOMA',
+    'config.contasCartoes': 'CUENTAS Y TARJETAS',
+    'config.adicionarConta': 'AGREGAR CUENTA',
+    'config.dados': 'DATOS',
+    'config.sincronizacao': 'Sincronización',
+    'config.sincronizacaoAtiva': 'Activa',
+    'config.sincronizacaoIndisponivel': 'No disponible en este dispositivo',
+    'config.ocultarValores': 'Ocultar valores',
+    'config.seguranca': 'SEGURIDAD',
+    'config.pinAcesso': 'PIN de acceso',
+    'config.ativado': 'Activado',
+    'config.desativado': 'Desactivado',
+    'config.definir': 'DEFINIR',
+    'config.alterar': 'CAMBIAR',
+    'config.remover': 'QUITAR',
+    'config.fechaDia': 'cierra el día',
+    'conta.tipoCartao': 'Tarjeta',
+    'conta.tipoContaCorrente': 'Cuenta corriente',
+    'conta.tipoCarteira': 'Billetera',
+  },
+};
+
+function t(chave, idioma) {
+  const dicionario = TRADUCOES[idioma] || TRADUCOES[IDIOMA_PADRAO];
+  return dicionario[chave] ?? TRADUCOES[IDIOMA_PADRAO][chave] ?? chave;
+}
+
+function mesesDoIdioma(idioma) {
+  return MESES_POR_IDIOMA[idioma] || MESES_POR_IDIOMA[IDIOMA_PADRAO];
+}
+
+function localeDoIdioma(idioma) {
+  return LOCALE_POR_IDIOMA[idioma] || LOCALE_POR_IDIOMA[IDIOMA_PADRAO];
+}
+
+// Wrapper de função (não `const`) por uma razão específica: no bundle concatenado como script
+// clássico (ver build.js), só `function` no topo do arquivo vira propriedade de `window`
+// automaticamente — um `const` não vira, e ficaria undefined pro resto do app no navegador.
+function listaIdiomas() {
+  return IDIOMAS;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { IDIOMA_PADRAO, IDIOMAS, t, mesesDoIdioma, localeDoIdioma, listaIdiomas, TRADUCOES };
+}
+
+const L = typeof require !== 'undefined' ? require('./logic.js') : window;
+const I18N = typeof require !== 'undefined' ? require('./i18n.js') : window;
+
+const MESES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+const MESES_ABREV = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+
+const ROTULOS_TIPO_INVESTIMENTO = {
+  acao: 'Ação',
+  fii: 'Fundo Imobiliário',
+  fundo_investimento: 'Fundo de Investimento',
+  criptomoeda: 'Criptomoeda',
+  stock: 'Stock',
+  reit: 'REIT',
+  bdr: 'BDR',
+  etf: 'ETF',
+  etf_internacional: 'ETF Internacional',
+  tesouro_direto: 'Tesouro Direto',
+  renda_fixa: 'Renda Fixa',
+  outro: 'Outro',
+};
+
+// Rótulo pra grupos sintéticos que não são um tipo de ativo de verdade selecionável no
+// formulário (hoje só o "Outros" que a composição da carteira usa pra agrupar o 7º tipo em
+// diante) — fica fora de ROTULOS_TIPO_INVESTIMENTO de propósito, senão viraria uma opção
+// escolhível ao criar um ativo.
+const ROTULOS_GRUPO_SINTETICO = {
+  outros_agrupados: 'Outros',
+};
+
+function rotuloTipoInvestimento(tipo) {
+  return ROTULOS_TIPO_INVESTIMENTO[tipo] || ROTULOS_GRUPO_SINTETICO[tipo] || tipo;
+}
+
+const ROTULOS_TIPO_CONTA = {
+  cartao: 'Cartão',
+  conta: 'Conta corrente',
+  carteira: 'Carteira',
+};
+
+const OCULTO = '••••';
+
+// idioma é opcional (default português) — o valor em si nunca deixa de ser real brasileiro
+// (não tem conversão de moeda aqui), só o separador de milhar/decimal e a posição do "R$" mudam
+// pra convenção de cada idioma. currencyDisplay:'narrowSymbol' garante "R$" nos três idiomas —
+// sem isso o ICU mostra "BRL" por extenso em espanhol em vez do símbolo.
+function formatCurrency(valor, idioma) {
+  return new Intl.NumberFormat(I18N.localeDoIdioma(idioma), { style: 'currency', currency: 'BRL', currencyDisplay: 'narrowSymbol' }).format(valor);
+}
+
+function formatNumero(valor, idioma) {
+  return new Intl.NumberFormat(I18N.localeDoIdioma(idioma), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valor);
+}
+
+function formatPercent(valor, idioma) {
+  const formatado = formatNumero(valor, idioma);
+  return `${valor >= 0 ? '+' : ''}${formatado}%`;
+}
+
+// Anos aparecem com uma casa decimal só (18,2 anos), diferente de formatNumero, que sempre usa
+// duas. Passa pelo Intl para o separador acompanhar o idioma — toFixed devolveria sempre ponto.
+function formatAnos(valor, idioma) {
+  return new Intl.NumberFormat(I18N.localeDoIdioma(idioma), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(valor);
+}
+
+function escapeHtml(texto) {
+  return String(texto)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Esconde valores monetários quando state.ocultarValores está ativo, mantendo a largura tabular.
+function mascarar(textoFormatado, ocultarValores) {
+  return ocultarValores ? OCULTO : textoFormatado;
+}
+
+function iconSymbol(size = 20, corTraco = 'currentColor', corLaje = 'var(--nv-accent)') {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" aria-hidden="true"><rect x="1" y="1" width="18" height="18" rx="4" fill="none" stroke="${corTraco}" stroke-width="2"></rect><path d="M4 16 L16 4 L16 9.5 L9.5 16 Z" fill="${corLaje}"></path></svg>`;
+}
+
+// Função (não const) de propósito — no bundle do navegador (script clássico, sem módulos),
+// `function` no nível superior vira propriedade de window automaticamente, mas `const` não.
+// ROTULOS_TIPO_INVESTIMENTO sozinho não estaria acessível via `renderizacao.` no app.js.
+function opcoesTipoInvestimento() {
+  return Object.entries(ROTULOS_TIPO_INVESTIMENTO).map(([valor, rotulo]) => ({ valor, rotulo }));
+}
+
+// Combobox custom (dropdown com fundo/cor de seleção controlados pelo app) — substitui
+// <select>/<datalist> nativos, cujo popup o navegador não deixa estilizar de forma confiável
+// entre navegadores/SOs (ver commits anteriores tentando resolver isso via CSS só).
+function renderComboItens(opcoes, valorAtual) {
+  return opcoes.length
+    ? opcoes
+        .map(
+          (o) =>
+            `<div class="nv-combo-item ${o.valor === valorAtual ? 'ativo' : ''}" data-acao="selecionar-combo-item" data-valor="${escapeHtml(o.valor)}" data-rotulo="${escapeHtml(o.rotulo || o.valor)}">${escapeHtml(o.rotulo || o.valor)}</div>`
+        )
+        .join('')
+    : '<div class="nv-combo-vazio">Nenhuma opção encontrada.</div>';
+}
+
+function renderComboSelect(nomeCampo, opcoes, valorAtual, idElemento) {
+  const atual = opcoes.find((o) => o.valor === valorAtual) || opcoes[0] || { valor: '', rotulo: '' };
+  return `
+    <div class="nv-combo" data-combo="${nomeCampo}">
+      <input type="hidden" name="${nomeCampo}" value="${escapeHtml(atual.valor)}" />
+      <button type="button" ${idElemento ? `id="${idElemento}"` : ''} class="nv-combo-gatilho" data-acao="abrir-combo">
+        <span class="nv-combo-valor">${escapeHtml(atual.rotulo)}</span>
+        <svg class="nv-combo-seta" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+      <div class="nv-combo-lista" hidden>${renderComboItens(opcoes, atual.valor)}</div>
+    </div>`;
+}
+
+function renderComboBusca(nomeCampo, valorInicial, sugestoes, idElemento) {
+  return `
+    <div class="nv-combo" data-combo="${nomeCampo}">
+      <input type="text" ${idElemento ? `id="${idElemento}"` : ''} name="${nomeCampo}" class="nv-combo-input" autocomplete="off" required maxlength="40" value="${escapeHtml(valorInicial || '')}" />
+      <div class="nv-combo-lista" hidden>${(sugestoes || [])
+        .map((t) => `<div class="nv-combo-item" data-acao="selecionar-combo-item" data-valor="${escapeHtml(t)}">${escapeHtml(t)}</div>`)
+        .join('')}<div class="nv-combo-vazio" ${(sugestoes || []).length ? 'hidden' : ''}>Nenhuma sugestão — pode digitar o nome livremente.</div></div>
+    </div>`;
+}
+
+function iconSearch() {
+  return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>';
+}
+
+// Paleta fixa e propositalmente discreta (tons médios, baixa saturação) pra não brigar com a
+// identidade monocromática + acento do resto do app — serve só pra diferenciar ativos visualmente
+// numa lista, não é uma paleta categórica de gráfico. Ordem fixa, nunca gerada dinamicamente.
+const PALETA_MONOGRAMA = ['#6b7a99', '#a1665e', '#6b8f71', '#8a6b9c', '#9c8465', '#6ba1a1', '#a17f6b', '#7a7a9c'];
+
+// Não pode carregar o logo de marca de nenhum ativo (CSP do Artifact bloqueia fetch externo, e
+// reproduzir a arte de uma empresa sem licença seria problema de marca registrada de qualquer
+// forma) — em vez disso, cada ativo ganha duas letras + uma cor sempre igual pra aquele nome.
+function monogramaAtivo(nome, tamanho = 32) {
+  const iniciais = L.iniciaisAtivo(nome);
+  const cor = PALETA_MONOGRAMA[L.corIndiceAtivo(nome, PALETA_MONOGRAMA.length)];
+  const fonte = Math.round(tamanho * 0.4);
+  return `<span class="nv-monograma" style="width:${tamanho}px;height:${tamanho}px;font-size:${fonte}px;background:${cor}" aria-hidden="true">${escapeHtml(iniciais)}</span>`;
+}
+
+function iconCalculator(size = 18) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="8" y2="10.01"></line><line x1="12" y1="10" x2="12" y2="10.01"></line><line x1="16" y1="10" x2="16" y2="10.01"></line><line x1="8" y1="14" x2="8" y2="14.01"></line><line x1="12" y1="14" x2="12" y2="14.01"></line><line x1="16" y1="14" x2="16" y2="14.01"></line><line x1="8" y1="18" x2="8" y2="18.01"></line><line x1="12" y1="18" x2="12" y2="18.01"></line><line x1="16" y1="18" x2="16" y2="18.01"></line></svg>`;
+}
+
+function iconSol(size = 16) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"></line><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"></line><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"></line></svg>`;
+}
+
+function iconLua(size = 16) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+}
+
+function iconMonitor(size = 16) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
+}
+
+function iconGear(size = 18) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
+}
+
+function tabBar(abaAtiva, idioma) {
+  const itens = [
+    { id: 'resumo', rotulo: I18N.t('tabs.resumo', idioma) },
+    { id: 'lancamentos', rotulo: I18N.t('tabs.lancamentos', idioma) },
+    { id: 'carteira', rotulo: I18N.t('tabs.carteira', idioma) },
+    { id: 'metas', rotulo: I18N.t('tabs.metas', idioma) },
+  ];
+  return `
+    <nav class="nv-tabbar">
+      ${itens
+        .map(
+          (item) => `
+        <button type="button" data-acao="ir-tab" data-tab="${item.id}" class="${item.id === abaAtiva ? 'ativo' : ''}">${item.rotulo}</button>`
+        )
+        .join('')}
+    </nav>`;
+}
+
+function headerResumo(ano, mes, idioma) {
+  const meses = I18N.mesesDoIdioma(idioma);
+  return `
+    <div class="nv-header nv-header--brand">
+      <div class="nv-brand">
+        ${iconSymbol(26)}
+        <span class="nv-wordmark">NUVRA</span>
+      </div>
+      <div class="nv-monthnav">
+        <button type="button" data-acao="mes-anterior" aria-label="${I18N.t('header.mesAnterior', idioma)}">${'‹'}</button>
+        <span>${meses[mes - 1].slice(0, 3).toUpperCase()} ${ano}</span>
+        <button type="button" data-acao="mes-seguinte" aria-label="${I18N.t('header.mesSeguinte', idioma)}">${'›'}</button>
+        <button type="button" class="nv-gear" data-acao="abrir-calculadoras" aria-label="${I18N.t('header.calculadoras', idioma)}">${iconCalculator(19)}</button>
+        <button type="button" class="nv-gear" data-acao="abrir-configuracoes" aria-label="${I18N.t('header.configuracoes', idioma)}">${iconGear(19)}</button>
+      </div>
+    </div>`;
+}
+
+function headerTituloMes(titulo, ano, mes) {
+  return `
+    <div class="nv-header">
+      <span class="nv-title">${titulo}</span>
+      <div class="nv-monthnav">
+        <button type="button" data-acao="mes-anterior" aria-label="Mês anterior">${'‹'}</button>
+        <span>${MESES[mes - 1].toUpperCase()} ${ano}</span>
+        <button type="button" data-acao="mes-seguinte" aria-label="Próximo mês">${'›'}</button>
+      </div>
+    </div>`;
+}
+
+function headerVoltar(titulo, acaoVoltar) {
+  return `
+    <div class="nv-header nv-header--back">
+      <button type="button" class="nv-back" data-acao="${acaoVoltar}" aria-label="Voltar">${'‹'}</button>
+      <span class="nv-title">${titulo}</span>
+    </div>`;
+}
+
+function sparkline(pontos) {
+  const valores = pontos.map((p) => p.saldo);
+  const min = Math.min(0, ...valores);
+  const max = Math.max(0, ...valores);
+  const amplitude = max - min || 1;
+  const largura = 350;
+  const altura = 90;
+  const passo = pontos.length > 1 ? largura / (pontos.length - 1) : 0;
+  const coords = pontos.map((p, i) => {
+    const x = i * passo;
+    const y = altura - 6 - ((p.saldo - min) / amplitude) * (altura - 16);
+    return { x, y };
+  });
+  const linha = coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+  const ultimo = coords[coords.length - 1];
+  const eixo = pontos.map((p) => `<span>${MESES_ABREV[p.mes - 1]}</span>`).join('');
+  return `
+    <div class="nv-sparkline">
+      <svg viewBox="0 0 ${largura} ${altura}" width="100%" height="${altura}" preserveAspectRatio="none" aria-hidden="true">
+        <line x1="0" y1="${altura - 1}" x2="${largura}" y2="${altura - 1}" stroke="var(--nv-rule-soft)" stroke-width="1"></line>
+        <polyline points="${linha}" fill="none" stroke="var(--nv-accent)" stroke-width="2"></polyline>
+        <rect x="${(ultimo.x - 5).toFixed(1)}" y="${(ultimo.y - 5).toFixed(1)}" width="10" height="10" fill="var(--nv-accent)"></rect>
+      </svg>
+      <div class="nv-sparkline-axis">${eixo}</div>
+    </div>`;
+}
+
+function renderResumo(state, ano, mes) {
+  const idioma = state.idioma;
+  const investimentos = state.investimentos || [];
+  const ocultar = !!state.ocultarValores;
+  const resumo = L.resumoMensal(state.lancamentos, ano, mes);
+  const carteira = L.totalCarteira(investimentos);
+  const abertas = L.parcelasEmAberto(state.lancamentos, ano, mes);
+  const historico = L.resumoUltimosMeses(state.lancamentos, ano, mes, 7);
+  const anterior = historico[historico.length - 2];
+  const variacao = anterior ? resumo.saldo - anterior.saldo : 0;
+  const categorias = L.gastosPorCategoria(state.lancamentos, ano, mes).slice(0, 3);
+  const maiorCategoria = categorias.length ? categorias[0].valor : 0;
+  const meses = I18N.mesesDoIdioma(idioma);
+
+  const barrasCategoria = categorias.length
+    ? categorias
+        .map(
+          (c, i) => `
+        <button type="button" class="nv-bar-row" data-acao="abrir-categoria" data-categoria="${escapeHtml(c.categoria)}">
+          <div class="nv-bar-top"><span>${escapeHtml(c.categoria)}</span><span>${mascarar(formatNumero(c.valor, idioma), ocultar)}</span></div>
+          <div class="nv-bar-track"><div class="nv-bar-fill" style="width:${maiorCategoria ? (c.valor / maiorCategoria) * 100 : 0}%;background:${i === 0 ? 'var(--nv-accent)' : 'var(--nv-bar-neutral-strong)'}"></div></div>
+        </button>`
+        )
+        .join('')
+    : `<p class="nv-vazio">${I18N.t('resumo.semDespesas', idioma)}</p>`;
+
+  const listaParcelas = abertas.length
+    ? abertas
+        .map(
+          (p) => `
+        <div class="nv-row-plain">
+          <span>${escapeHtml(p.descricao)} <small>${p.numeroParcela}/${p.parcelas}</small></span>
+          <span>${mascarar(formatNumero(p.valorParcela, idioma), ocultar)}</span>
+        </div>`
+        )
+        .join('')
+    : `<p class="nv-vazio">${I18N.t('resumo.semParcelas', idioma)}</p>`;
+
+  return `
+    ${headerResumo(ano, mes, idioma)}
+    <div class="nv-hero">
+      <div class="nv-hero-label">${I18N.t('resumo.saldoDoMes', idioma)}</div>
+      <div class="nv-hero-value">
+        <span class="cifrao">R$</span>
+        <span class="numero">${mascarar(formatNumero(resumo.saldo, idioma), ocultar)}</span>
+      </div>
+      <div class="nv-hero-sub">${variacao >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(variacao), idioma), ocultar)} ${I18N.t('resumo.emRelacaoA', idioma)} ${meses[(mes - 2 + 12) % 12].toLowerCase()}</div>
+    </div>
+    ${sparkline(historico)}
+    <div class="nv-cells">
+      <div class="nv-cell">
+        <div class="nv-cell-label">${I18N.t('resumo.receitas', idioma)}</div>
+        <div class="nv-cell-valor">${mascarar(formatNumero(resumo.receitas, idioma), ocultar)}</div>
+      </div>
+      <div class="nv-cell">
+        <div class="nv-cell-label">${I18N.t('resumo.despesas', idioma)}</div>
+        <div class="nv-cell-valor" style="color:var(--nv-negative)">${mascarar(formatNumero(resumo.despesas, idioma), ocultar)}</div>
+      </div>
+      <div class="nv-cell">
+        <div class="nv-cell-label">${I18N.t('resumo.carteira', idioma)}</div>
+        <div class="nv-cell-valor">${mascarar(formatNumero(carteira.totalAtual, idioma), ocultar)}</div>
+      </div>
+    </div>
+    <div class="nv-section-head">
+      <span class="nv-section-label">${I18N.t('resumo.gastosPorCategoria', idioma)}</span>
+      <button type="button" class="nv-link-accent" data-acao="ir-tab" data-tab="lancamentos">${I18N.t('resumo.verTudo', idioma)}</button>
+    </div>
+    <div class="nv-bars">${barrasCategoria}</div>
+    <div class="nv-section-head">
+      <span class="nv-section-label">${I18N.t('resumo.parcelasEmAberto', idioma)}</span>
+    </div>
+    <div class="nv-list-plain">${listaParcelas}</div>
+    ${tabBar('resumo', idioma)}
+  `;
+}
+
+function agruparPorDia(itens) {
+  const grupos = [];
+  let atual = null;
+  for (const item of itens) {
+    if (!atual || atual.data !== item.data) {
+      atual = { data: item.data, itens: [] };
+      grupos.push(atual);
+    }
+    atual.itens.push(item);
+  }
+  return grupos;
+}
+
+function rotuloData(dataISO) {
+  const [ano, mes, dia] = dataISO.split('-');
+  return `${dia} DE ${MESES[Number(mes) - 1].toUpperCase()}`;
+}
+
+function renderLancamentos(state, ano, mes, opcoes = {}) {
+  const ocultar = !!state.ocultarValores;
+  const contas = state.contas || [];
+  const { busca = '', filtro = 'todos', contaSelecionada = null } = opcoes;
+  const itens = L.filtrarLancamentos(state.lancamentos, ano, mes, { busca, filtro, contaId: contaSelecionada });
+  const total = L.totalFiltrado(itens);
+  const grupos = agruparPorDia(itens);
+  const contaAtual = contas.find((c) => c.id === contaSelecionada);
+
+  const chips = [
+    { id: 'todos', rotulo: 'TODOS' },
+    { id: 'receitas', rotulo: 'RECEITAS' },
+    { id: 'despesas', rotulo: 'DESPESAS' },
+    { id: 'parcelados', rotulo: 'PARCELADOS' },
+  ];
+
+  const listaGrupos = grupos.length
+    ? grupos
+        .map(
+          (grupo) => `
+        <div class="nv-grupo-data">${rotuloData(grupo.data)}</div>
+        ${grupo.itens
+          .map((l) => {
+            const tag = l.parcelas > 1 ? `<span class="nv-tag-parcela">${l.numeroParcela}/${l.parcelas}</span>` : '';
+            const sinal = l.tipo === 'receita' ? '+' : '−';
+            const classe = l.tipo === 'receita' ? 'positivo' : 'negativo';
+            const conta = contas.find((c) => c.id === l.contaId);
+            const metaConta = conta ? ` · ${escapeHtml(conta.nome)}` : '';
+            return `
+        <div class="nv-item-lanc" data-id="${l.id}" data-acao="editar-lancamento">
+          <div>
+            <div class="nv-item-nome">${escapeHtml(l.descricao || l.categoria)}${tag}</div>
+            <div class="nv-item-meta">${escapeHtml(l.categoria)}${metaConta}</div>
+          </div>
+          <div class="nv-item-valor ${classe}">${sinal} ${mascarar(formatNumero(L.parcelaValor(l)), ocultar)}</div>
+        </div>`;
+          })
+          .join('')}`
+        )
+        .join('')
+    : '<p class="nv-vazio">Nenhum lançamento neste mês.</p>';
+
+  return `
+    ${headerTituloMes('Lançamentos', ano, mes)}
+    <div class="nv-search">
+      <div class="nv-search-box">
+        ${iconSearch()}
+        <input type="search" id="campo-busca-lancamentos" placeholder="Buscar descrição ou categoria" value="${escapeHtml(busca)}" />
+      </div>
+    </div>
+    <div class="nv-chips">
+      ${chips
+        .map(
+          (chip) => `<button type="button" class="nv-chip ${chip.id === filtro ? 'ativo' : ''}" data-acao="filtrar-lancamentos" data-filtro="${chip.id}">${chip.rotulo}</button>`
+        )
+        .join('')}
+    </div>
+    <div class="nv-cells nv-cells--linha">
+      <div class="nv-cell">
+        <div class="nv-cell-label" style="font-size:9px">CONTA</div>
+        <select id="campo-conta-filtro" class="nv-select-inline">
+          <option value="">Todas</option>
+          ${contas.map((c) => `<option value="${c.id}" ${c.id === contaSelecionada ? 'selected' : ''}>${escapeHtml(c.nome)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="nv-cell">
+        <div class="nv-cell-label" style="font-size:9px">TOTAL FILTRADO</div>
+        <div class="nv-cell-valor" style="font-size:12px">${total >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(total)), ocultar)}</div>
+      </div>
+    </div>
+    <div class="nv-grupo-lista">${listaGrupos}</div>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-cheio" data-acao="novo-lancamento">
+        <span>NOVO LANÇAMENTO</span><span class="mais">+</span>
+      </button>
+    </div>
+    ${tabBar('lancamentos', state.idioma)}
+    ${contaAtual ? '' : ''}
+  `;
+}
+
+function opcoesCategoria(tipo) {
+  const receitas = ['Salário', 'Freelance', 'Investimentos', 'Outras Receitas'];
+  const despesas = ['Moradia', 'Alimentação', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Vestuário', 'Outras Despesas'];
+  return (tipo === 'receita' ? receitas : despesas).map((c) => ({ valor: c, rotulo: c }));
+}
+
+function renderNovoLancamento(state, dadosIniciais) {
+  const contas = state.contas || [];
+  const d = dadosIniciais || {};
+  const tipo = d.tipo || 'despesa';
+  const parcelado = (d.parcelas || 1) > 1;
+  const saldoProjetado = d.saldoProjetado ?? 0;
+
+  return `
+    <div class="nv-header nv-header--back">
+      <span class="nv-title">Lançamento</span>
+      <button type="button" class="nv-link-muted" data-acao="cancelar-lancamento">CANCELAR</button>
+    </div>
+    <form id="formulario-lancamento">
+      <input type="hidden" name="id" value="${escapeHtml(d.id || '')}" />
+      <div class="nv-segmentado">
+        <button type="button" data-acao="tipo-lancamento" data-tipo="despesa" class="${tipo === 'despesa' ? 'ativo' : ''}">DESPESA</button>
+        <button type="button" data-acao="tipo-lancamento" data-tipo="receita" class="${tipo === 'receita' ? 'ativo' : ''}">RECEITA</button>
+      </div>
+      <input type="hidden" name="tipo" value="${tipo}" />
+      <div class="nv-valor-grande">
+        <div class="nv-cell-label">VALOR TOTAL</div>
+        <div class="nv-hero-value">
+          <span class="cifrao">R$</span>
+          <input type="text" inputmode="decimal" name="valorTotal" class="nv-campo-moeda" required value="${d.valorTotal ? formatNumero(d.valorTotal) : ''}" placeholder="0,00" />
+        </div>
+      </div>
+      <div class="nv-campo-linha">
+        <label class="nv-campo-label" for="campo-descricao">DESCRIÇÃO</label>
+        <input type="text" id="campo-descricao" name="descricao" maxlength="80" value="${escapeHtml(d.descricao || '')}" />
+      </div>
+      <div class="nv-campo-linha">
+        <label class="nv-campo-label" for="campo-categoria-lancamento">CATEGORIA</label>
+        ${renderComboSelect('categoria', opcoesCategoria(tipo), d.categoria, 'campo-categoria-lancamento')}
+      </div>
+      <div class="nv-campo-dupla">
+        <div>
+          <label class="nv-campo-label" for="campo-data">DATA</label>
+          <input type="date" id="campo-data" name="data" required value="${d.data || ''}" />
+        </div>
+        <div>
+          <label class="nv-campo-label" for="campo-conta">CONTA</label>
+          <select id="campo-conta" name="contaId">
+            <option value="">Sem conta</option>
+            ${contas.map((c) => `<option value="${c.id}" ${c.id === d.contaId ? 'selected' : ''}>${escapeHtml(c.nome)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="nv-linha-toggle">
+        <span>Parcelado</span>
+        <label class="nv-switch-wrap">
+          <input type="checkbox" name="parcelado" id="campo-parcelado" ${parcelado ? 'checked' : ''} />
+          <span class="nv-switch"><span class="knob"></span></span>
+        </label>
+      </div>
+      <div class="nv-linha-toggle nv-stepper-linha ${parcelado ? '' : 'desabilitado'}" id="campo-parcelas-linha">
+        <span>Número de parcelas</span>
+        <div class="nv-stepper">
+          <button type="button" data-acao="parcelas-menos">−</button>
+          <span id="valor-parcelas">${d.parcelas && d.parcelas > 1 ? d.parcelas : 2}</span>
+          <button type="button" data-acao="parcelas-mais">+</button>
+        </div>
+        <input type="hidden" name="parcelas" id="campo-parcelas" value="${d.parcelas && d.parcelas > 1 ? d.parcelas : 2}" />
+      </div>
+      ${
+        d.id
+          ? `<div class="nv-campo-linha" style="border-top:1px solid var(--nv-rule-soft);border-bottom:none;padding-top:14px">
+        <button type="button" class="nv-link-muted" data-acao="excluir-lancamento-atual" style="color:var(--nv-negative)">Excluir lançamento</button>
+      </div>`
+          : ''
+      }
+      <div class="nv-rodape-form">
+        <div class="nv-rodape-saldo">
+          <span>SALDO APÓS SALVAR</span><span>${formatCurrency(saldoProjetado)}</span>
+        </div>
+        <button type="submit" class="nv-btn-cheio">SALVAR</button>
+      </div>
+    </form>
+  `;
+}
+
+function renderCategoriaDetalhe(state, categoria, ano, mes) {
+  const ocultar = !!state.ocultarValores;
+  const contas = state.contas || [];
+  const gastoAtual = L.gastosPorCategoria(state.lancamentos, ano, mes).find((c) => c.categoria === categoria);
+  const total = gastoAtual ? gastoAtual.valor : 0;
+  const historico = L.gastoCategoriaUltimosMeses(state.lancamentos, categoria, ano, mes, 6);
+  const media6 = historico.reduce((s, h) => s + h.valor, 0) / (historico.length || 1);
+  const variacao = media6 ? ((total - media6) / media6) * 100 : 0;
+  const maiorHistorico = Math.max(1, ...historico.map((h) => h.valor));
+  const meta = (state.metas || []).find((m) => m.categoria === categoria);
+  const statusMeta = meta ? L.statusMeta(total, meta.limite) : null;
+  const itens = L.filtrarLancamentos(state.lancamentos, ano, mes, {}).filter((l) => l.categoria === categoria && l.tipo === 'despesa');
+
+  const barras = historico
+    .map(
+      (h, i) => `<div class="nv-barra-mes ${i === historico.length - 1 ? 'atual' : ''}" style="height:${Math.max(4, (h.valor / maiorHistorico) * 100)}%"></div>`
+    )
+    .join('');
+  const eixo = historico.map((h) => `<span>${MESES_ABREV[h.mes - 1]}</span>`).join('');
+
+  const listaItens = itens.length
+    ? itens
+        .map((l) => {
+          const conta = contas.find((c) => c.id === l.contaId);
+          const dataFmt = l.data.split('-').reverse().slice(0, 2).join('/');
+          return `
+        <div class="nv-item-lanc" data-id="${l.id}" data-acao="editar-lancamento">
+          <div>
+            <div class="nv-item-nome">${escapeHtml(l.descricao || l.categoria)}</div>
+            <div class="nv-item-meta">${dataFmt}${conta ? ` · ${escapeHtml(conta.nome)}` : ''}</div>
+          </div>
+          <div class="nv-item-valor">${mascarar(formatNumero(L.parcelaValor(l)), ocultar)}</div>
+        </div>`;
+        })
+        .join('')
+    : '<p class="nv-vazio">Nenhum lançamento nesta categoria.</p>';
+
+  return `
+    ${headerVoltar(escapeHtml(categoria), 'fechar-categoria')}
+    <div class="nv-hero" style="border-bottom:1px solid var(--nv-rule-soft)">
+      <div class="nv-hero-label">GASTO EM ${MESES[mes - 1].toUpperCase()}</div>
+      <div class="nv-hero-value">
+        <span class="cifrao" style="font-size:18px">R$</span>
+        <span class="numero" style="font-size:44px">${mascarar(formatNumero(total), ocultar)}</span>
+      </div>
+      <div class="nv-hero-sub" style="display:flex;gap:16px">
+        <span>Média 6 meses ${mascarar(formatCurrency(media6), ocultar)}</span>
+        <span style="color:${variacao >= 0 ? 'var(--nv-negative)' : 'var(--nv-positive)'}">${formatPercent(variacao)}</span>
+      </div>
+    </div>
+    <div class="nv-barras-meses">
+      <div class="nv-section-label" style="margin-bottom:14px">SEIS MESES</div>
+      <div class="nv-barras-meses-grid">${barras}</div>
+      <div class="nv-barras-eixo">${eixo}</div>
+    </div>
+    ${
+      meta
+        ? `<div class="nv-meta-linha">
+      <div>
+        <div class="nv-cell-label">META DO MÊS</div>
+        <div class="nv-item-nome" style="margin-top:4px">${mascarar(formatCurrency(total), ocultar)} de ${mascarar(formatCurrency(meta.limite), ocultar)}</div>
+      </div>
+      <div class="nv-badge">${Math.round(statusMeta.percentual)}%</div>
+    </div>`
+        : ''
+    }
+    <div class="nv-section-head"><span class="nv-section-label">LANÇAMENTOS</span></div>
+    <div>${listaItens}</div>
+    ${tabBar('resumo', state.idioma)}
+  `;
+}
+
+function renderMetas(state, ano, mes) {
+  const ocultar = !!state.ocultarValores;
+  const metas = state.metas || [];
+  const gastos = L.gastosPorCategoria(state.lancamentos, ano, mes);
+  const gastoPorCategoria = new Map(gastos.map((g) => [g.categoria, g.valor]));
+  const totalGasto = gastos.reduce((s, g) => s + g.valor, 0);
+  const totalLimite = metas.reduce((s, m) => s + m.limite, 0);
+  const percentualGeral = totalLimite ? (totalGasto / totalLimite) * 100 : 0;
+  const hoje = new Date();
+  const ehMesAtual = hoje.getFullYear() === ano && hoje.getMonth() + 1 === mes;
+  const diasNoMes = new Date(ano, mes, 0).getDate();
+  const diasRestantes = ehMesAtual ? Math.max(0, diasNoMes - hoje.getDate()) : diasNoMes;
+
+  const linhas = metas.length
+    ? metas
+        .map((m) => {
+          const gasto = gastoPorCategoria.get(m.categoria) || 0;
+          const status = L.statusMeta(gasto, m.limite);
+          const pctBarra = Math.min(100, status.percentual);
+          return `
+        <div class="nv-meta-item ${status.excedeu ? 'excedida' : ''}" data-id="${m.id}" data-acao="editar-meta" role="button" tabindex="0">
+          <div class="nv-meta-topo">
+            <span>
+              <span class="nv-meta-nome">${escapeHtml(m.nome || m.categoria)}</span>
+              ${m.nome ? `<div class="nv-item-meta">${escapeHtml(m.categoria)}</div>` : ''}
+            </span>
+            <span class="nv-meta-valores ${status.excedeu ? 'excedida' : ''}">${mascarar(formatNumero(gasto), ocultar)} / ${mascarar(formatNumero(m.limite), ocultar)}</span>
+          </div>
+          <div class="nv-meta-track"><div class="nv-meta-fill ${status.excedeu ? 'excedida' : ''}" style="width:${pctBarra}%"></div></div>
+          ${status.excedeu ? `<div class="nv-meta-excesso">Excedeu ${mascarar(formatCurrency(status.excedente), ocultar)}</div>` : ''}
+        </div>`;
+        })
+        .join('')
+    : '<p class="nv-vazio">Nenhuma meta definida ainda.</p>';
+
+  return `
+    ${headerTituloMes('Metas', ano, mes)}
+    <div class="nv-orcamento">
+      <div class="nv-cell-label">ORÇAMENTO USADO</div>
+      <div class="nv-orcamento-num">
+        <span class="grande">${Math.round(percentualGeral)}</span><span class="pct">%</span>
+        <span class="detalhe">${mascarar(formatCurrency(totalGasto), ocultar)} de ${mascarar(formatCurrency(totalLimite), ocultar)}</span>
+      </div>
+      <div class="nv-orcamento-track"><div class="nv-orcamento-fill" style="width:${Math.min(100, percentualGeral)}%"></div></div>
+      <div class="nv-orcamento-sub">Faltam ${diasRestantes} dias no mês</div>
+    </div>
+    <div>${linhas}</div>
+    <div class="nv-acao-fixa" style="margin-top:auto">
+      <button type="button" class="nv-btn-contorno" data-acao="nova-meta">
+        <span>DEFINIR NOVA META</span><span class="mais">+</span>
+      </button>
+    </div>
+    ${tabBar('metas', state.idioma)}
+  `;
+}
+
+function renderPin(erro) {
+  return `
+    <div class="nv-abertura">
+      ${iconSymbol(56, '#f3f2f2', 'var(--nv-accent)')}
+      <div class="nv-wordmark" style="font-size:22px;margin-top:20px">NUVRA</div>
+      <form id="formulario-pin" style="margin-top:auto;display:flex;flex-direction:column;gap:16px">
+        <label style="display:flex;flex-direction:column;gap:8px;font-size:11px;font-weight:600;letter-spacing:.14em;color:rgba(243,242,242,.6)">
+          DIGITE SEU PIN
+          <input type="password" inputmode="numeric" pattern="[0-9]*" name="pin" maxlength="6" autofocus
+            style="background:none;border:none;border-bottom:2px solid rgba(243,242,242,.35);color:#f3f2f2;font-size:36px;letter-spacing:.4em;text-align:center;padding:10px 0;outline:none;font-family:inherit" />
+        </label>
+        ${erro ? '<div style="color:var(--nv-negative);font-size:12px;font-weight:600;text-align:center">PIN incorreto</div>' : ''}
+        <button type="submit" class="nv-abertura-cta">ENTRAR</button>
+      </form>
+    </div>`;
+}
+
+// --- Teste de perfil de investidor ---
+
+// Um radio por opção, com a primeira já marcada: assim o formulário nunca é enviado com pergunta
+// em branco, e a resposta default é sempre a mais conservadora (pontos 0).
+function renderPerguntasPerfil() {
+  return L.perguntasPerfil().map(
+    (p) => `
+      <fieldset class="nv-perfil-bloco">
+        <legend>${escapeHtml(p.pergunta)}</legend>
+        ${p.opcoes
+          .map(
+            (o, i) => `
+          <label class="nv-perfil-opcao">
+            <input type="radio" name="${escapeHtml(p.id)}" value="${o.pontos}" ${i === 0 ? 'checked' : ''} />
+            <span>${escapeHtml(o.texto)}</span>
+          </label>`
+          )
+          .join('')}
+      </fieldset>`
+  ).join('');
+}
+
+const ROTULO_PERFIL = {
+  conservador: 'Conservador',
+  moderado: 'Moderado',
+  arrojado: 'Arrojado',
+};
+
+const RESUMO_PERFIL = {
+  conservador: 'Você prioriza previsibilidade e não se sente confortável vendo o valor oscilar.',
+  moderado: 'Você aceita alguma oscilação em troca de um retorno maior no médio prazo.',
+  arrojado: 'Você tolera oscilação forte e pensa no longo prazo.',
+};
+
+// O aviso de que isto não é recomendação de investimento é obrigatório e coberto por teste:
+// sugerir ativo a uma pessoa é atividade regulada pela CVM. Aqui só se distribui percentual por
+// CLASSE de ativo, que é conteúdo educativo — nenhum papel específico é citado em lugar nenhum.
+function renderResultadoPerfil(perfil, pontos, alocacao) {
+  const linhas = Object.entries(alocacao || {})
+    .sort((a, b) => b[1] - a[1])
+    .map(
+      ([tipo, pct]) => `
+        <div class="nv-row-plain">
+          <span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[tipo] || tipo)}</span>
+          <span><b>${pct}%</b></span>
+        </div>`
+    )
+    .join('');
+  return `
+    <div class="nv-perfil-resultado">
+      <div class="nv-label">SEU PERFIL</div>
+      <div class="nv-perfil-nome">${escapeHtml(ROTULO_PERFIL[perfil] || perfil)}</div>
+      <div class="nv-perfil-pontos">${pontos} de 12 pontos</div>
+      <p class="nv-perfil-resumo">${escapeHtml(RESUMO_PERFIL[perfil] || '')}</p>
+      <div class="nv-label" style="margin-top:22px">SUGESTÃO DE ALOCAÇÃO POR CLASSE</div>
+      ${linhas}
+      <p class="nv-perfil-aviso">
+        Isto é material educativo e não é recomendação de investimento. A sugestão distribui
+        percentuais por classe de ativo e não indica nenhum ativo específico. Decisões de
+        investimento são suas; se precisar de orientação, procure um profissional habilitado.
+      </p>
+    </div>`;
+}
+
+// --- Tela de calculadoras ---
+// Ferramentas de apoio, sem ligação com os dados do usuário (não lê nem grava lançamento,
+// investimento etc.) — por isso não recebe `state`. O cálculo em si roda no clique do botão
+// (em app.js), lendo os campos direto do DOM; esta função só desenha o formulário e a área de
+// resultado (vazia/oculta até o primeiro clique).
+
+function corpoJurosCompostos() {
+  return `
+    <div class="nv-section-head"><span class="nv-section-label">JUROS COMPOSTOS</span></div>
+    <div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-compostos-capital">CAPITAL INICIAL (R$)</label>
+      <input type="text" inputmode="decimal" id="campo-calc-compostos-capital" class="nv-campo-moeda" placeholder="0,00" />
+    </div>
+    <div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-compostos-aporte">APORTE MENSAL (R$)</label>
+      <input type="text" inputmode="decimal" id="campo-calc-compostos-aporte" class="nv-campo-moeda" placeholder="0,00" />
+    </div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-compostos-taxa">TAXA MENSAL (%)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-compostos-taxa" placeholder="1,00" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-compostos-meses">PERÍODO (MESES)</label>
+        <input type="number" min="0" id="campo-calc-compostos-meses" placeholder="12" />
+      </div>
+    </div>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-compostos"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-compostos" class="nv-list-plain" hidden></div>`;
+}
+
+function corpoJurosSimples() {
+  return `
+    <div class="nv-section-head"><span class="nv-section-label">JUROS SIMPLES</span></div>
+    <div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-simples-capital">CAPITAL INICIAL (R$)</label>
+      <input type="text" inputmode="decimal" id="campo-calc-simples-capital" class="nv-campo-moeda" placeholder="0,00" />
+    </div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-simples-taxa">TAXA MENSAL (%)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-simples-taxa" placeholder="1,00" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-simples-meses">PERÍODO (MESES)</label>
+        <input type="number" min="0" id="campo-calc-simples-meses" placeholder="12" />
+      </div>
+    </div>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-simples"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-simples" class="nv-list-plain" hidden></div>`;
+}
+
+function corpoPorcentagem() {
+  return `
+    <div class="nv-section-head"><span class="nv-section-label">QUANTO É X% DE UM VALOR</span></div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct1-percentual">PERCENTUAL (%)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct1-percentual" placeholder="15" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct1-valor">VALOR (R$)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct1-valor" class="nv-campo-moeda" placeholder="0,00" />
+      </div>
+    </div>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-pct1"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-pct1" class="nv-list-plain" hidden></div>
+
+    <div class="nv-section-head" style="border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">QUE PERCENTUAL UM VALOR REPRESENTA DE UM TOTAL</span></div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct2-valor">VALOR (R$)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct2-valor" class="nv-campo-moeda" placeholder="0,00" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct2-total">TOTAL (R$)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct2-total" class="nv-campo-moeda" placeholder="0,00" />
+      </div>
+    </div>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-pct2"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-pct2" class="nv-list-plain" hidden></div>
+
+    <div class="nv-section-head" style="border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">AUMENTAR OU DIMINUIR UM VALOR EM X%</span></div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct3-valor">VALOR (R$)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct3-valor" class="nv-campo-moeda" placeholder="0,00" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-pct3-percentual">PERCENTUAL (use negativo p/ diminuir)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-pct3-percentual" placeholder="10 ou -10" />
+      </div>
+    </div>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-pct3"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-pct3" class="nv-list-plain" hidden></div>`;
+}
+
+function corpoPrimeiroMilhao(modoMilhao) {
+  const modo = modoMilhao === 'aporte' ? 'aporte' : 'tempo';
+  return `
+    <div class="nv-section-head"><span class="nv-section-label">PRIMEIRO MILHÃO</span></div>
+    <div class="nv-segmentado">
+      <button type="button" data-acao="definir-modo-milhao" data-modomilhao="tempo" class="${modo === 'tempo' ? 'ativo' : ''}">TEMPO NECESSÁRIO</button>
+      <button type="button" data-acao="definir-modo-milhao" data-modomilhao="aporte" class="${modo === 'aporte' ? 'ativo' : ''}">APORTE NECESSÁRIO</button>
+    </div>
+    <div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-milhao-alvo">VALOR-ALVO (R$)</label>
+      <input type="text" inputmode="decimal" id="campo-calc-milhao-alvo" class="nv-campo-moeda" value="${formatNumero(1000000)}" />
+    </div>
+    <div class="nv-campo-dupla">
+      <div>
+        <label class="nv-campo-label" for="campo-calc-milhao-capital">CAPITAL INICIAL (R$)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-milhao-capital" class="nv-campo-moeda" placeholder="0,00" />
+      </div>
+      <div>
+        <label class="nv-campo-label" for="campo-calc-milhao-taxa">TAXA MENSAL (%)</label>
+        <input type="text" inputmode="decimal" id="campo-calc-milhao-taxa" placeholder="1,00" />
+      </div>
+    </div>
+    ${
+      modo === 'tempo'
+        ? `<div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-milhao-aporte">APORTE MENSAL (R$)</label>
+      <input type="text" inputmode="decimal" id="campo-calc-milhao-aporte" class="nv-campo-moeda" placeholder="0,00" />
+    </div>`
+        : `<div class="nv-campo-linha">
+      <label class="nv-campo-label" for="campo-calc-milhao-meses">PRAZO DESEJADO (MESES)</label>
+      <input type="number" min="1" id="campo-calc-milhao-meses" placeholder="120" />
+    </div>`
+    }
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="calcular-milhao"><span>CALCULAR</span></button>
+    </div>
+    <div id="resultado-calc-milhao" class="nv-list-plain" hidden></div>`;
+}
+
+function renderCalculadoras(modo = 'compostos', modoMilhao = 'tempo') {
+  const abas = [
+    { id: 'compostos', rotulo: 'COMPOSTOS' },
+    { id: 'simples', rotulo: 'SIMPLES' },
+    { id: 'porcentagem', rotulo: '%' },
+    { id: 'milhao', rotulo: '1º MILHÃO' },
+  ];
+  const corpos = {
+    compostos: corpoJurosCompostos,
+    simples: corpoJurosSimples,
+    porcentagem: corpoPorcentagem,
+    milhao: () => corpoPrimeiroMilhao(modoMilhao),
+  };
+  const corpo = (corpos[modo] || corpos.compostos)();
+  return `
+    ${headerVoltar('Calculadoras', 'fechar-calculadoras')}
+    <div class="nv-segmentado">
+      ${abas
+        .map(
+          (a) => `<button type="button" data-acao="definir-calculadora" data-calc="${a.id}" class="${a.id === modo ? 'ativo' : ''}">${a.rotulo}</button>`
+        )
+        .join('')}
+    </div>
+    <div id="corpo-calculadora">${corpo}</div>`;
+}
+
+// Nome de cada idioma escrito nele mesmo (não traduzido) — é assim que seletor de idioma
+// normalmente funciona (a pessoa reconhece o nome do próprio idioma mesmo sem saber ler os outros).
+const NOME_PROPRIO_IDIOMA = { pt: 'PORTUGUÊS', en: 'ENGLISH', es: 'ESPAÑOL' };
+
+const CHAVE_I18N_TIPO_CONTA = { cartao: 'conta.tipoCartao', conta: 'conta.tipoContaCorrente', carteira: 'conta.tipoCarteira' };
+
+function rotuloTipoConta(tipo, idioma) {
+  const chave = CHAVE_I18N_TIPO_CONTA[tipo];
+  return chave ? I18N.t(chave, idioma) : tipo;
+}
+
+function renderConfiguracoes(state, temPin) {
+  const idioma = state.idioma;
+  const contas = state.contas || [];
+  const tema = state.tema || 'escuro';
+  const ocultar = !!state.ocultarValores;
+
+  const linhasContas = contas
+    .map(
+      (c) => `
+    <div class="nv-conta-linha" data-id="${c.id}">
+      <span style="display:flex;align-items:center;gap:12px">
+        <span class="nv-conta-marcador">${escapeHtml((c.nome || '?').slice(0, 1).toUpperCase())}</span>
+        <span class="nv-item-nome">${escapeHtml(c.nome)}</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:10px">
+        <span class="nv-item-meta">${escapeHtml(rotuloTipoConta(c.tipo, idioma))}${c.fechamento ? ` · ${I18N.t('config.fechaDia', idioma)} ${c.fechamento}` : ''}</span>
+        <button type="button" class="nv-link-muted" data-acao="excluir-conta" data-id="${c.id}" aria-label="Remover conta">✕</button>
+      </span>
+    </div>`
+    )
+    .join('');
+
+  return `
+    ${headerVoltar(I18N.t('config.titulo', idioma), 'fechar-configuracoes')}
+    <div class="nv-perfil">
+      <div class="nv-avatar">${iconSymbol(24, 'var(--nv-fg-inverse)', 'var(--nv-accent)')}</div>
+      <div>
+        <div class="nv-perfil-nome">${I18N.t('config.minhaConta', idioma)}</div>
+        <div class="nv-perfil-sub">${I18N.t('config.dadosSincronizados', idioma)}</div>
+      </div>
+    </div>
+    <div class="nv-section-head" style="padding-bottom:0"><span class="nv-section-label">${I18N.t('config.aparencia', idioma)}</span></div>
+    <div style="padding:8px 20px 16px">
+      <div class="nv-segmentado-tema">
+        <button type="button" data-acao="definir-tema" data-tema="claro" class="${tema === 'claro' ? 'ativo' : ''}">${iconSol(16)}<span>${I18N.t('config.claro', idioma)}</span></button>
+        <button type="button" data-acao="definir-tema" data-tema="escuro" class="${tema === 'escuro' ? 'ativo' : ''}">${iconLua(16)}<span>${I18N.t('config.escuro', idioma)}</span></button>
+        <button type="button" data-acao="definir-tema" data-tema="sistema" class="${tema === 'sistema' ? 'ativo' : ''}">${iconMonitor(16)}<span>${I18N.t('config.sistema', idioma)}</span></button>
+      </div>
+    </div>
+    <div class="nv-section-head" style="padding-top:8px;padding-bottom:0;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">${I18N.t('config.idioma', idioma)}</span></div>
+    <div style="padding:8px 20px 16px">
+      <div class="nv-segmentado-tema">
+        ${I18N.listaIdiomas()
+          .map(
+            (cod) =>
+              `<button type="button" data-acao="definir-idioma" data-idioma="${cod}" class="${(idioma || 'pt') === cod ? 'ativo' : ''}"><span>${NOME_PROPRIO_IDIOMA[cod]}</span></button>`
+          )
+          .join('')}
+      </div>
+    </div>
+    <div class="nv-section-head" style="padding-top:8px;padding-bottom:8px;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">${I18N.t('config.contasCartoes', idioma)}</span></div>
+    <div>${linhasContas}</div>
+    <div class="nv-conta-linha" style="border-bottom:2px solid var(--nv-rule-strong)">
+      <button type="button" class="nv-link-accent" data-acao="nova-conta" style="font-size:12px">${I18N.t('config.adicionarConta', idioma)}</button>
+      <span class="mais" style="color:var(--nv-accent)">+</span>
+    </div>
+    <div class="nv-section-head" style="padding-bottom:8px"><span class="nv-section-label">${I18N.t('config.dados', idioma)}</span></div>
+    <div class="nv-dado-linha"><span>${I18N.t('config.sincronizacao', idioma)}</span><span class="nv-item-meta" id="status-sincronizacao">verificando…</span></div>
+    <div class="nv-dado-linha">
+      <span>${I18N.t('config.ocultarValores', idioma)}</span>
+      <label class="nv-switch-wrap">
+        <input type="checkbox" id="campo-ocultar-valores" ${ocultar ? 'checked' : ''} />
+        <span class="nv-switch"><span class="knob"></span></span>
+      </label>
+    </div>
+    <div class="nv-section-head" style="padding-top:8px;padding-bottom:8px;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">${I18N.t('config.seguranca', idioma)}</span></div>
+    <div class="nv-dado-linha">
+      <span>${I18N.t('config.pinAcesso', idioma)}</span>
+      <span style="display:flex;gap:14px;align-items:center">
+        <span class="nv-item-meta">${temPin ? I18N.t('config.ativado', idioma) : I18N.t('config.desativado', idioma)}</span>
+        <button type="button" class="nv-link-accent" data-acao="definir-pin" style="font-size:11px">${temPin ? I18N.t('config.alterar', idioma) : I18N.t('config.definir', idioma)}</button>
+        ${temPin ? `<button type="button" class="nv-link-muted" data-acao="remover-pin" style="font-size:11px;color:var(--nv-negative)">${I18N.t('config.remover', idioma)}</button>` : ''}
+      </span>
+    </div>
+    <div class="nv-rodape-versao">NUVRA 1.0.0</div>
+  `;
+}
+
+function renderAbertura() {
+  return `
+    <div class="nv-abertura">
+      ${iconSymbol(80, '#f3f2f2', 'var(--nv-accent)')}
+      <div class="nv-wordmark" style="font-size:32px;margin-top:28px">NUVRA</div>
+      <p class="nv-abertura-frase">Um número por mês. O resto é registro.</p>
+      <div style="margin-top:auto">
+        <div class="nv-abertura-progress"><span class="ativo"></span><span></span><span></span></div>
+        <button type="button" class="nv-abertura-cta" data-acao="comecar">COMEÇAR</button>
+      </div>
+    </div>`;
+}
+
+// Gráfico de rosca (donut) da composição da carteira por tipo de ativo — mesma paleta
+// monocromática + acento já usada na barra de composição, pra manter a identidade do app (o
+// resto da UI não usa nenhuma outra cor além dessas).
+function renderGraficoComposicao(composicao, total, cores) {
+  const raio = 52;
+  const espessura = 20;
+  const circunferencia = 2 * Math.PI * raio;
+  let acumulado = 0;
+  const segmentos = composicao
+    .map((c, i) => {
+      const fracao = total ? c.valor / total : 0;
+      const comprimento = fracao * circunferencia;
+      const dashoffset = -acumulado;
+      acumulado += comprimento;
+      return `<circle cx="60" cy="60" r="${raio}" fill="none" stroke="${cores[i % cores.length]}" stroke-width="${espessura}" stroke-dasharray="${comprimento.toFixed(2)} ${(circunferencia - comprimento).toFixed(2)}" stroke-dashoffset="${dashoffset.toFixed(2)}"></circle>`;
+    })
+    .join('');
+  return `
+    <svg width="120" height="120" viewBox="0 0 120 120" style="transform:rotate(-90deg);flex:none" role="img" aria-label="Gráfico de composição da carteira por tipo de ativo">
+      <circle cx="60" cy="60" r="${raio}" fill="none" stroke="var(--nv-hairline)" stroke-width="${espessura}"></circle>
+      ${segmentos}
+    </svg>`;
+}
+
+function renderInvestimentos(state) {
+  const ocultar = !!state.ocultarValores;
+  const investimentos = state.investimentos || [];
+  const carteira = L.totalCarteira(investimentos);
+
+  const cores = ['var(--nv-accent)', 'var(--nv-bar-neutral-strong)', 'var(--nv-bar-neutral)', 'var(--nv-muted)', 'var(--nv-muted-2)', 'var(--nv-track)'];
+  const resumos = investimentos.map((i) => ({ investimento: i, resumo: L.resumoInvestimento(i) }));
+  const composicaoBruta = L.composicaoPorTipo(investimentos);
+  // Mais de 6 tipos distintos vira ilegível numa pizza — os menores (já vêm ordenados do maior
+  // pro menor) dobram em "Outros" em vez de gerar mais uma cor.
+  const composicao =
+    composicaoBruta.length > 6
+      ? [...composicaoBruta.slice(0, 5), { tipo: 'outros_agrupados', valor: composicaoBruta.slice(5).reduce((s, c) => s + c.valor, 0) }]
+      : composicaoBruta;
+  const totalComposicao = composicao.reduce((s, c) => s + c.valor, 0) || 1;
+  const sugestao = L.sugestaoAporte(investimentos, state.alocacaoAlvo).filter((s) => s.diferenca > 0);
+  const hoje = new Date();
+  const imposto = L.impostoEstimadoMes(investimentos, hoje.getFullYear(), hoje.getMonth() + 1);
+  const agendaDividendos = L.proximosDividendosPrevistos(investimentos);
+
+  const itens = resumos.length
+    ? resumos
+        .map(({ investimento: i, resumo: r }) => {
+          const classe = r.rendimentoValor > 0 ? 'positivo' : r.rendimentoValor < 0 ? 'negativo' : '';
+          const rotuloTipo = ROTULOS_TIPO_INVESTIMENTO[i.tipo] || i.tipo;
+          return `
+        <div class="nv-ativo-linha" data-id="${i.id}" data-acao="abrir-ativo">
+          <div style="display:flex;align-items:center;gap:12px">
+            ${monogramaAtivo(i.nome, 34)}
+            <div>
+              <div class="nv-item-nome">${escapeHtml(i.nome)}</div>
+              <div class="nv-item-meta">${escapeHtml(rotuloTipo)} · investido ${mascarar(formatCurrency(r.valorInvestido), ocultar)}</div>
+            </div>
+          </div>
+          <div class="nv-ativo-valor">
+            <div class="nv-item-valor">${mascarar(formatCurrency(r.valorAtual), ocultar)}</div>
+            <div class="nv-ativo-rend ${classe}">${formatPercent(r.rendimentoPercentual)}</div>
+          </div>
+        </div>`;
+        })
+        .join('')
+    : '<p class="nv-vazio">Nenhum investimento cadastrado.</p>';
+
+  return `
+    <div class="nv-header">
+      <span class="nv-title">Carteira</span>
+      <span class="nv-month-label">${investimentos.length} ATIVO${investimentos.length === 1 ? '' : 'S'}</span>
+    </div>
+    <div class="nv-hero" style="border-bottom:1px solid var(--nv-rule-soft)">
+      <div class="nv-hero-label">VALOR ATUAL</div>
+      <div class="nv-hero-value">
+        <span class="cifrao" style="font-size:18px">R$</span>
+        <span class="numero" style="font-size:48px">${mascarar(formatNumero(carteira.totalAtual), ocultar)}</span>
+      </div>
+      <div class="nv-carteira-badge-row">
+        <span class="nv-carteira-badge">${formatPercent(carteira.rendimentoPercentual)}</span>
+        <span class="nv-item-meta">${carteira.rendimentoValor >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(carteira.rendimentoValor)), ocultar)} sobre ${mascarar(formatCurrency(carteira.totalInvestido), ocultar)}</span>
+      </div>
+    </div>
+    ${
+      investimentos.length
+        ? '<button type="button" class="nv-link-accent" data-acao="abrir-perfil" style="margin:14px 0 0 20px;font-size:10px">DESCOBRIR MEU PERFIL</button>'
+        : `<div class="nv-perfil-convite">
+            <div class="nv-perfil-convite-titulo">Não sabe por onde começar?</div>
+            <p>Responda 4 perguntas e descubra seu perfil de investidor. O app sugere uma divisão por classe de ativo pra você usar como meta.</p>
+            <button type="button" class="nv-perfil-cta" data-acao="abrir-perfil">FAZER O TESTE</button>
+          </div>`
+    }
+    ${
+      composicao.length
+        ? `<div class="nv-composicao">
+      <div class="nv-section-label" style="margin-bottom:10px">COMPOSIÇÃO</div>
+      <div class="nv-composicao-grafico">
+        ${renderGraficoComposicao(composicao, totalComposicao, cores)}
+        <div class="nv-composicao-legenda">
+          ${composicao
+            .map(
+              (c, i) =>
+                `<div class="nv-composicao-item"><span class="nv-composicao-bolinha" style="background:${cores[i % cores.length]}"></span>${escapeHtml(rotuloTipoInvestimento(c.tipo)).toUpperCase()} <b>${Math.round((c.valor / totalComposicao) * 100)}%</b></div>`
+            )
+            .join('')}
+        </div>
+      </div>
+      <button type="button" class="nv-link-accent" data-acao="editar-alocacao" style="margin-top:10px;font-size:10px">METAS DE ALOCAÇÃO</button>
+    </div>`
+        : ''
+    }
+    ${
+      sugestao.length
+        ? `<div class="nv-section-head"><span class="nv-section-label">PRÓXIMO APORTE</span></div>
+    <div class="nv-list-plain">
+      ${sugestao
+        .map(
+          (s) => `<div class="nv-row-plain"><span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[s.tipo] || s.tipo)}</span><span>faltam ${mascarar(formatCurrency(s.diferenca), ocultar)}</span></div>`
+        )
+        .join('')}
+    </div>`
+        : ''
+    }
+    ${
+      agendaDividendos.length
+        ? `<div class="nv-section-head"><span class="nv-section-label">PRÓXIMOS DIVIDENDOS</span></div>
+    <div class="nv-list-plain">
+      ${agendaDividendos
+        .map((p) => {
+          const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
+          return `<div class="nv-row-plain"><span>${escapeHtml(p.nome)} · ${dataFmt}</span><span>${mascarar(formatCurrency(p.valor), ocultar)}</span></div>`;
+        })
+        .join('')}
+    </div>`
+        : ''
+    }
+    <div>${itens}</div>
+    <div class="nv-acao-fixa" style="margin-top:auto">
+      <button type="button" class="nv-btn-contorno" data-acao="novo-investimento">
+        <span>NOVO ATIVO</span><span class="mais">+</span>
+      </button>
+    </div>
+    ${
+      imposto.length
+        ? `<div class="nv-section-head"><span class="nv-section-label">IMPOSTO ESTIMADO — ${MESES[hoje.getMonth()].toUpperCase()}</span></div>
+    <div class="nv-list-plain">
+      ${imposto
+        .map(
+          (i) => `<div class="nv-row-plain"><span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[i.tipo] || i.tipo)}${i.isento ? ' (isento)' : ` · ${Math.round(i.aliquota * 100)}%`}</span><span>${mascarar(formatCurrency(i.impostoEstimado), ocultar)}</span></div>`
+        )
+        .join('')}
+    </div>
+    <p class="nv-item-meta" style="padding:0 20px 16px">Estimativa de apoio à decisão — não substitui o cálculo de um contador pra fins de DARF.</p>`
+        : ''
+    }
+    ${tabBar('carteira', state.idioma)}
+  `;
+}
+
+function renderAtivoDetalhe(state, ativoId) {
+  const ocultar = !!state.ocultarValores;
+  const investimento = (state.investimentos || []).find((i) => i.id === ativoId);
+  if (!investimento) return '<p class="nv-vazio">Ativo não encontrado.</p>';
+
+  const resumo = L.resumoInvestimento(investimento);
+  const operacoes = investimento.operacoes || [];
+  const proventos = investimento.proventos || [];
+  const totalProventos = L.totalProventos(proventos);
+  const classeRend = resumo.rendimentoValor > 0 ? 'positivo' : resumo.rendimentoValor < 0 ? 'negativo' : '';
+  const dividendosPrevistos = L.proximosDividendosPrevistos([investimento]);
+
+  const listaProventos = proventos.length
+    ? [...proventos]
+        .sort((a, b) => b.data.localeCompare(a.data))
+        .map((p) => {
+          const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
+          return `
+        <div class="nv-conta-linha" data-id="${p.id}">
+          <div>
+            <div class="nv-item-nome">${p.tipo === 'jcp' ? 'JCP' : 'DIVIDENDO'} · ${dataFmt}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="nv-item-valor">${mascarar(formatCurrency(p.valor), ocultar)}</div>
+            <button type="button" class="nv-link-muted" data-acao="excluir-provento" data-id="${p.id}" aria-label="Excluir provento" style="color:var(--nv-negative)">✕</button>
+          </div>
+        </div>`;
+        })
+        .join('')
+    : '<p class="nv-vazio">Nenhum provento recebido ainda.</p>';
+
+  const listaOperacoes = operacoes.length
+    ? [...operacoes]
+        .sort((a, b) => b.data.localeCompare(a.data))
+        .map((op) => {
+          const dataFmt = op.data.split('-').reverse().slice(0, 2).join('/');
+          const valorOperacao = op.quantidade * op.precoUnitario;
+          return `
+        <div class="nv-conta-linha" data-id="${op.id}">
+          <div>
+            <div class="nv-item-nome">${op.tipo === 'compra' ? 'COMPRA' : 'VENDA'} · ${dataFmt}</div>
+            <div class="nv-item-meta">${formatNumero(op.quantidade)} × ${mascarar(formatCurrency(op.precoUnitario), ocultar)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="nv-item-valor">${mascarar(formatCurrency(valorOperacao), ocultar)}</div>
+            <button type="button" class="nv-link-muted" data-acao="excluir-operacao" data-id="${op.id}" aria-label="Excluir operação" style="color:var(--nv-negative)">✕</button>
+          </div>
+        </div>`;
+        })
+        .join('')
+    : '<p class="nv-vazio">Nenhuma operação lançada ainda.</p>';
+
+  return `
+    <div class="nv-header nv-header--back">
+      <button type="button" class="nv-back" data-acao="fechar-ativo" aria-label="Voltar">${'‹'}</button>
+      ${monogramaAtivo(investimento.nome, 24)}
+      <span class="nv-title">${escapeHtml(investimento.nome)}</span>
+      <button type="button" class="nv-gear" data-acao="editar-investimento" data-id="${investimento.id}" aria-label="Editar ativo" style="margin-left:auto">${iconGear(19)}</button>
+    </div>
+    <div class="nv-hero" style="border-bottom:1px solid var(--nv-rule-soft)">
+      <div class="nv-hero-label">VALOR ATUAL</div>
+      <div class="nv-hero-value">
+        <span class="cifrao" style="font-size:18px">R$</span>
+        <span class="numero" style="font-size:48px">${mascarar(formatNumero(resumo.valorAtual), ocultar)}</span>
+      </div>
+      <div class="nv-carteira-badge-row">
+        <span class="nv-carteira-badge">${formatPercent(resumo.rendimentoPercentual)}</span>
+        <span class="nv-item-meta ${classeRend}">${resumo.rendimentoValor >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(resumo.rendimentoValor)), ocultar)} sobre ${mascarar(formatCurrency(resumo.valorInvestido), ocultar)}</span>
+      </div>
+      ${totalProventos ? `<div class="nv-hero-sub">Proventos recebidos: ${mascarar(formatCurrency(totalProventos), ocultar)}</div>` : ''}
+    </div>
+    <div class="nv-cells">
+      <div class="nv-cell">
+        <div class="nv-cell-label">QUANTIDADE</div>
+        <div class="nv-cell-valor">${mascarar(formatNumero(resumo.quantidade), ocultar)}</div>
+      </div>
+      <div class="nv-cell">
+        <div class="nv-cell-label">PREÇO MÉDIO</div>
+        <div class="nv-cell-valor">${mascarar(formatCurrency(resumo.precoMedio), ocultar)}</div>
+      </div>
+    </div>
+    <div class="nv-section-head">
+      <span class="nv-section-label">OPERAÇÕES</span>
+      <button type="button" class="nv-link-accent" data-acao="nova-operacao" data-id="${investimento.id}">+ NOVA OPERAÇÃO</button>
+    </div>
+    <div>${listaOperacoes}</div>
+    <div class="nv-section-head">
+      <span class="nv-section-label">PRÓXIMOS DIVIDENDOS</span>
+      <button type="button" class="nv-link-accent" data-acao="novo-provento-previsto" data-id="${investimento.id}">+ NOVO PREVISTO</button>
+    </div>
+    <div>${
+      dividendosPrevistos.length
+        ? dividendosPrevistos
+            .map((p) => {
+              const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
+              return `
+        <div class="nv-conta-linha" data-id="${p.id}">
+          <div>
+            <div class="nv-item-nome">${dataFmt}${p.descricao ? ` · ${escapeHtml(p.descricao)}` : ''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="nv-item-valor">${mascarar(formatCurrency(p.valor), ocultar)}</div>
+            <button type="button" class="nv-link-muted" data-acao="excluir-provento-previsto" data-id="${p.id}" aria-label="Excluir dividendo previsto" style="color:var(--nv-negative)">✕</button>
+          </div>
+        </div>`;
+            })
+            .join('')
+        : '<p class="nv-vazio">Nenhum dividendo previsto cadastrado.</p>'
+    }</div>
+    <div class="nv-section-head">
+      <span class="nv-section-label">PROVENTOS</span>
+      <button type="button" class="nv-link-accent" data-acao="novo-provento" data-id="${investimento.id}">+ NOVO PROVENTO</button>
+    </div>
+    <div>${listaProventos}</div>
+    ${tabBar('carteira', state.idioma)}
+  `;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    formatCurrency,
+    formatNumero,
+    formatPercent,
+    formatAnos,
+    renderPerguntasPerfil,
+    renderResultadoPerfil,
+    escapeHtml,
+    mascarar,
+    renderResumo,
+    renderLancamentos,
+    renderNovoLancamento,
+    renderCategoriaDetalhe,
+    renderMetas,
+    renderConfiguracoes,
+    renderPin,
+    renderComboSelect,
+    renderComboBusca,
+    renderComboItens,
+    opcoesTipoInvestimento,
+    renderAbertura,
+    renderInvestimentos,
+    renderAtivoDetalhe,
+    ROTULOS_TIPO_INVESTIMENTO,
+    ROTULOS_TIPO_CONTA,
+    MESES,
+    renderCalculadoras,
+    monogramaAtivo,
+  };
+}
+
+(function () {
+  const logica = typeof require !== 'undefined' ? require('./logic.js') : window;
+  const renderizacao = typeof require !== 'undefined' ? require('./render.js') : window;
+  const { uid, applyAction, estadoInicial, hashSimples } = logica;
+  const {
+    renderResumo,
+    renderLancamentos,
+    renderNovoLancamento,
+    renderCategoriaDetalhe,
+    renderMetas,
+    renderConfiguracoes,
+    renderAbertura,
+    renderInvestimentos,
+    renderAtivoDetalhe,
+    renderPin,
+    renderCalculadoras,
+  } = renderizacao;
+
+  const CHAVE_ONBOARDING = 'nuvra-onboarding-visto';
+  const CHAVE_PIN = 'nuvra-pin-hash';
+
+  let state = estadoInicial();
+  let artifactApi = null;
+  let anoAtual;
+  let mesAtual;
+  let somenteLeitura = false;
+
+  let abaAtual = 'resumo'; // resumo | lancamentos | carteira | metas — última aba principal visitada
+  let telaAtual = 'resumo'; // aba atual + categoria | novo-lancamento | configuracoes | ativo-detalhe
+  let categoriaAberta = null;
+  let ativoAberto = null;
+  let busca = '';
+  let filtroLancamentos = 'todos';
+  let contaSelecionada = null;
+  let rascunhoLancamento = null; // dados em edição na tela de novo lançamento
+  let descricaoSincronizacao = 'Verificando…';
+  let calculadoraAtiva = 'compostos'; // compostos | simples | porcentagem | milhao
+  let modoMilhao = 'tempo'; // tempo | aporte — qual variável a calculadora "primeiro milhão" resolve
+
+  async function iniciar() {
+    const hoje = new Date();
+    anoAtual = hoje.getFullYear();
+    mesAtual = hoje.getMonth() + 1;
+
+    await carregarEstado();
+    try {
+      artifactApi = window.claude ? await window.claude.use('artifact') : null;
+    } catch (erro) {
+      artifactApi = null;
+    }
+    descricaoSincronizacao = artifactApi ? 'Ativa' : 'Indisponível neste dispositivo';
+    aplicarTema(state.tema);
+    inicializarCombosEstaticos();
+    ligarEventos();
+
+    if (localStorage_get(CHAVE_PIN)) {
+      mostrarTelaPin();
+    } else {
+      prosseguirAposPin();
+    }
+  }
+
+  function prosseguirAposPin() {
+    if (localStorage_get(CHAVE_ONBOARDING)) {
+      mostrarApp();
+    } else {
+      mostrarAbertura();
+    }
+  }
+
+  function mostrarTelaPin(erro) {
+    document.getElementById('tela-pin').hidden = false;
+    document.getElementById('tela-pin').innerHTML = renderPin(erro);
+    document.getElementById('tela-abertura').hidden = true;
+    document.getElementById('app-shell').hidden = true;
+    const campo = document.querySelector('#formulario-pin [name="pin"]');
+    if (campo) campo.focus();
+  }
+
+  function localStorage_get(chave) {
+    try {
+      return localStorage.getItem(chave);
+    } catch (erro) {
+      return null;
+    }
+  }
+
+  function localStorage_set(chave, valor) {
+    try {
+      localStorage.setItem(chave, valor);
+    } catch (erro) {
+      // localStorage indisponível — onboarding vai reaparecer, sem problema
+    }
+  }
+
+  function mostrarAbertura() {
+    document.getElementById('tela-pin').hidden = true;
+    document.getElementById('tela-abertura').hidden = false;
+    document.getElementById('tela-abertura').innerHTML = renderAbertura();
+    document.getElementById('app-shell').hidden = true;
+  }
+
+  function mostrarApp() {
+    document.getElementById('tela-pin').hidden = true;
+    document.getElementById('tela-abertura').hidden = true;
+    document.getElementById('app-shell').hidden = false;
+    renderizarTudo();
+  }
+
+  async function carregarEstado() {
+    let carregado = null;
+    try {
+      const resposta = await fetch('data/state.json');
+      if (resposta.ok) carregado = await resposta.json();
+    } catch (erro) {
+      // sem dado publicado ainda, ou sem rede — segue com estado vazio/local
+    }
+    if (!carregado) carregado = lerBackupLocal();
+    // Semente da build de demonstração (ver build-demo.js): entra por último, então quem abrir a
+    // demo e mexer nos dados continua vendo as próprias alterações nas visitas seguintes. Na build
+    // normal window.NUVRA_SEED não existe e esta linha não faz nada.
+    if (!carregado && typeof window !== 'undefined' && window.NUVRA_SEED) carregado = window.NUVRA_SEED;
+    if (carregado) state = { ...estadoInicial(), ...carregado };
+  }
+
+  function lerBackupLocal() {
+    try {
+      const bruto = localStorage.getItem('controle-financeiro-backup');
+      return bruto ? JSON.parse(bruto) : null;
+    } catch (erro) {
+      return null;
+    }
+  }
+
+  function salvarBackupLocal() {
+    try {
+      localStorage.setItem('controle-financeiro-backup', JSON.stringify(state));
+    } catch (erro) {
+      // localStorage indisponível — não é a fonte da verdade, pode ignorar
+    }
+  }
+
+  // Campos de valor monetário (.nv-campo-moeda) são <input type="text">, não number, porque um
+  // number input nunca exibe vírgula decimal (só ponto, mesmo em pt-BR) — essas duas funções
+  // convertem entre o texto exibido ("1.234,56") e o número usado no resto do app.
+  function numeroDoCampoMoeda(texto) {
+    if (!texto) return 0;
+    const numero = Number(String(texto).trim().replace(/\./g, '').replace(',', '.'));
+    return Number.isFinite(numero) ? numero : 0;
+  }
+
+  function formatarCampoMoeda(elemento) {
+    const bruto = elemento.value.trim();
+    if (!bruto) return;
+    const numero = numeroDoCampoMoeda(bruto);
+    elemento.value = renderizacao.formatNumero(numero);
+  }
+
+  // Combobox custom (ver render.js renderComboSelect/renderComboBusca) — funções de apoio pra
+  // abrir/fechar, selecionar item e definir valor programaticamente (prefill em modo de edição).
+  function fecharTodosCombos() {
+    document.querySelectorAll('.nv-combo-lista').forEach((lista) => {
+      lista.hidden = true;
+    });
+  }
+
+  function selecionarItemCombo(combo, valor, rotulo) {
+    const inputBusca = combo.querySelector('.nv-combo-input');
+    if (inputBusca) {
+      inputBusca.value = valor;
+      return;
+    }
+    definirComboPorValor(combo, valor, rotulo);
+  }
+
+  function definirComboPorValor(combo, valor, rotuloConhecido) {
+    if (!combo) return;
+    const oculto = combo.querySelector('input[type="hidden"]');
+    if (oculto) oculto.value = valor;
+    const item = combo.querySelector(`.nv-combo-item[data-valor="${(window.CSS && CSS.escape) ? CSS.escape(String(valor)) : valor}"]`);
+    const rotulo = rotuloConhecido || (item ? item.dataset.rotulo : valor);
+    const gatilhoValor = combo.querySelector('.nv-combo-valor');
+    if (gatilhoValor) gatilhoValor.textContent = rotulo;
+    combo.querySelectorAll('.nv-combo-item').forEach((it) => it.classList.toggle('ativo', it.dataset.valor === valor));
+  }
+
+  const OPCOES_TIPO_OPERACAO = [
+    { valor: 'compra', rotulo: 'Compra' },
+    { valor: 'venda', rotulo: 'Venda' },
+  ];
+  const OPCOES_TIPO_CONTA = [
+    { valor: 'conta', rotulo: 'Conta corrente' },
+    { valor: 'cartao', rotulo: 'Cartão' },
+    { valor: 'carteira', rotulo: 'Carteira' },
+  ];
+  const OPCOES_TIPO_PROVENTO = [
+    { valor: 'dividendo', rotulo: 'Dividendo' },
+    { valor: 'jcp', rotulo: 'JCP' },
+  ];
+  const CATEGORIAS_META = ['Moradia', 'Alimentação', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Vestuário', 'Outras Despesas'];
+
+  // Combos com opções fixas (não dependem de nenhum outro campo) — populados uma única vez no
+  // início. O de nome do ativo (busca) é populado de novo sempre que o tipo de ativo muda.
+  function inicializarCombosEstaticos() {
+    document.getElementById('combo-tipo-investimento').innerHTML = renderizacao.renderComboSelect('tipo', renderizacao.opcoesTipoInvestimento(), 'acao', 'campo-tipo-investimento');
+    document.getElementById('combo-tipo-operacao').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_OPERACAO, 'compra', 'campo-tipo-operacao');
+    document.getElementById('combo-tipo-conta').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_CONTA, 'conta', 'campo-tipo-conta');
+    document.getElementById('combo-tipo-provento').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_PROVENTO, 'dividendo', 'campo-tipo-provento');
+    document.getElementById('combo-categoria-meta').innerHTML = renderizacao.renderComboSelect(
+      'categoria',
+      CATEGORIAS_META.map((c) => ({ valor: c, rotulo: c })),
+      'Moradia',
+      'campo-categoria-meta'
+    );
+    atualizarSugestoesAtivo('acao');
+  }
+
+  // Repopula o combo de busca de nome/ticker de acordo com o tipo de ativo escolhido — é só um
+  // ponto de partida (lista fixa embutida no app, sem cotação nenhuma); o campo continua
+  // aceitando qualquer texto digitado que não esteja na lista.
+  function atualizarSugestoesAtivo(tipo) {
+    const container = document.getElementById('combo-nome-ativo');
+    if (!container) return;
+    const inputAnterior = container.querySelector('.nv-combo-input');
+    const valorAtual = inputAnterior ? inputAnterior.value : '';
+    container.innerHTML = renderizacao.renderComboBusca('nome', valorAtual, logica.listaSugeridaPorTipo(tipo), 'campo-nome-ativo');
+    // Reaplica o filtro do que já tinha sido digitado em cima da lista nova (a lista em si vem
+    // fechada por padrão — só isso já evita mostrar sugestões de um tipo antigo se a pessoa
+    // reabrir o campo depois de trocar o tipo).
+    if (valorAtual) filtrarComboBusca(container, valorAtual);
+  }
+
+  // Esconde/mostra os itens de um combo de busca conforme o texto digitado, e mostra a
+  // mensagem de "nenhuma sugestão" quando o filtro não bate com nada da lista.
+  function filtrarComboBusca(combo, textoDigitado) {
+    const lista = combo.querySelector('.nv-combo-lista');
+    const termo = textoDigitado.trim().toUpperCase();
+    let algumVisivel = false;
+    lista.querySelectorAll('.nv-combo-item').forEach((item) => {
+      const visivel = !termo || item.dataset.valor.toUpperCase().includes(termo);
+      item.hidden = !visivel;
+      if (visivel) algumVisivel = true;
+    });
+    const vazio = lista.querySelector('.nv-combo-vazio');
+    if (vazio) vazio.hidden = algumVisivel;
+  }
+
+  function aplicarTema(tema) {
+    const raiz = document.documentElement;
+    if (tema === 'claro') raiz.dataset.theme = 'light';
+    else if (tema === 'escuro') raiz.dataset.theme = 'dark';
+    else delete raiz.dataset.theme;
+  }
+
+  function renderizarTudo() {
+    document.getElementById('tela-resumo').innerHTML = renderResumo(state, anoAtual, mesAtual);
+    document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual, {
+      busca,
+      filtro: filtroLancamentos,
+      contaSelecionada,
+    });
+    document.getElementById('tela-carteira').innerHTML = renderInvestimentos(state);
+    document.getElementById('tela-metas').innerHTML = renderMetas(state, anoAtual, mesAtual);
+
+    if (telaAtual === 'categoria' && categoriaAberta) {
+      document.getElementById('tela-categoria').innerHTML = renderCategoriaDetalhe(state, categoriaAberta, anoAtual, mesAtual);
+    }
+    if (telaAtual === 'ativo-detalhe' && ativoAberto) {
+      document.getElementById('tela-ativo-detalhe').innerHTML = renderAtivoDetalhe(state, ativoAberto);
+    }
+    if (telaAtual === 'novo-lancamento') {
+      document.getElementById('tela-novo-lancamento').innerHTML = renderNovoLancamento(state, rascunhoLancamento);
+      atualizarSaldoProjetado();
+    }
+    if (telaAtual === 'configuracoes') {
+      document.getElementById('tela-configuracoes').innerHTML = renderConfiguracoes(state, !!localStorage_get(CHAVE_PIN));
+      const statusEl = document.getElementById('status-sincronizacao');
+      if (statusEl) statusEl.textContent = descricaoSincronizacao;
+    }
+    if (telaAtual === 'calculadoras') {
+      document.getElementById('tela-calculadoras').innerHTML = renderCalculadoras(calculadoraAtiva, modoMilhao);
+    }
+
+    const telas = ['resumo', 'lancamentos', 'carteira', 'metas', 'categoria', 'ativo-detalhe', 'novo-lancamento', 'configuracoes', 'calculadoras'];
+    for (const nome of telas) {
+      document.getElementById(`tela-${nome}`).hidden = nome !== telaAtual;
+    }
+    document.body.classList.toggle('somente-leitura', somenteLeitura);
+  }
+
+  function irParaAba(nome) {
+    abaAtual = nome;
+    telaAtual = nome;
+    categoriaAberta = null;
+    renderizarTudo();
+  }
+
+  function abrirCategoria(categoria) {
+    categoriaAberta = categoria;
+    telaAtual = 'categoria';
+    renderizarTudo();
+  }
+
+  function fecharCategoria() {
+    categoriaAberta = null;
+    telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  function abrirAtivo(id) {
+    ativoAberto = id;
+    telaAtual = 'ativo-detalhe';
+    renderizarTudo();
+  }
+
+  function fecharAtivo() {
+    ativoAberto = null;
+    telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  function abrirConfiguracoes() {
+    telaAtual = 'configuracoes';
+    renderizarTudo();
+  }
+
+  function fecharConfiguracoes() {
+    telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  function abrirCalculadoras() {
+    calculadoraAtiva = 'compostos';
+    modoMilhao = 'tempo';
+    telaAtual = 'calculadoras';
+    renderizarTudo();
+  }
+
+  function fecharCalculadoras() {
+    telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  // Lê um campo numérico em texto no padrão pt-BR (vírgula decimal) — mesma regra de
+  // numeroDoCampoMoeda, reaproveitada aqui pros campos de taxa/percentual da calculadora, que não
+  // são .nv-campo-moeda (não fazem sentido com formatação de milhar tipo "1.234,56").
+  function numeroPtBR(elemento) {
+    return elemento ? numeroDoCampoMoeda(elemento.value) : 0;
+  }
+
+  // Campos de taxa/percentual (não são .nv-campo-moeda) usam um parser mais tolerante: aceita
+  // ponto OU vírgula como decimal, porque o teclado numérico de celular normalmente digita ponto —
+  // com numeroPtBR (que trata ponto como separador de milhar), digitar "1.5" virava 15 em silêncio.
+  function numeroTaxa(elemento) {
+    return elemento ? logica.numeroDecimalFlexivel(elemento.value) : 0;
+  }
+
+  function mostrarResultadoCalculadora(idResultado, linhasHtml) {
+    const resultado = document.getElementById(idResultado);
+    resultado.hidden = false;
+    resultado.innerHTML = linhasHtml;
+  }
+
+  // Escapa mesmo só recebendo rótulo fixo e número formatado hoje: o retorno vai direto pro
+  // innerHTML em mostrarResultadoCalculadora, então no dia em que alguém passar texto digitado
+  // pelo usuário (o nome de uma meta, por exemplo) isso viraria XSS sem ninguém perceber.
+  function linhaResultado(rotulo, valor) {
+    const esc = renderizacao.escapeHtml;
+    return `<div class="nv-row-plain"><span>${esc(rotulo)}</span><span>${esc(valor)}</span></div>`;
+  }
+
+  function calcularJurosCompostos() {
+    const r = logica.jurosCompostos({
+      capitalInicial: numeroPtBR(document.getElementById('campo-calc-compostos-capital')),
+      aporteMensal: numeroPtBR(document.getElementById('campo-calc-compostos-aporte')),
+      taxaMensal: numeroTaxa(document.getElementById('campo-calc-compostos-taxa')) / 100,
+      meses: Number(document.getElementById('campo-calc-compostos-meses').value) || 0,
+    });
+    mostrarResultadoCalculadora(
+      'resultado-calc-compostos',
+      linhaResultado('Montante final', renderizacao.formatCurrency(r.montanteFinal)) +
+        linhaResultado('Total investido', renderizacao.formatCurrency(r.totalInvestido)) +
+        linhaResultado('Total em juros', renderizacao.formatCurrency(r.totalJuros))
+    );
+  }
+
+  function calcularJurosSimples() {
+    const r = logica.jurosSimples({
+      capitalInicial: numeroPtBR(document.getElementById('campo-calc-simples-capital')),
+      taxaMensal: numeroTaxa(document.getElementById('campo-calc-simples-taxa')) / 100,
+      meses: Number(document.getElementById('campo-calc-simples-meses').value) || 0,
+    });
+    mostrarResultadoCalculadora(
+      'resultado-calc-simples',
+      linhaResultado('Montante final', renderizacao.formatCurrency(r.montanteFinal)) +
+        linhaResultado('Juros total', renderizacao.formatCurrency(r.jurosTotal))
+    );
+  }
+
+  function calcularPercentualDeValor() {
+    const percentual = numeroTaxa(document.getElementById('campo-calc-pct1-percentual'));
+    const valor = numeroPtBR(document.getElementById('campo-calc-pct1-valor'));
+    const r = logica.percentualDeValor(percentual, valor);
+    mostrarResultadoCalculadora(
+      'resultado-calc-pct1',
+      linhaResultado(`${renderizacao.formatNumero(percentual)}% de ${renderizacao.formatCurrency(valor)}`, renderizacao.formatCurrency(r))
+    );
+  }
+
+  function calcularValorEQuePercentualDoTotal() {
+    const valor = numeroPtBR(document.getElementById('campo-calc-pct2-valor'));
+    const total = numeroPtBR(document.getElementById('campo-calc-pct2-total'));
+    const r = logica.valorEQuePercentualDoTotal(valor, total);
+    mostrarResultadoCalculadora(
+      'resultado-calc-pct2',
+      linhaResultado(`${renderizacao.formatCurrency(valor)} de ${renderizacao.formatCurrency(total)}`, `${renderizacao.formatNumero(r)}%`)
+    );
+  }
+
+  function calcularVariacaoPercentual() {
+    const valor = numeroPtBR(document.getElementById('campo-calc-pct3-valor'));
+    const percentual = numeroTaxa(document.getElementById('campo-calc-pct3-percentual'));
+    const r = logica.aplicarVariacaoPercentual(valor, percentual);
+    mostrarResultadoCalculadora('resultado-calc-pct3', linhaResultado('Novo valor', renderizacao.formatCurrency(r)));
+  }
+
+  function calcularPrimeiroMilhao() {
+    const valorAlvo = numeroPtBR(document.getElementById('campo-calc-milhao-alvo'));
+    const capitalInicial = numeroPtBR(document.getElementById('campo-calc-milhao-capital'));
+    const taxaMensal = numeroTaxa(document.getElementById('campo-calc-milhao-taxa')) / 100;
+    if (modoMilhao === 'tempo') {
+      const aporteMensal = numeroPtBR(document.getElementById('campo-calc-milhao-aporte'));
+      const r = logica.mesesParaAtingirMeta({ capitalInicial, aporteMensal, taxaMensal, valorAlvo });
+      mostrarResultadoCalculadora(
+        'resultado-calc-milhao',
+        r.meses === null
+          ? linhaResultado('Tempo necessário', 'Não atingível nesse ritmo (teto de 100 anos)')
+          : linhaResultado('Tempo necessário', `${r.meses} meses (${renderizacao.formatAnos(r.anos)} anos)`)
+      );
+    } else {
+      const meses = Number(document.getElementById('campo-calc-milhao-meses').value) || 0;
+      const r = logica.aporteNecessarioParaMeta({ capitalInicial, meses, taxaMensal, valorAlvo });
+      mostrarResultadoCalculadora(
+        'resultado-calc-milhao',
+        r.aporteMensal === null
+          ? linhaResultado('Aporte mensal necessário', 'Informe um prazo válido')
+          : linhaResultado('Aporte mensal necessário', renderizacao.formatCurrency(r.aporteMensal))
+      );
+    }
+  }
+
+  function abrirNovoLancamento(id) {
+    if (id) {
+      const item = state.lancamentos.find((l) => l.id === id);
+      rascunhoLancamento = { ...item };
+    } else {
+      rascunhoLancamento = { data: `${anoAtual}-${String(mesAtual).padStart(2, '0')}-01`, tipo: 'despesa', parcelas: 1 };
+    }
+    telaAtual = 'novo-lancamento';
+    renderizarTudo();
+  }
+
+  function fecharNovoLancamento() {
+    rascunhoLancamento = null;
+    telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  function coletarRascunhoDoFormulario() {
+    const form = document.getElementById('formulario-lancamento');
+    if (!form) return rascunhoLancamento || {};
+    const dados = new FormData(form);
+    return {
+      id: dados.get('id') || (rascunhoLancamento && rascunhoLancamento.id) || '',
+      data: dados.get('data') || '',
+      descricao: dados.get('descricao') || '',
+      categoria: dados.get('categoria') || '',
+      tipo: dados.get('tipo') || 'despesa',
+      valorTotal: numeroDoCampoMoeda(dados.get('valorTotal')),
+      contaId: dados.get('contaId') || null,
+      parcelas: dados.get('parcelado') === 'on' ? Number(dados.get('parcelas')) || 2 : 1,
+    };
+  }
+
+  function atualizarSaldoProjetado() {
+    const rodape = document.querySelector('#tela-novo-lancamento .nv-rodape-saldo span:last-child');
+    if (!rodape) return;
+    const form = document.getElementById('formulario-lancamento');
+    if (!form) return;
+    const valorTotal = numeroDoCampoMoeda(form.elements.valorTotal.value);
+    const parcelado = form.elements.parcelado.checked;
+    const parcelas = parcelado ? Number(document.getElementById('campo-parcelas').value) || 2 : 1;
+    const valorParcela = valorTotal / parcelas;
+    const tipo = form.elements.tipo.value;
+    const resumoAtual = logica.resumoMensal(state.lancamentos, anoAtual, mesAtual);
+    const projetado = resumoAtual.saldo + (tipo === 'receita' ? valorParcela : -valorParcela);
+    rodape.textContent = renderizacao.formatCurrency(projetado);
+  }
+
+  function mudarMes(delta) {
+    mesAtual += delta;
+    if (mesAtual > 12) { mesAtual = 1; anoAtual += 1; }
+    if (mesAtual < 1) { mesAtual = 12; anoAtual -= 1; }
+    renderizarTudo();
+  }
+
+  async function despachar(acao) {
+    state = applyAction(state, acao);
+    renderizarTudo();
+    salvarBackupLocal();
+    await salvarNoServidor(acao);
+  }
+
+  async function salvarNoServidor(acao, tentativa = 1) {
+    // Na build de demonstração nada é publicado: cada visitante mexe numa cópia que vive só no
+    // navegador dele (salvarBackupLocal já rodou), então ninguém altera o que os outros veem e
+    // nenhum dado sai do aparelho. Na build normal esta condição é sempre falsa.
+    if (typeof window !== 'undefined' && window.NUVRA_DEMO) {
+      descricaoSincronizacao = 'Demonstração — dados só neste aparelho';
+      return;
+    }
+    if (!artifactApi) {
+      descricaoSincronizacao = 'Indisponível neste dispositivo';
+      mostrarBanner('Sincronização indisponível nesta visualização — os dados ficam só neste aparelho.');
+      return;
+    }
+    try {
+      await artifactApi.publish({ 'data/state.json': JSON.stringify(state) });
+      descricaoSincronizacao = 'Ativa';
+      esconderBanner();
+    } catch (erro) {
+      if (erro.code === 'conflict' && tentativa <= 3) {
+        await reidratarDeOutraVersao();
+        state = applyAction(state, acao);
+        renderizarTudo();
+        const espera = 200 * tentativa + Math.random() * 200;
+        await new Promise((resolve) => setTimeout(resolve, espera));
+        await salvarNoServidor(acao, tentativa + 1);
+        return;
+      }
+      if (erro.code === 'not_writer' || erro.code === 'not_granted') {
+        somenteLeitura = true;
+        renderizarTudo();
+        mostrarBanner('Modo leitura — você não pode editar este artifact.');
+        return;
+      }
+      descricaoSincronizacao = 'Erro ao sincronizar';
+      mostrarBanner('Não foi possível sincronizar agora. Suas alterações estão salvas neste aparelho.', () => salvarNoServidor(acao, 1));
+    }
+  }
+
+  async function reidratarDeOutraVersao() {
+    try {
+      const resposta = await fetch(`data/state.json?t=${Date.now()}`);
+      if (resposta.ok) state = { ...estadoInicial(), ...(await resposta.json()) };
+    } catch (erro) {
+      // mantém o estado local se não conseguir buscar a versão mais nova
+    }
+  }
+
+  function mostrarBanner(texto, aoTentarNovamente) {
+    const banner = document.getElementById('banner-sync');
+    if (aoTentarNovamente) {
+      banner.innerHTML = '';
+      const spanTexto = document.createElement('span');
+      spanTexto.textContent = texto;
+      const botao = document.createElement('button');
+      botao.type = 'button';
+      botao.className = 'banner-retry';
+      botao.textContent = 'Tentar novamente';
+      botao.addEventListener('click', aoTentarNovamente);
+      banner.appendChild(spanTexto);
+      banner.appendChild(botao);
+    } else {
+      banner.textContent = texto;
+    }
+    banner.hidden = false;
+  }
+
+  function esconderBanner() {
+    document.getElementById('banner-sync').hidden = true;
+  }
+
+  function abrirFormularioInvestimento(id) {
+    const form = document.getElementById('formulario-investimento');
+    form.reset();
+    fecharTodosCombos();
+    const comboTipo = document.getElementById('combo-tipo-investimento');
+    if (id) {
+      const item = state.investimentos.find((i) => i.id === id);
+      const migrado = logica.migrarInvestimentoLegado(item);
+      form.elements.id.value = item.id;
+      atualizarSugestoesAtivo(item.tipo);
+      form.elements.nome.value = item.nome;
+      definirComboPorValor(comboTipo, item.tipo);
+      form.elements.precoAtual.value = renderizacao.formatNumero(migrado.precoAtual);
+    } else {
+      form.elements.id.value = '';
+      atualizarSugestoesAtivo('acao');
+      definirComboPorValor(comboTipo, 'acao');
+    }
+    document.getElementById('botao-excluir-investimento').hidden = !id;
+    document.getElementById('form-investimento').showModal();
+  }
+
+  function abrirFormularioOperacao(ativoId) {
+    const form = document.getElementById('formulario-operacao');
+    form.reset();
+    fecharTodosCombos();
+    definirComboPorValor(document.getElementById('combo-tipo-operacao'), 'compra');
+    form.elements.ativoId.value = ativoId;
+    form.elements.data.value = `${anoAtual}-${String(mesAtual).padStart(2, '0')}-01`;
+    document.getElementById('form-operacao').showModal();
+  }
+
+  function abrirFormularioAlocacao() {
+    const form = document.getElementById('formulario-alocacao');
+    form.reset();
+    const alvo = state.alocacaoAlvo || {};
+    for (const tipo of logica.tiposAlocacao()) {
+      form.elements[tipo].value = alvo[tipo] || '';
+    }
+    document.getElementById('form-alocacao').showModal();
+  }
+
+  // Guarda a alocação sugerida entre "ver resultado" e "usar como minha meta" — só vira estado
+  // de verdade se a pessoa confirmar; ver resultado sozinho não altera nada da carteira dela.
+  let alocacaoSugeridaPendente = null;
+
+  function abrirTestePerfil() {
+    const form = document.getElementById('formulario-perfil');
+    form.reset();
+    document.getElementById('perfil-perguntas').innerHTML = renderizacao.renderPerguntasPerfil();
+    document.getElementById('form-perfil').showModal();
+  }
+
+  function mostrarResultadoPerfil(respostas) {
+    const { perfil, pontos } = logica.perfilDeInvestidor(respostas);
+    alocacaoSugeridaPendente = logica.alocacaoSugeridaPorPerfil(perfil);
+    document.getElementById('perfil-resultado-conteudo').innerHTML = renderizacao.renderResultadoPerfil(
+      perfil,
+      pontos,
+      alocacaoSugeridaPendente
+    );
+    document.getElementById('resultado-perfil').showModal();
+  }
+
+  function aplicarAlocacaoDoPerfil() {
+    if (!alocacaoSugeridaPendente) return;
+    despachar({ type: 'setAlocacaoAlvo', alocacaoAlvo: { ...alocacaoSugeridaPendente } });
+    document.getElementById('resultado-perfil').close();
+  }
+
+  function abrirFormularioProvento(ativoId) {
+    const form = document.getElementById('formulario-provento');
+    form.reset();
+    fecharTodosCombos();
+    definirComboPorValor(document.getElementById('combo-tipo-provento'), 'dividendo');
+    form.elements.ativoId.value = ativoId;
+    form.elements.data.value = `${anoAtual}-${String(mesAtual).padStart(2, '0')}-01`;
+    document.getElementById('form-provento').showModal();
+  }
+
+  function abrirFormularioProventoPrevisto(ativoId) {
+    const form = document.getElementById('formulario-provento-previsto');
+    form.reset();
+    form.elements.ativoId.value = ativoId;
+    document.getElementById('form-provento-previsto').showModal();
+  }
+
+  function abrirFormularioConta(id) {
+    const form = document.getElementById('formulario-conta');
+    form.reset();
+    fecharTodosCombos();
+    const comboTipo = document.getElementById('combo-tipo-conta');
+    if (id) {
+      const item = state.contas.find((c) => c.id === id);
+      form.elements.id.value = item.id;
+      form.elements.nome.value = item.nome;
+      definirComboPorValor(comboTipo, item.tipo);
+      form.elements.fechamento.value = item.fechamento || '';
+    } else {
+      form.elements.id.value = '';
+      definirComboPorValor(comboTipo, 'conta');
+    }
+    document.getElementById('form-conta').showModal();
+  }
+
+  function abrirFormularioMeta(id) {
+    const form = document.getElementById('formulario-meta');
+    form.reset();
+    fecharTodosCombos();
+    const comboCategoria = document.getElementById('combo-categoria-meta');
+    if (id) {
+      const item = state.metas.find((m) => m.id === id);
+      form.elements.id.value = item.id;
+      definirComboPorValor(comboCategoria, item.categoria);
+      form.elements.nome.value = item.nome || '';
+      form.elements.limite.value = renderizacao.formatNumero(item.limite);
+    } else {
+      form.elements.id.value = '';
+      definirComboPorValor(comboCategoria, 'Moradia');
+    }
+    document.getElementById('botao-excluir-meta').hidden = !id;
+    document.getElementById('form-meta').showModal();
+  }
+
+  function ligarEventos() {
+    document.body.addEventListener('click', (evento) => {
+      const alvo = evento.target.closest('[data-acao]');
+      if (!alvo) return;
+      const acao = alvo.dataset.acao;
+
+      if (acao === 'ir-tab') irParaAba(alvo.dataset.tab);
+      if (acao === 'mes-anterior') mudarMes(-1);
+      if (acao === 'mes-seguinte') mudarMes(1);
+      if (acao === 'abrir-configuracoes') abrirConfiguracoes();
+      if (acao === 'fechar-configuracoes') fecharConfiguracoes();
+      if (acao === 'abrir-calculadoras') abrirCalculadoras();
+      if (acao === 'fechar-calculadoras') fecharCalculadoras();
+      if (acao === 'definir-calculadora') {
+        calculadoraAtiva = alvo.dataset.calc;
+        renderizarTudo();
+      }
+      if (acao === 'definir-modo-milhao') {
+        modoMilhao = alvo.dataset.modomilhao;
+        renderizarTudo();
+      }
+      if (acao === 'calcular-compostos') calcularJurosCompostos();
+      if (acao === 'calcular-simples') calcularJurosSimples();
+      if (acao === 'calcular-pct1') calcularPercentualDeValor();
+      if (acao === 'calcular-pct2') calcularValorEQuePercentualDoTotal();
+      if (acao === 'calcular-pct3') calcularVariacaoPercentual();
+      if (acao === 'calcular-milhao') calcularPrimeiroMilhao();
+
+      if (acao === 'definir-pin') {
+        document.getElementById('formulario-definir-pin').reset();
+        document.getElementById('erro-definir-pin').style.display = 'none';
+        document.getElementById('form-pin').showModal();
+      }
+      if (acao === 'remover-pin') {
+        if (!confirm('Remover o PIN de acesso?')) return;
+        try {
+          localStorage.removeItem(CHAVE_PIN);
+        } catch (erro) {
+          // localStorage indisponível — nada a remover
+        }
+        renderizarTudo();
+      }
+      if (acao === 'abrir-categoria') abrirCategoria(alvo.dataset.categoria);
+      if (acao === 'fechar-categoria') fecharCategoria();
+      if (acao === 'abrir-ativo') abrirAtivo(alvo.dataset.id);
+      if (acao === 'fechar-ativo') fecharAtivo();
+      if (acao === 'comecar') {
+        localStorage_set(CHAVE_ONBOARDING, '1');
+        mostrarApp();
+      }
+
+      if (acao === 'novo-lancamento') abrirNovoLancamento();
+      if (acao === 'editar-lancamento') abrirNovoLancamento(alvo.dataset.id);
+      if (acao === 'cancelar-lancamento') fecharNovoLancamento();
+      if (acao === 'excluir-lancamento-atual' && rascunhoLancamento && rascunhoLancamento.id) {
+        if (!confirm('Excluir este lançamento?')) return;
+        despachar({ type: 'deleteLancamento', id: rascunhoLancamento.id });
+        fecharNovoLancamento();
+      }
+      if (acao === 'tipo-lancamento') {
+        rascunhoLancamento = { ...coletarRascunhoDoFormulario(), tipo: alvo.dataset.tipo };
+        renderizarTudo();
+      }
+      if (acao === 'parcelas-menos' || acao === 'parcelas-mais') {
+        const campo = document.getElementById('campo-parcelas');
+        const span = document.getElementById('valor-parcelas');
+        let valor = Number(campo.value) || 2;
+        valor = acao === 'parcelas-mais' ? valor + 1 : Math.max(2, valor - 1);
+        campo.value = valor;
+        span.textContent = valor;
+        atualizarSaldoProjetado();
+      }
+
+      if (acao === 'filtrar-lancamentos') {
+        filtroLancamentos = alvo.dataset.filtro;
+        document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual, {
+          busca,
+          filtro: filtroLancamentos,
+          contaSelecionada,
+        });
+      }
+
+      if (acao === 'definir-tema') {
+        despachar({ type: 'setTema', tema: alvo.dataset.tema });
+        aplicarTema(alvo.dataset.tema);
+      }
+      if (acao === 'definir-idioma') {
+        despachar({ type: 'setIdioma', idioma: alvo.dataset.idioma });
+      }
+
+      if (acao === 'novo-investimento') abrirFormularioInvestimento();
+      if (acao === 'editar-investimento') abrirFormularioInvestimento(alvo.dataset.id);
+      if (acao === 'excluir-investimento-atual') {
+        const idAtual = document.getElementById('formulario-investimento').elements.id.value;
+        if (!idAtual || !confirm('Excluir este investimento?')) return;
+        despachar({ type: 'deleteInvestimento', id: idAtual });
+        document.getElementById('form-investimento').close();
+        fecharAtivo();
+      }
+
+      if (acao === 'nova-operacao') abrirFormularioOperacao(alvo.dataset.id);
+      if (acao === 'excluir-operacao') {
+        if (!ativoAberto || !confirm('Excluir esta operação?')) return;
+        const item = state.investimentos.find((i) => i.id === ativoAberto);
+        const migrado = logica.migrarInvestimentoLegado(item);
+        const operacoes = migrado.operacoes.filter((op) => op.id !== alvo.dataset.id);
+        despachar({ type: 'editInvestimento', id: ativoAberto, changes: { operacoes, precoAtual: migrado.precoAtual } });
+      }
+
+      if (acao === 'editar-alocacao') abrirFormularioAlocacao();
+      if (acao === 'abrir-perfil') abrirTestePerfil();
+      if (acao === 'aplicar-alocacao-perfil') aplicarAlocacaoDoPerfil();
+
+      if (acao === 'novo-provento') abrirFormularioProvento(alvo.dataset.id);
+      if (acao === 'excluir-provento') {
+        if (!ativoAberto || !confirm('Excluir este provento?')) return;
+        const item = state.investimentos.find((i) => i.id === ativoAberto);
+        const proventos = (item.proventos || []).filter((p) => p.id !== alvo.dataset.id);
+        despachar({ type: 'editInvestimento', id: ativoAberto, changes: { proventos } });
+      }
+
+      if (acao === 'novo-provento-previsto') abrirFormularioProventoPrevisto(alvo.dataset.id);
+      if (acao === 'excluir-provento-previsto') {
+        if (!ativoAberto || !confirm('Excluir este dividendo previsto?')) return;
+        const item = state.investimentos.find((i) => i.id === ativoAberto);
+        const proventosPrevistos = (item.proventosPrevistos || []).filter((p) => p.id !== alvo.dataset.id);
+        despachar({ type: 'editInvestimento', id: ativoAberto, changes: { proventosPrevistos } });
+      }
+
+      if (acao === 'nova-conta') abrirFormularioConta();
+      if (acao === 'excluir-conta') {
+        if (!confirm('Remover esta conta? Lançamentos associados não serão apagados.')) return;
+        despachar({ type: 'deleteConta', id: alvo.dataset.id });
+      }
+
+      if (acao === 'nova-meta') abrirFormularioMeta();
+      if (acao === 'editar-meta') abrirFormularioMeta(alvo.dataset.id);
+      if (acao === 'excluir-meta-atual') {
+        const idAtual = document.getElementById('formulario-meta').elements.id.value;
+        if (!idAtual) return;
+        despachar({ type: 'deleteMeta', id: idAtual });
+        document.getElementById('form-meta').close();
+      }
+
+      if (acao === 'cancelar-form') alvo.closest('dialog').close();
+
+      if (acao === 'abrir-combo') {
+        const lista = alvo.closest('.nv-combo').querySelector('.nv-combo-lista');
+        const estavaAberta = !lista.hidden;
+        fecharTodosCombos();
+        lista.hidden = estavaAberta;
+      }
+
+      if (acao === 'selecionar-combo-item') {
+        const combo = alvo.closest('.nv-combo');
+        selecionarItemCombo(combo, alvo.dataset.valor, alvo.dataset.rotulo);
+        fecharTodosCombos();
+        // trocar o tipo de ativo muda quais tickers fazem sentido sugerir no nome
+        if (alvo.closest('#combo-tipo-investimento')) atualizarSugestoesAtivo(alvo.dataset.valor);
+      }
+    });
+
+    // Fecha qualquer combo aberto ao clicar fora dele (o clique dentro já foi tratado acima).
+    document.body.addEventListener('click', (evento) => {
+      if (!evento.target.closest('.nv-combo')) fecharTodosCombos();
+    });
+
+    document.body.addEventListener('focusin', (evento) => {
+      if (evento.target.classList.contains('nv-combo-input')) {
+        fecharTodosCombos();
+        evento.target.closest('.nv-combo').querySelector('.nv-combo-lista').hidden = false;
+      }
+    });
+
+    document.body.addEventListener('input', (evento) => {
+      if (evento.target.classList.contains('nv-combo-input')) {
+        const combo = evento.target.closest('.nv-combo');
+        filtrarComboBusca(combo, evento.target.value);
+        combo.querySelector('.nv-combo-lista').hidden = false;
+        return;
+      }
+      if (evento.target.id === 'campo-busca-lancamentos') {
+        busca = evento.target.value;
+        const foco = evento.target;
+        const posicaoCursor = foco.selectionStart;
+        document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual, {
+          busca,
+          filtro: filtroLancamentos,
+          contaSelecionada,
+        });
+        const novoFoco = document.getElementById('campo-busca-lancamentos');
+        if (novoFoco) {
+          novoFoco.focus();
+          novoFoco.setSelectionRange(posicaoCursor, posicaoCursor);
+        }
+      }
+      if (['valorTotal', 'parcelado'].includes(evento.target.name) && evento.target.closest('#formulario-lancamento')) {
+        atualizarSaldoProjetado();
+      }
+    });
+
+    document.body.addEventListener('change', (evento) => {
+      if (evento.target.name === 'tipo' && evento.target.closest('#formulario-investimento')) {
+        atualizarSugestoesAtivo(evento.target.value);
+      }
+      if (evento.target.id === 'campo-conta-filtro') {
+        contaSelecionada = evento.target.value || null;
+        document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual, {
+          busca,
+          filtro: filtroLancamentos,
+          contaSelecionada,
+        });
+      }
+      if (evento.target.name === 'parcelado' && evento.target.closest('#formulario-lancamento')) {
+        document.getElementById('campo-parcelas-linha').classList.toggle('desabilitado', !evento.target.checked);
+        atualizarSaldoProjetado();
+      }
+      if (evento.target.id === 'campo-ocultar-valores') {
+        despachar({ type: 'setOcultarValores', valor: evento.target.checked });
+      }
+    });
+
+    // Campos de valor monetário (.nv-campo-moeda): reformata pro padrão "1.234,56" assim que a
+    // pessoa sai do campo (focusout, que ao contrário de blur borbulha até o body) ou aperta
+    // Enter nele — sem precisar digitar a vírgula e os dois zeros na mão.
+    document.body.addEventListener('focusout', (evento) => {
+      if (evento.target.classList && evento.target.classList.contains('nv-campo-moeda')) {
+        formatarCampoMoeda(evento.target);
+      }
+    });
+    document.body.addEventListener('keydown', (evento) => {
+      if (evento.key === 'Enter' && evento.target.classList && evento.target.classList.contains('nv-campo-moeda')) {
+        formatarCampoMoeda(evento.target);
+      }
+    });
+
+    document.body.addEventListener('submit', (evento) => {
+      // Nota: não usar evento.target.id aqui — cada <form> tem um <input name="id">, e o HTML
+      // spec faz esse controle "sombrear" a propriedade .id do próprio elemento <form>.
+      if (evento.target.getAttribute('id') === 'formulario-pin') {
+        evento.preventDefault();
+        const dados = new FormData(evento.target);
+        const digitado = dados.get('pin') || '';
+        if (hashSimples(digitado) === localStorage_get(CHAVE_PIN)) {
+          prosseguirAposPin();
+        } else {
+          mostrarTelaPin(true);
+        }
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-definir-pin') {
+        const dados = new FormData(evento.target);
+        const pin = dados.get('pin') || '';
+        const confirmarPin = dados.get('confirmarPin') || '';
+        if (pin !== confirmarPin) {
+          evento.preventDefault();
+          document.getElementById('erro-definir-pin').style.display = 'block';
+          return;
+        }
+        localStorage_set(CHAVE_PIN, hashSimples(pin));
+        renderizarTudo();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-lancamento') {
+        evento.preventDefault();
+        const dados = coletarRascunhoDoFormulario();
+        const id = dados.id || uid();
+        const lancamento = { ...dados, id };
+        const existe = state.lancamentos.some((l) => l.id === id);
+        despachar(existe ? { type: 'editLancamento', id, changes: lancamento } : { type: 'addLancamento', lancamento });
+        fecharNovoLancamento();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-investimento') {
+        const dados = new FormData(evento.target);
+        const id = dados.get('id') || uid();
+        const existe = state.investimentos.some((i) => i.id === id);
+        if (existe) {
+          despachar({
+            type: 'editInvestimento',
+            id,
+            changes: { nome: dados.get('nome'), tipo: dados.get('tipo'), precoAtual: numeroDoCampoMoeda(dados.get('precoAtual')) },
+          });
+        } else {
+          despachar({
+            type: 'addInvestimento',
+            investimento: { id, nome: dados.get('nome'), tipo: dados.get('tipo'), precoAtual: numeroDoCampoMoeda(dados.get('precoAtual')), operacoes: [] },
+          });
+          abrirAtivo(id);
+        }
+        evento.target.reset();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-operacao') {
+        // preventDefault: essa validação pode falhar (venda maior que a posição) — nesse caso o
+        // dialog precisa continuar aberto pro usuário corrigir, então o fechamento automático do
+        // <form method="dialog"> só deve acontecer depois que a validação passar (fechamos manualmente).
+        evento.preventDefault();
+        const dados = new FormData(evento.target);
+        const ativoId = dados.get('ativoId');
+        const item = state.investimentos.find((i) => i.id === ativoId);
+        const migrado = logica.migrarInvestimentoLegado(item);
+        const novaOperacao = {
+          id: uid(),
+          tipo: dados.get('tipo'),
+          data: dados.get('data'),
+          quantidade: Number(dados.get('quantidade')),
+          precoUnitario: numeroDoCampoMoeda(dados.get('precoUnitario')),
+        };
+        try {
+          logica.posicaoAtivo([...migrado.operacoes, novaOperacao]);
+        } catch (erro) {
+          alert(erro.message);
+          return;
+        }
+        despachar({
+          type: 'editInvestimento',
+          id: ativoId,
+          changes: { operacoes: [...migrado.operacoes, novaOperacao], precoAtual: migrado.precoAtual },
+        });
+        evento.target.reset();
+        document.getElementById('form-operacao').close();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-perfil') {
+        const dados = new FormData(evento.target);
+        const respostas = {};
+        for (const p of logica.perguntasPerfil()) respostas[p.id] = Number(dados.get(p.id));
+        mostrarResultadoPerfil(respostas);
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-alocacao') {
+        const dados = new FormData(evento.target);
+        const alocacaoAlvo = {};
+        for (const tipo of logica.tiposAlocacao()) {
+          const valor = Number(dados.get(tipo));
+          if (valor > 0) alocacaoAlvo[tipo] = valor;
+        }
+        despachar({ type: 'setAlocacaoAlvo', alocacaoAlvo: Object.keys(alocacaoAlvo).length ? alocacaoAlvo : null });
+        evento.target.reset();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-provento') {
+        const dados = new FormData(evento.target);
+        const ativoId = dados.get('ativoId');
+        const item = state.investimentos.find((i) => i.id === ativoId);
+        const novoProvento = {
+          id: uid(),
+          tipo: dados.get('tipo'),
+          data: dados.get('data'),
+          valor: numeroDoCampoMoeda(dados.get('valor')),
+        };
+        despachar({
+          type: 'editInvestimento',
+          id: ativoId,
+          changes: { proventos: [...(item.proventos || []), novoProvento] },
+        });
+        evento.target.reset();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-provento-previsto') {
+        const dados = new FormData(evento.target);
+        const ativoId = dados.get('ativoId');
+        const item = state.investimentos.find((i) => i.id === ativoId);
+        const novoPrevisto = {
+          id: uid(),
+          data: dados.get('data'),
+          valor: numeroDoCampoMoeda(dados.get('valor')),
+          descricao: dados.get('descricao') || '',
+        };
+        despachar({
+          type: 'editInvestimento',
+          id: ativoId,
+          changes: { proventosPrevistos: [...(item.proventosPrevistos || []), novoPrevisto] },
+        });
+        evento.target.reset();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-conta') {
+        const dados = new FormData(evento.target);
+        const id = dados.get('id') || uid();
+        const conta = {
+          id,
+          nome: dados.get('nome'),
+          tipo: dados.get('tipo'),
+          fechamento: dados.get('fechamento') ? Number(dados.get('fechamento')) : null,
+        };
+        const existe = state.contas.some((c) => c.id === id);
+        despachar(existe ? { type: 'editConta', id, changes: conta } : { type: 'addConta', conta });
+        evento.target.reset();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-meta') {
+        const dados = new FormData(evento.target);
+        const id = dados.get('id') || uid();
+        const meta = {
+          id,
+          categoria: dados.get('categoria'),
+          nome: dados.get('nome') || '',
+          limite: numeroDoCampoMoeda(dados.get('limite')),
+        };
+        const existe = state.metas.some((m) => m.id === id);
+        despachar(existe ? { type: 'editMeta', id, changes: meta } : { type: 'addMeta', meta });
+        evento.target.reset();
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', iniciar);
+})();
+
+</script>

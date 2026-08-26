@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "test": "node --test src/*.test.js",
-    "build": "node build.js"
+    "build": "node build.js",
+    "build:demo": "node build-demo.js"
   }
 }
