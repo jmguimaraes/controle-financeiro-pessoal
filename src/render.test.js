@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
   formatCurrency,
   formatPercent,
+  formatAnos,
   renderResumo,
   renderLancamentos,
   renderNovoLancamento,
@@ -37,6 +38,15 @@ test('formatCurrency formata em reais no padrão pt-BR', () => {
 test('formatPercent formata com sinal e vírgula decimal', () => {
   assert.equal(formatPercent(7.5), '+7,50%');
   assert.equal(formatPercent(-5), '-5,00%');
+});
+
+test('formatAnos usa vírgula decimal e uma casa no padrão pt-BR', () => {
+  assert.equal(formatAnos(18.1666), '18,2');
+  assert.equal(formatAnos(5), '5,0');
+});
+
+test('formatAnos acompanha o idioma escolhido', () => {
+  assert.equal(formatAnos(18.1666, 'en'), '18.2');
 });
 
 test('renderResumo mostra o wordmark da marca e o saldo do mês', () => {

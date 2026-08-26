@@ -60,6 +60,12 @@ function formatPercent(valor, idioma) {
   return `${valor >= 0 ? '+' : ''}${formatado}%`;
 }
 
+// Anos aparecem com uma casa decimal só (18,2 anos), diferente de formatNumero, que sempre usa
+// duas. Passa pelo Intl para o separador acompanhar o idioma — toFixed devolveria sempre ponto.
+function formatAnos(valor, idioma) {
+  return new Intl.NumberFormat(I18N.localeDoIdioma(idioma), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(valor);
+}
+
 function escapeHtml(texto) {
   return String(texto)
     .replace(/&/g, '&amp;')
@@ -1197,6 +1203,7 @@ if (typeof module !== 'undefined' && module.exports) {
     formatCurrency,
     formatNumero,
     formatPercent,
+    formatAnos,
     escapeHtml,
     mascarar,
     renderResumo,

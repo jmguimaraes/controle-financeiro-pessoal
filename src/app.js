@@ -427,7 +427,7 @@
         'resultado-calc-milhao',
         r.meses === null
           ? linhaResultado('Tempo necessário', 'Não atingível nesse ritmo (teto de 100 anos)')
-          : linhaResultado('Tempo necessário', `${r.meses} meses (${r.anos.toFixed(1)} anos)`)
+          : linhaResultado('Tempo necessário', `${r.meses} meses (${renderizacao.formatAnos(r.anos)} anos)`)
       );
     } else {
       const meses = Number(document.getElementById('campo-calc-milhao-meses').value) || 0;
