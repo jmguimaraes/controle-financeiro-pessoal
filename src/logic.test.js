@@ -37,6 +37,10 @@ const {
   iniciaisAtivo,
   corIndiceAtivo,
   numeroDecimalFlexivel,
+  PERGUNTAS_PERFIL,
+  perfilDeInvestidor,
+  alocacaoSugeridaPorPerfil,
+  TIPOS_ALOCACAO,
 } = require('./logic.js');
 
 const arred = (x) => Math.round(x * 100) / 100;
@@ -746,4 +750,77 @@ test('numeroDecimalFlexivel devolve 0 pra texto vazio ou inválido', () => {
   assert.equal(numeroDecimalFlexivel(''), 0);
   assert.equal(numeroDecimalFlexivel(undefined), 0);
   assert.equal(numeroDecimalFlexivel('abc'), 0);
+});
+
+test('PERGUNTAS_PERFIL tem 4 perguntas, cada uma com opções pontuadas de 0 a 3', () => {
+  assert.equal(PERGUNTAS_PERFIL.length, 4);
+  for (const p of PERGUNTAS_PERFIL) {
+    assert.ok(p.id && p.pergunta, 'pergunta precisa de id e enunciado');
+    assert.equal(p.opcoes.length, 4);
+    assert.deepEqual(p.opcoes.map((o) => o.pontos), [0, 1, 2, 3]);
+  }
+});
+
+test('perfilDeInvestidor classifica como conservador quem pontua baixo', () => {
+  const r = perfilDeInvestidor({ reacaoQueda: 0, prazo: 0, experiencia: 0, reserva: 1 });
+  assert.equal(r.pontos, 1);
+  assert.equal(r.perfil, 'conservador');
+});
+
+test('perfilDeInvestidor classifica como moderado na faixa do meio', () => {
+  const r = perfilDeInvestidor({ reacaoQueda: 2, prazo: 2, experiencia: 1, reserva: 1 });
+  assert.equal(r.pontos, 6);
+  assert.equal(r.perfil, 'moderado');
+});
+
+test('perfilDeInvestidor classifica como arrojado quem pontua alto', () => {
+  const r = perfilDeInvestidor({ reacaoQueda: 3, prazo: 3, experiencia: 3, reserva: 3 });
+  assert.equal(r.pontos, 12);
+  assert.equal(r.perfil, 'arrojado');
+});
+
+test('perfilDeInvestidor trata resposta faltando como zero, sem quebrar', () => {
+  const r = perfilDeInvestidor({ reacaoQueda: 3 });
+  assert.equal(r.pontos, 3);
+  assert.equal(r.perfil, 'conservador');
+});
+
+test('alocacaoSugeridaPorPerfil devolve percentuais que somam exatamente 100 nos três perfis', () => {
+  for (const perfil of ['conservador', 'moderado', 'arrojado']) {
+    const alocacao = alocacaoSugeridaPorPerfil(perfil);
+    const soma = Object.values(alocacao).reduce((a, b) => a + b, 0);
+    assert.equal(soma, 100, `${perfil} deveria somar 100`);
+  }
+});
+
+test('alocacaoSugeridaPorPerfil usa só tipos de ativo válidos, nunca um ativo específico', () => {
+  const tiposValidos = ['acao', 'fii', 'fundo_investimento', 'criptomoeda', 'stock', 'reit', 'bdr', 'etf', 'etf_internacional', 'tesouro_direto', 'renda_fixa', 'outro'];
+  for (const perfil of ['conservador', 'moderado', 'arrojado']) {
+    for (const tipo of Object.keys(alocacaoSugeridaPorPerfil(perfil))) {
+      assert.ok(tiposValidos.includes(tipo), `${tipo} não é um tipo de ativo do app`);
+    }
+  }
+});
+
+test('alocacaoSugeridaPorPerfil dá mais renda fixa ao conservador e mais ação ao arrojado', () => {
+  const conservador = alocacaoSugeridaPorPerfil('conservador');
+  const arrojado = alocacaoSugeridaPorPerfil('arrojado');
+  const rendaFixaConservador = (conservador.renda_fixa || 0) + (conservador.tesouro_direto || 0);
+  const rendaFixaArrojado = (arrojado.renda_fixa || 0) + (arrojado.tesouro_direto || 0);
+  assert.ok(rendaFixaConservador > rendaFixaArrojado);
+  assert.ok((arrojado.acao || 0) > (conservador.acao || 0));
+});
+
+test('alocacaoSugeridaPorPerfil devolve null pra perfil desconhecido', () => {
+  assert.equal(alocacaoSugeridaPorPerfil('qualquer'), null);
+});
+
+test('alocacaoSugeridaPorPerfil só usa tipos que o formulário manual também edita', () => {
+  // Trava a regressão: se o perfil gravasse um tipo fora de TIPOS_ALOCACAO, salvar o formulário
+  // manual de alocação apagaria esse tipo em silêncio.
+  for (const perfil of ['conservador', 'moderado', 'arrojado']) {
+    for (const tipo of Object.keys(alocacaoSugeridaPorPerfil(perfil))) {
+      assert.ok(TIPOS_ALOCACAO.includes(tipo), `${tipo} não está em TIPOS_ALOCACAO`);
+    }
+  }
 });

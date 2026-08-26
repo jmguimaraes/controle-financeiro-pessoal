@@ -656,6 +656,70 @@ function renderPin(erro) {
     </div>`;
 }
 
+// --- Teste de perfil de investidor ---
+
+// Um radio por opção, com a primeira já marcada: assim o formulário nunca é enviado com pergunta
+// em branco, e a resposta default é sempre a mais conservadora (pontos 0).
+function renderPerguntasPerfil() {
+  return L.perguntasPerfil().map(
+    (p) => `
+      <fieldset class="nv-perfil-bloco">
+        <legend>${escapeHtml(p.pergunta)}</legend>
+        ${p.opcoes
+          .map(
+            (o, i) => `
+          <label class="nv-perfil-opcao">
+            <input type="radio" name="${escapeHtml(p.id)}" value="${o.pontos}" ${i === 0 ? 'checked' : ''} />
+            <span>${escapeHtml(o.texto)}</span>
+          </label>`
+          )
+          .join('')}
+      </fieldset>`
+  ).join('');
+}
+
+const ROTULO_PERFIL = {
+  conservador: 'Conservador',
+  moderado: 'Moderado',
+  arrojado: 'Arrojado',
+};
+
+const RESUMO_PERFIL = {
+  conservador: 'Você prioriza previsibilidade e não se sente confortável vendo o valor oscilar.',
+  moderado: 'Você aceita alguma oscilação em troca de um retorno maior no médio prazo.',
+  arrojado: 'Você tolera oscilação forte e pensa no longo prazo.',
+};
+
+// O aviso de que isto não é recomendação de investimento é obrigatório e coberto por teste:
+// sugerir ativo a uma pessoa é atividade regulada pela CVM. Aqui só se distribui percentual por
+// CLASSE de ativo, que é conteúdo educativo — nenhum papel específico é citado em lugar nenhum.
+function renderResultadoPerfil(perfil, pontos, alocacao) {
+  const linhas = Object.entries(alocacao || {})
+    .sort((a, b) => b[1] - a[1])
+    .map(
+      ([tipo, pct]) => `
+        <div class="nv-row-plain">
+          <span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[tipo] || tipo)}</span>
+          <span><b>${pct}%</b></span>
+        </div>`
+    )
+    .join('');
+  return `
+    <div class="nv-perfil-resultado">
+      <div class="nv-label">SEU PERFIL</div>
+      <div class="nv-perfil-nome">${escapeHtml(ROTULO_PERFIL[perfil] || perfil)}</div>
+      <div class="nv-perfil-pontos">${pontos} de 12 pontos</div>
+      <p class="nv-perfil-resumo">${escapeHtml(RESUMO_PERFIL[perfil] || '')}</p>
+      <div class="nv-label" style="margin-top:22px">SUGESTÃO DE ALOCAÇÃO POR CLASSE</div>
+      ${linhas}
+      <p class="nv-perfil-aviso">
+        Isto é material educativo e não é recomendação de investimento. A sugestão distribui
+        percentuais por classe de ativo e não indica nenhum ativo específico. Decisões de
+        investimento são suas; se precisar de orientação, procure um profissional habilitado.
+      </p>
+    </div>`;
+}
+
 // --- Tela de calculadoras ---
 // Ferramentas de apoio, sem ligação com os dados do usuário (não lê nem grava lançamento,
 // investimento etc.) — por isso não recebe `state`. O cálculo em si roda no clique do botão
@@ -1014,6 +1078,15 @@ function renderInvestimentos(state) {
       </div>
     </div>
     ${
+      investimentos.length
+        ? '<button type="button" class="nv-link-accent" data-acao="abrir-perfil" style="margin:14px 0 0 20px;font-size:10px">DESCOBRIR MEU PERFIL</button>'
+        : `<div class="nv-perfil-convite">
+            <div class="nv-perfil-convite-titulo">Não sabe por onde começar?</div>
+            <p>Responda 4 perguntas e descubra seu perfil de investidor. O app sugere uma divisão por classe de ativo pra você usar como meta.</p>
+            <button type="button" class="nv-perfil-cta" data-acao="abrir-perfil">FAZER O TESTE</button>
+          </div>`
+    }
+    ${
       composicao.length
         ? `<div class="nv-composicao">
       <div class="nv-section-label" style="margin-bottom:10px">COMPOSIÇÃO</div>
@@ -1204,6 +1277,8 @@ if (typeof module !== 'undefined' && module.exports) {
     formatNumero,
     formatPercent,
     formatAnos,
+    renderPerguntasPerfil,
+    renderResultadoPerfil,
     escapeHtml,
     mascarar,
     renderResumo,

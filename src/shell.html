@@ -60,6 +60,21 @@ select option{background-color:var(--nv-bg);color:var(--nv-fg);}
 .nv-link-muted{font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted);background:none;border:none;cursor:pointer;padding:0;}
 .nv-link-accent{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--nv-accent);background:none;border:none;cursor:pointer;padding:0;}
 
+
+/* Teste de perfil de investidor */
+.nv-perfil-convite{margin:16px 20px 0;padding:18px;border:1px solid var(--nv-rule-soft);border-radius:14px;}
+.nv-perfil-convite-titulo{font-size:15px;font-weight:600;margin-bottom:6px;}
+.nv-perfil-convite p{font-size:12px;color:var(--nv-muted);line-height:1.5;margin:0 0 14px;}
+.nv-perfil-cta{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--nv-bg);background:var(--nv-accent);border:none;border-radius:999px;padding:10px 18px;cursor:pointer;}
+.nv-perfil-bloco{border:none;border-top:1px solid var(--nv-rule-soft);padding:14px 0 4px;margin:0;}
+.nv-perfil-bloco legend{font-size:12px;font-weight:600;padding:0;margin-bottom:10px;}
+.nv-perfil-opcao{display:flex;flex-direction:row;align-items:center;gap:10px;font-size:12px;color:var(--nv-muted);padding:5px 0;margin:0;cursor:pointer;}
+.nv-perfil-opcao input{accent-color:var(--nv-accent);flex:none;margin:0;}
+.nv-perfil-nome{font-size:30px;font-weight:600;letter-spacing:-.02em;margin-top:6px;}
+.nv-perfil-pontos{font-size:11px;color:var(--nv-muted);margin-top:4px;}
+.nv-perfil-resumo{font-size:12px;color:var(--nv-muted);line-height:1.5;margin:12px 0 0;}
+.nv-perfil-aviso{font-size:10px;line-height:1.5;color:var(--nv-muted);margin:18px 0 0;padding-top:12px;border-top:1px solid var(--nv-rule-soft);}
+
 .nv-hero{padding:22px 20px 18px;border-bottom:2px solid var(--nv-rule-strong);}
 .nv-hero-label{font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--nv-muted);}
 .nv-hero-value{display:flex;align-items:baseline;gap:6px;margin-top:8px;}
@@ -317,13 +332,37 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
     <h3>Metas de alocação (%)</h3>
     <label>Ação<input type="number" name="acao" min="0" max="100" step="1" /></label>
     <label>Fundo Imobiliário<input type="number" name="fii" min="0" max="100" step="1" /></label>
+    <label>ETF Internacional<input type="number" name="etf_internacional" min="0" max="100" step="1" /></label>
+    <label>Tesouro Direto<input type="number" name="tesouro_direto" min="0" max="100" step="1" /></label>
     <label>Renda Fixa<input type="number" name="renda_fixa" min="0" max="100" step="1" /></label>
+    <label>Criptomoeda<input type="number" name="criptomoeda" min="0" max="100" step="1" /></label>
     <label>Outro<input type="number" name="outro" min="0" max="100" step="1" /></label>
     <div class="form-acoes">
       <button type="button" data-acao="cancelar-form">Cancelar</button>
       <button type="submit" class="primario">Salvar</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="form-perfil">
+  <form method="dialog" id="formulario-perfil">
+    <h3>Perfil de investidor</h3>
+    <div id="perfil-perguntas"></div>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Ver resultado</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="resultado-perfil">
+  <div>
+    <div id="perfil-resultado-conteudo"></div>
+    <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Fechar</button>
+      <button type="button" class="primario" data-acao="aplicar-alocacao-perfil">Usar como minha meta</button>
+    </div>
+  </div>
 </dialog>
 
 <dialog id="form-provento">

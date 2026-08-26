@@ -413,6 +413,92 @@ function aporteNecessarioParaMeta({ capitalInicial = 0, meses, taxaMensal = 0, v
   return { aporteMensal: Math.max(0, (valorAlvo - capitalFuturo) / fatorAnuidade) };
 }
 
+// --- Perfil de investidor ---
+
+// Questionário de suitability no formato padrão do mercado: mede tolerância a perda, prazo,
+// experiência e colchão de emergência. As opções vêm sempre da mais conservadora (0) pra mais
+// arrojada (3), então a soma bruta já é a pontuação — não precisa de tabela de conversão.
+const PERGUNTAS_PERFIL = [
+  {
+    id: 'reacaoQueda',
+    pergunta: 'Se sua carteira caísse 20% em um mês, o que você faria?',
+    opcoes: [
+      { pontos: 0, texto: 'Venderia tudo pra não perder mais' },
+      { pontos: 1, texto: 'Venderia uma parte' },
+      { pontos: 2, texto: 'Não faria nada e esperaria' },
+      { pontos: 3, texto: 'Aproveitaria pra comprar mais' },
+    ],
+  },
+  {
+    id: 'prazo',
+    pergunta: 'Em quanto tempo você pretende usar esse dinheiro?',
+    opcoes: [
+      { pontos: 0, texto: 'Menos de 1 ano' },
+      { pontos: 1, texto: 'De 1 a 3 anos' },
+      { pontos: 2, texto: 'De 3 a 10 anos' },
+      { pontos: 3, texto: 'Mais de 10 anos' },
+    ],
+  },
+  {
+    id: 'experiencia',
+    pergunta: 'Qual sua experiência com investimentos?',
+    opcoes: [
+      { pontos: 0, texto: 'Nunca investi' },
+      { pontos: 1, texto: 'Só poupança ou renda fixa' },
+      { pontos: 2, texto: 'Já invisto em ações ou fundos imobiliários' },
+      { pontos: 3, texto: 'Invisto há anos, inclusive fora do Brasil' },
+    ],
+  },
+  {
+    id: 'reserva',
+    pergunta: 'Você tem reserva de emergência?',
+    opcoes: [
+      { pontos: 0, texto: 'Não tenho' },
+      { pontos: 1, texto: 'Tenho, mas dá pra menos de 3 meses' },
+      { pontos: 2, texto: 'Tenho de 3 a 6 meses de despesa guardados' },
+      { pontos: 3, texto: 'Tenho mais de 6 meses guardados' },
+    ],
+  },
+];
+
+// Soma as respostas (0-12) e corta em três faixas. Resposta faltando conta zero, então um
+// questionário incompleto cai pro lado conservador em vez de quebrar.
+function perguntasPerfil() {
+  return PERGUNTAS_PERFIL;
+}
+
+function perfilDeInvestidor(respostas = {}) {
+  let pontos = 0;
+  for (const p of PERGUNTAS_PERFIL) pontos += Number(respostas[p.id]) || 0;
+  const perfil = pontos <= 4 ? 'conservador' : pontos <= 8 ? 'moderado' : 'arrojado';
+  return { pontos, perfil };
+}
+
+// IMPORTANTE — isto é deliberadamente uma sugestão de proporção por CLASSE de ativo, nunca de
+// ativo específico: recomendar um papel a uma pessoa é atividade regulada pela CVM (consultoria
+// de valores mobiliários) e exige credenciamento, coisa que um aviso de isenção não substitui.
+// Distribuir percentual entre classes é conteúdo educativo, e alimenta a meta de alocação que o
+// app já tinha. Cada perfil soma exatamente 100 (coberto por teste).
+// Fonte única dos tipos que participam da meta de alocação — o formulário manual (shell.html /
+// app.js) e a sugestão por perfil leem daqui. Se as duas listas divergissem, o usuário perderia
+// em silêncio os tipos definidos pelo perfil ao salvar o formulário manual.
+const TIPOS_ALOCACAO = ['acao', 'fii', 'etf_internacional', 'tesouro_direto', 'renda_fixa', 'criptomoeda', 'outro'];
+
+const ALOCACAO_POR_PERFIL = {
+  conservador: { tesouro_direto: 45, renda_fixa: 35, fii: 15, acao: 5 },
+  moderado: { tesouro_direto: 20, renda_fixa: 20, fii: 25, acao: 30, etf_internacional: 5 },
+  arrojado: { renda_fixa: 10, fii: 20, acao: 40, etf_internacional: 20, criptomoeda: 10 },
+};
+
+function tiposAlocacao() {
+  return TIPOS_ALOCACAO;
+}
+
+function alocacaoSugeridaPorPerfil(perfil) {
+  const alocacao = ALOCACAO_POR_PERFIL[perfil];
+  return alocacao ? { ...alocacao } : null;
+}
+
 // Junta os dividendos previstos (cadastrados manualmente pelo usuário, não vêm de nenhuma fonte
 // de mercado — ver restrição de plataforma) de todos os ativos numa única agenda, ignorando datas
 // já passadas em relação a dataReferencia e ordenando do mais próximo pro mais distante.
@@ -580,5 +666,11 @@ if (typeof module !== 'undefined' && module.exports) {
     iniciaisAtivo,
     corIndiceAtivo,
     numeroDecimalFlexivel,
+    PERGUNTAS_PERFIL,
+    perfilDeInvestidor,
+    alocacaoSugeridaPorPerfil,
+    TIPOS_ALOCACAO,
+    perguntasPerfil,
+    tiposAlocacao,
   };
 }

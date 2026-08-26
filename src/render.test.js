@@ -1,9 +1,12 @@
 const test = require('node:test');
+const { PERGUNTAS_PERFIL, alocacaoSugeridaPorPerfil } = require('./logic.js');
 const assert = require('node:assert/strict');
 const {
   formatCurrency,
   formatPercent,
   formatAnos,
+  renderPerguntasPerfil,
+  renderResultadoPerfil,
   renderResumo,
   renderLancamentos,
   renderNovoLancamento,
@@ -666,4 +669,42 @@ test('renderAtivoDetalhe mostra o monograma do ativo no cabeçalho', () => {
   const html = renderAtivoDetalhe(estado({ investimentos: [{ id: '1', nome: 'AAPL', tipo: 'stock', precoAtual: 10, operacoes: [] }] }), '1');
   assert.match(html, /nv-monograma/);
   assert.ok(html.includes('AA'));
+});
+
+test('renderPerguntasPerfil mostra as 4 perguntas com 4 opções de rádio cada', () => {
+  const html = renderPerguntasPerfil();
+  for (const p of PERGUNTAS_PERFIL) {
+    assert.ok(html.includes(p.pergunta), `faltou a pergunta: ${p.pergunta}`);
+    for (const o of p.opcoes) assert.ok(html.includes(o.texto), `faltou a opção: ${o.texto}`);
+  }
+  assert.equal((html.match(/type="radio"/g) || []).length, 16);
+});
+
+test('renderPerguntasPerfil marca a primeira opção de cada pergunta, pra nunca enviar vazio', () => {
+  const html = renderPerguntasPerfil();
+  assert.equal((html.match(/checked/g) || []).length, 4);
+});
+
+test('renderResultadoPerfil mostra o nome do perfil e a alocação sugerida', () => {
+  const html = renderResultadoPerfil('conservador', 3, { tesouro_direto: 45, renda_fixa: 35 });
+  assert.ok(html.toLowerCase().includes('conservador'));
+  assert.ok(html.includes('Tesouro Direto'));
+  assert.ok(html.includes('45%'));
+  assert.ok(html.includes('Renda Fixa'));
+  assert.ok(html.includes('35%'));
+});
+
+test('renderResultadoPerfil sempre traz o aviso de que não é recomendação de investimento', () => {
+  // Sugerir ativo a uma pessoa é atividade regulada pela CVM; o app só distribui percentual por
+  // classe de ativo, e o aviso não pode sumir da tela.
+  for (const perfil of ['conservador', 'moderado', 'arrojado']) {
+    const html = renderResultadoPerfil(perfil, 6, alocacaoSugeridaPorPerfil(perfil));
+    assert.ok(/não é recomendaç/i.test(html), `faltou o aviso no perfil ${perfil}`);
+  }
+});
+
+test('renderResultadoPerfil escapa o perfil recebido', () => {
+  const html = renderResultadoPerfil('<img src=x onerror=alert(1)>', 0, {});
+  assert.ok(!html.includes('<img src=x'));
+  assert.ok(html.includes('&lt;img'));
 });

@@ -606,10 +606,38 @@
     const form = document.getElementById('formulario-alocacao');
     form.reset();
     const alvo = state.alocacaoAlvo || {};
-    for (const tipo of ['acao', 'fii', 'renda_fixa', 'outro']) {
+    for (const tipo of logica.tiposAlocacao()) {
       form.elements[tipo].value = alvo[tipo] || '';
     }
     document.getElementById('form-alocacao').showModal();
+  }
+
+  // Guarda a alocação sugerida entre "ver resultado" e "usar como minha meta" — só vira estado
+  // de verdade se a pessoa confirmar; ver resultado sozinho não altera nada da carteira dela.
+  let alocacaoSugeridaPendente = null;
+
+  function abrirTestePerfil() {
+    const form = document.getElementById('formulario-perfil');
+    form.reset();
+    document.getElementById('perfil-perguntas').innerHTML = renderizacao.renderPerguntasPerfil();
+    document.getElementById('form-perfil').showModal();
+  }
+
+  function mostrarResultadoPerfil(respostas) {
+    const { perfil, pontos } = logica.perfilDeInvestidor(respostas);
+    alocacaoSugeridaPendente = logica.alocacaoSugeridaPorPerfil(perfil);
+    document.getElementById('perfil-resultado-conteudo').innerHTML = renderizacao.renderResultadoPerfil(
+      perfil,
+      pontos,
+      alocacaoSugeridaPendente
+    );
+    document.getElementById('resultado-perfil').showModal();
+  }
+
+  function aplicarAlocacaoDoPerfil() {
+    if (!alocacaoSugeridaPendente) return;
+    despachar({ type: 'setAlocacaoAlvo', alocacaoAlvo: { ...alocacaoSugeridaPendente } });
+    document.getElementById('resultado-perfil').close();
   }
 
   function abrirFormularioProvento(ativoId) {
@@ -776,6 +804,8 @@
       }
 
       if (acao === 'editar-alocacao') abrirFormularioAlocacao();
+      if (acao === 'abrir-perfil') abrirTestePerfil();
+      if (acao === 'aplicar-alocacao-perfil') aplicarAlocacaoDoPerfil();
 
       if (acao === 'novo-provento') abrirFormularioProvento(alvo.dataset.id);
       if (acao === 'excluir-provento') {
@@ -993,10 +1023,18 @@
         return;
       }
 
+      if (evento.target.getAttribute('id') === 'formulario-perfil') {
+        const dados = new FormData(evento.target);
+        const respostas = {};
+        for (const p of logica.perguntasPerfil()) respostas[p.id] = Number(dados.get(p.id));
+        mostrarResultadoPerfil(respostas);
+        return;
+      }
+
       if (evento.target.getAttribute('id') === 'formulario-alocacao') {
         const dados = new FormData(evento.target);
         const alocacaoAlvo = {};
-        for (const tipo of ['acao', 'fii', 'renda_fixa', 'outro']) {
+        for (const tipo of logica.tiposAlocacao()) {
           const valor = Number(dados.get(tipo));
           if (valor > 0) alocacaoAlvo[tipo] = valor;
         }
