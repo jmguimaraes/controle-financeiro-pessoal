@@ -81,7 +81,14 @@ window.NUVRA_SEED = ${JSON.stringify(SEED)};
 const marcador = '<script>';
 const posicao = base.indexOf(marcador);
 if (posicao === -1) throw new Error('Não encontrei o <script> do bundle em dist/index.html');
-const saida = base.slice(0, posicao) + injecao + base.slice(posicao);
+let saida = base.slice(0, posicao) + injecao + base.slice(posicao);
+
+// Título diferente do app real de propósito: os dois ficam lado a lado na galeria de artifacts, e
+// confundir um com o outro é justamente o erro que esta build existe pra evitar — só a demo pode
+// ser compartilhada.
+const tituloAntes = saida;
+saida = saida.replace('<title>Nuvra</title>', '<title>Nuvra Demo</title>');
+if (saida === tituloAntes) throw new Error('Não encontrei <title>Nuvra</title> em dist/index.html');
 
 fs.mkdirSync(path.join(dir, 'dist-demo'), { recursive: true });
 fs.writeFileSync(path.join(dir, 'dist-demo', 'index.html'), saida, 'utf8');
