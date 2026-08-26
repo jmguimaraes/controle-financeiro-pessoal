@@ -781,6 +781,15 @@ function renderPerguntasPerfil() {
   ).join('');
 }
 
+const ROTULOS_TIPO_DIVIDA = {
+  financiamento_imobiliario: 'Financiamento imobiliário',
+  financiamento_veiculo: 'Financiamento de veículo',
+  emprestimo: 'Empréstimo',
+  consignado: 'Consignado',
+  cartao: 'Cartão de crédito',
+  outro: 'Outra dívida',
+};
+
 const ROTULO_PERFIL = {
   conservador: 'Conservador',
   moderado: 'Moderado',
@@ -1252,8 +1261,45 @@ function renderInvestimentos(state) {
     <p class="nv-item-meta" style="padding:0 20px 16px">Estimativa de apoio à decisão — não substitui o cálculo de um contador pra fins de DARF.</p>`
         : ''
     }
+    ${blocoDividas(state, investimentos, ocultar)}
+    <button type="button" class="nv-novo" data-acao="nova-divida">
+      <span>NOVA DÍVIDA</span><span class="nv-novo-mais">+</span>
+    </button>
     ${tabBar('carteira', state.idioma)}
   `;
+}
+
+// A carteira sozinha conta metade da história: quem tem 20 mil investidos e 180 mil de
+// financiamento não tem 20 mil. Só aparece pra quem registrou dívida — sem dívida, patrimônio
+// líquido é igual à carteira e o card seria ruído repetindo o número que já está no topo.
+function blocoDividas(state, investimentos, ocultar) {
+  const dividas = state.dividas || [];
+  if (!dividas.length) return '';
+  const pl = L.patrimonioLiquido(investimentos, dividas);
+  const linhas = dividas
+    .map(
+      (d) => `
+      <div class="nv-item" data-id="${d.id}" data-acao="editar-divida">
+        <div>
+          <div class="nv-item-nome">${escapeHtml(d.nome)}</div>
+          <div class="nv-item-meta">${escapeHtml(ROTULOS_TIPO_DIVIDA[d.tipo] || d.tipo)}${
+            d.parcelasRestantes ? ` · faltam ${d.parcelasRestantes}x` : ''
+          }</div>
+        </div>
+        <span class="nv-item-valor negativo">${mascarar(formatCurrency(d.saldoDevedor || 0), ocultar)}</span>
+      </div>`
+    )
+    .join('');
+  return `
+    <div class="nv-patrimonio">
+      <div class="nv-label">PATRIMÔNIO LÍQUIDO</div>
+      <div class="nv-patrimonio-valor ${pl.negativo ? 'nv-negativo' : ''}">${mascarar(formatCurrency(pl.liquido), ocultar)}</div>
+      <div class="nv-item-meta">${mascarar(formatCurrency(pl.ativos), ocultar)} em ativos − ${mascarar(formatCurrency(pl.dividas), ocultar)} em dívidas</div>
+    </div>
+    <div class="nv-section-head" style="margin-top:18px">
+      <span class="nv-section-label">DÍVIDAS</span>
+    </div>
+    ${linhas}`;
 }
 
 function renderAtivoDetalhe(state, ativoId) {

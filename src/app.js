@@ -198,6 +198,14 @@
     { valor: 'dividendo', rotulo: 'Dividendo' },
     { valor: 'jcp', rotulo: 'JCP' },
   ];
+  const OPCOES_TIPO_DIVIDA = [
+    { valor: 'financiamento_imobiliario', rotulo: 'Financiamento imobiliário' },
+    { valor: 'financiamento_veiculo', rotulo: 'Financiamento de veículo' },
+    { valor: 'emprestimo', rotulo: 'Empréstimo' },
+    { valor: 'consignado', rotulo: 'Consignado' },
+    { valor: 'cartao', rotulo: 'Cartão de crédito' },
+    { valor: 'outro', rotulo: 'Outra dívida' },
+  ];
   const CATEGORIAS_META = ['Moradia', 'Alimentação', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Vestuário', 'Outras Despesas'];
 
   // Combos com opções fixas (não dependem de nenhum outro campo) — populados uma única vez no
@@ -206,6 +214,7 @@
     document.getElementById('combo-tipo-investimento').innerHTML = renderizacao.renderComboSelect('tipo', renderizacao.opcoesTipoInvestimento(), 'acao', 'campo-tipo-investimento');
     document.getElementById('combo-tipo-operacao').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_OPERACAO, 'compra', 'campo-tipo-operacao');
     document.getElementById('combo-tipo-conta').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_CONTA, 'conta', 'campo-tipo-conta');
+    document.getElementById('combo-tipo-divida').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_DIVIDA, 'financiamento_imobiliario', 'campo-tipo-divida');
     document.getElementById('combo-tipo-provento').innerHTML = renderizacao.renderComboSelect('tipo', OPCOES_TIPO_PROVENTO, 'dividendo', 'campo-tipo-provento');
     document.getElementById('combo-categoria-meta').innerHTML = renderizacao.renderComboSelect(
       'categoria',
@@ -656,6 +665,22 @@
     document.getElementById('resultado-perfil').close();
   }
 
+  function abrirFormularioDivida(id) {
+    const form = document.getElementById('formulario-divida');
+    form.reset();
+    fecharTodosCombos();
+    const existente = id ? (state.dividas || []).find((d) => d.id === id) : null;
+    form.elements.id.value = existente ? existente.id : '';
+    form.elements.nome.value = existente ? existente.nome : '';
+    form.elements.saldoDevedor.value = existente ? renderizacao.formatNumero(existente.saldoDevedor || 0) : '';
+    form.elements.valorParcela.value = existente && existente.valorParcela ? renderizacao.formatNumero(existente.valorParcela) : '';
+    form.elements.parcelasRestantes.value = existente && existente.parcelasRestantes ? existente.parcelasRestantes : '';
+    definirComboPorValor(document.getElementById('combo-tipo-divida'), existente ? existente.tipo : 'financiamento_imobiliario');
+    // Só faz sentido oferecer "excluir" no que já existe.
+    document.querySelector('[data-acao="excluir-divida"]').hidden = !existente;
+    document.getElementById('form-divida').showModal();
+  }
+
   function abrirFormularioProvento(ativoId) {
     const form = document.getElementById('formulario-provento');
     form.reset();
@@ -823,6 +848,15 @@
 
       if (acao === 'editar-alocacao') abrirFormularioAlocacao();
       if (acao === 'abrir-perfil') abrirTestePerfil();
+      if (acao === 'nova-divida') abrirFormularioDivida();
+      if (acao === 'editar-divida') abrirFormularioDivida(alvo.dataset.id);
+      if (acao === 'excluir-divida') {
+        const id = document.getElementById('formulario-divida').elements.id.value;
+        if (id && confirm('Excluir esta dívida?')) {
+          despachar({ type: 'deleteDivida', id });
+          document.getElementById('form-divida').close();
+        }
+      }
       if (acao === 'aplicar-alocacao-perfil') aplicarAlocacaoDoPerfil();
 
       if (acao === 'novo-provento') abrirFormularioProvento(alvo.dataset.id);
@@ -1038,6 +1072,23 @@
         });
         evento.target.reset();
         document.getElementById('form-operacao').close();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-divida') {
+        const dados = new FormData(evento.target);
+        const id = dados.get('id') || uid();
+        const divida = {
+          id,
+          nome: dados.get('nome'),
+          tipo: dados.get('tipo'),
+          saldoDevedor: numeroDoCampoMoeda(dados.get('saldoDevedor')),
+          valorParcela: numeroDoCampoMoeda(dados.get('valorParcela')),
+          parcelasRestantes: Number(dados.get('parcelasRestantes')) || 0,
+        };
+        const existe = (state.dividas || []).some((d) => d.id === id);
+        despachar(existe ? { type: 'editDivida', id, changes: divida } : { type: 'addDivida', divida });
+        evento.target.reset();
         return;
       }
 

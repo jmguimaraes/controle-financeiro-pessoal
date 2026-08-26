@@ -42,6 +42,9 @@ const {
   alocacaoSugeridaPorPerfil,
   TIPOS_ALOCACAO,
   interpretarLancamento,
+  totalDividas,
+  patrimonioLiquido,
+  comprometimentoMensal,
   resumoDiario,
   lancamentosDoDia,
 } = require('./logic.js');
@@ -1000,4 +1003,77 @@ test('totalFiltrado ignora transferência, que não soma nem subtrai do total do
     { id: '3', tipo: 'transferencia', data: '2026-08-03', valorTotal: 800, parcelas: 1 },
   ];
   assert.equal(totalFiltrado(itens), 700);
+});
+
+// --- Dívidas e patrimônio líquido ---
+
+test('totalDividas soma o saldo devedor de todas as dívidas', () => {
+  const dividas = [
+    { id: '1', nome: 'Apartamento', tipo: 'financiamento_imobiliario', saldoDevedor: 180000, valorParcela: 1800, parcelasRestantes: 220 },
+    { id: '2', nome: 'Carro', tipo: 'financiamento_veiculo', saldoDevedor: 32000, valorParcela: 950, parcelasRestantes: 36 },
+  ];
+  assert.equal(totalDividas(dividas), 212000);
+});
+
+test('totalDividas devolve 0 sem dívida nenhuma', () => {
+  assert.equal(totalDividas([]), 0);
+  assert.equal(totalDividas(undefined), 0);
+});
+
+test('patrimonioLiquido subtrai as dívidas do valor da carteira', () => {
+  const investimentos = [
+    { id: 'i1', nome: 'PETR4', tipo: 'acao', precoAtual: 40, operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-10', quantidade: 100, precoUnitario: 30 }] },
+  ];
+  const dividas = [{ id: 'd1', nome: 'Carro', tipo: 'financiamento_veiculo', saldoDevedor: 1500, valorParcela: 500, parcelasRestantes: 3 }];
+  const r = patrimonioLiquido(investimentos, dividas);
+  assert.equal(r.ativos, 4000);
+  assert.equal(r.dividas, 1500);
+  assert.equal(r.liquido, 2500);
+});
+
+test('patrimonioLiquido fica negativo quando se deve mais do que se tem', () => {
+  const r = patrimonioLiquido([], [{ id: 'd1', nome: 'Consignado', tipo: 'emprestimo', saldoDevedor: 5000, valorParcela: 500, parcelasRestantes: 10 }]);
+  assert.equal(r.liquido, -5000);
+  assert.equal(r.negativo, true);
+});
+
+test('patrimonioLiquido sem dívida nenhuma é igual à carteira', () => {
+  const investimentos = [
+    { id: 'i1', nome: 'X', tipo: 'renda_fixa', precoAtual: 1000, operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-10', quantidade: 1, precoUnitario: 1000 }] },
+  ];
+  const r = patrimonioLiquido(investimentos, []);
+  assert.equal(r.liquido, 1000);
+  assert.equal(r.negativo, false);
+});
+
+test('comprometimentoMensal soma as parcelas das dívidas e mostra o peso sobre a renda', () => {
+  const dividas = [
+    { id: '1', nome: 'Apto', tipo: 'financiamento_imobiliario', saldoDevedor: 180000, valorParcela: 1800, parcelasRestantes: 220 },
+    { id: '2', nome: 'Carro', tipo: 'financiamento_veiculo', saldoDevedor: 32000, valorParcela: 950, parcelasRestantes: 36 },
+  ];
+  const r = comprometimentoMensal(dividas, 5500);
+  assert.equal(r.parcelaTotal, 2750);
+  assert.equal(r.percentualDaRenda, 50);
+});
+
+test('comprometimentoMensal não divide por zero quando não há renda registrada', () => {
+  const r = comprometimentoMensal([{ id: '1', nome: 'X', tipo: 'emprestimo', saldoDevedor: 100, valorParcela: 100, parcelasRestantes: 1 }], 0);
+  assert.equal(r.parcelaTotal, 100);
+  assert.equal(r.percentualDaRenda, 0);
+});
+
+test('applyAction adiciona, edita e remove dívida', () => {
+  let s = estadoInicial();
+  const divida = { id: 'd1', nome: 'Carro', tipo: 'financiamento_veiculo', saldoDevedor: 32000, valorParcela: 950, parcelasRestantes: 36 };
+  s = applyAction(s, { type: 'addDivida', divida });
+  assert.equal(s.dividas.length, 1);
+  s = applyAction(s, { type: 'editDivida', id: 'd1', changes: { saldoDevedor: 31050, parcelasRestantes: 35 } });
+  assert.equal(s.dividas[0].saldoDevedor, 31050);
+  assert.equal(s.dividas[0].nome, 'Carro');
+  s = applyAction(s, { type: 'deleteDivida', id: 'd1' });
+  assert.equal(s.dividas.length, 0);
+});
+
+test('estadoInicial já traz a lista de dívidas vazia', () => {
+  assert.deepEqual(estadoInicial().dividas, []);
 });

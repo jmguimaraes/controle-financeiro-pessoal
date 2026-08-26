@@ -766,3 +766,30 @@ test('renderCalendario mostra a barra de abas, senão o usuário fica preso na t
   assert.match(html, /nv-tabbar/);
   assert.match(html, /data-tab="resumo"/);
 });
+
+test('renderInvestimentos mostra o patrimônio líquido quando há dívida registrada', () => {
+  const state = estado({
+    investimentos: [{ id: 'i1', nome: 'X', tipo: 'renda_fixa', precoAtual: 10000, operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: 10000 }] }],
+    dividas: [{ id: 'd1', nome: 'Carro', tipo: 'financiamento_veiculo', saldoDevedor: 4000, valorParcela: 500, parcelasRestantes: 8 }],
+  });
+  const html = renderInvestimentos(state);
+  assert.match(html, /PATRIMÔNIO LÍQUIDO/);
+  assert.match(html, /6\.000,00/); // 10.000 de ativo − 4.000 de dívida
+  assert.match(html, /Carro/);
+});
+
+test('renderInvestimentos não polui a tela com patrimônio líquido de quem não tem dívida', () => {
+  const state = estado({
+    investimentos: [{ id: 'i1', nome: 'X', tipo: 'renda_fixa', precoAtual: 10000, operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: 10000 }] }],
+  });
+  assert.doesNotMatch(renderInvestimentos(state), /PATRIMÔNIO LÍQUIDO/);
+});
+
+test('renderInvestimentos escapa o nome da dívida', () => {
+  const state = estado({
+    dividas: [{ id: 'd1', nome: '<img src=x onerror=alert(1)>', tipo: 'emprestimo', saldoDevedor: 100, valorParcela: 10, parcelasRestantes: 10 }],
+  });
+  const html = renderInvestimentos(state);
+  assert.equal(html.includes('<img src=x'), false);
+  assert.match(html, /&lt;img/);
+});

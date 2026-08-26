@@ -62,6 +62,12 @@ select option{background-color:var(--nv-bg);color:var(--nv-fg);}
 
 
 
+
+/* Patrimonio liquido */
+.nv-patrimonio{padding:18px 20px;border-top:1px solid var(--nv-rule-soft);}
+.nv-patrimonio-valor{font-size:32px;font-weight:600;letter-spacing:-.02em;margin:6px 0 4px;font-variant-numeric:tabular-nums;}
+.nv-patrimonio-valor.nv-negativo{color:var(--nv-accent);}
+
 /* Calendario financeiro */
 .nv-calendario{padding:16px 20px 24px;}
 .nv-dias-semana{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px;}
@@ -365,6 +371,24 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
     <label>Criptomoeda<input type="number" name="criptomoeda" min="0" max="100" step="1" /></label>
     <label>Outro<input type="number" name="outro" min="0" max="100" step="1" /></label>
     <div class="form-acoes">
+      <button type="button" data-acao="cancelar-form">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-divida">
+  <form method="dialog" id="formulario-divida">
+    <h3>Dívida</h3>
+    <input type="hidden" name="id" />
+    <label>Nome<input type="text" name="nome" maxlength="40" required /></label>
+    <label for="campo-tipo-divida">Tipo</label>
+    <div id="combo-tipo-divida"></div>
+    <label>Saldo devedor<input type="text" inputmode="decimal" name="saldoDevedor" class="nv-campo-moeda" required /></label>
+    <label>Valor da parcela<input type="text" inputmode="decimal" name="valorParcela" class="nv-campo-moeda" /></label>
+    <label>Parcelas restantes<input type="number" name="parcelasRestantes" min="0" step="1" /></label>
+    <div class="form-acoes">
+      <button type="button" data-acao="excluir-divida" class="perigo">Excluir</button>
       <button type="button" data-acao="cancelar-form">Cancelar</button>
       <button type="submit" class="primario">Salvar</button>
     </div>

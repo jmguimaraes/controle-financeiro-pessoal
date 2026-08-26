@@ -419,6 +419,30 @@ function aporteNecessarioParaMeta({ capitalInicial = 0, meses, taxaMensal = 0, v
   return { aporteMensal: Math.max(0, (valorAlvo - capitalFuturo) / fatorAnuidade) };
 }
 
+// --- Dívidas e patrimônio líquido ---
+
+// A carteira sozinha conta só metade da história: quem tem R$ 20 mil investidos e R$ 180 mil de
+// financiamento não tem R$ 20 mil. Patrimônio líquido é o número que fecha a conta, e pra quem
+// tem financiamento imobiliário costuma ser O número.
+function totalDividas(dividas) {
+  return (dividas || []).reduce((soma, d) => soma + (d.saldoDevedor || 0), 0);
+}
+
+function patrimonioLiquido(investimentos, dividas) {
+  const ativos = totalCarteira(investimentos || []).totalAtual;
+  const devido = totalDividas(dividas);
+  const liquido = ativos - devido;
+  return { ativos, dividas: devido, liquido, negativo: liquido < 0 };
+}
+
+// Quanto da renda do mês já está comprometido com parcela de dívida. É o indicador que mostra
+// aperto antes de ele virar problema — bem mais útil no dia a dia que o saldo devedor total.
+function comprometimentoMensal(dividas, rendaMensal) {
+  const parcelaTotal = (dividas || []).reduce((soma, d) => soma + (d.valorParcela || 0), 0);
+  const percentualDaRenda = rendaMensal > 0 ? (parcelaTotal / rendaMensal) * 100 : 0;
+  return { parcelaTotal, percentualDaRenda };
+}
+
 // --- Calendário financeiro ---
 
 // Um registro por dia COM movimento (dia parado não vira chave), no formato que a grade do
@@ -697,6 +721,7 @@ function estadoInicial() {
     tema: 'escuro',
     ocultarValores: false,
     alocacaoAlvo: null,
+    dividas: [],
     idioma: 'pt',
   };
 }
@@ -706,11 +731,12 @@ function applyAction(state, action) {
   const investimentos = state.investimentos ? state.investimentos.slice() : [];
   const contas = state.contas ? state.contas.slice() : [];
   const metas = state.metas ? state.metas.slice() : [];
+  const dividas = state.dividas ? state.dividas.slice() : [];
   const tema = state.tema || 'escuro';
   const ocultarValores = state.ocultarValores || false;
   const alocacaoAlvo = state.alocacaoAlvo || null;
   const idioma = state.idioma || 'pt';
-  const base = { lancamentos, investimentos, contas, metas, tema, ocultarValores, alocacaoAlvo, idioma };
+  const base = { lancamentos, investimentos, contas, metas, dividas, tema, ocultarValores, alocacaoAlvo, idioma };
 
   switch (action.type) {
     case 'addLancamento':
@@ -749,6 +775,12 @@ function applyAction(state, action) {
       return { ...base, ocultarValores: !!action.valor };
     case 'setAlocacaoAlvo':
       return { ...base, alocacaoAlvo: action.alocacaoAlvo };
+    case 'addDivida':
+      return { ...base, dividas: [...dividas, action.divida] };
+    case 'editDivida':
+      return { ...base, dividas: dividas.map((d) => (d.id === action.id ? { ...d, ...action.changes } : d)) };
+    case 'deleteDivida':
+      return { ...base, dividas: dividas.filter((d) => d.id !== action.id) };
     case 'setIdioma':
       return { ...base, idioma: action.idioma };
     default:
@@ -799,6 +831,9 @@ if (typeof module !== 'undefined' && module.exports) {
     alocacaoSugeridaPorPerfil,
     TIPOS_ALOCACAO,
     interpretarLancamento,
+    totalDividas,
+    patrimonioLiquido,
+    comprometimentoMensal,
     resumoDiario,
     lancamentosDoDia,
     perguntasPerfil,
