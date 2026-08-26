@@ -29,6 +29,7 @@
   let telaAtual = 'resumo'; // aba atual + categoria | novo-lancamento | configuracoes | ativo-detalhe
   let categoriaAberta = null;
   let ativoAberto = null;
+  let diaAberto = null; // data YYYY-MM-DD aberta a partir do calendário
   let busca = '';
   let filtroLancamentos = 'todos';
   let contaSelecionada = null;
@@ -277,11 +278,15 @@
       const statusEl = document.getElementById('status-sincronizacao');
       if (statusEl) statusEl.textContent = descricaoSincronizacao;
     }
+    document.getElementById('tela-calendario').innerHTML = renderizacao.renderCalendario(state, anoAtual, mesAtual, state.idioma);
+    if (telaAtual === 'dia' && diaAberto) {
+      document.getElementById('tela-dia').innerHTML = renderizacao.renderDiaDetalhe(state, diaAberto, state.idioma);
+    }
     if (telaAtual === 'calculadoras') {
       document.getElementById('tela-calculadoras').innerHTML = renderCalculadoras(calculadoraAtiva, modoMilhao);
     }
 
-    const telas = ['resumo', 'lancamentos', 'carteira', 'metas', 'categoria', 'ativo-detalhe', 'novo-lancamento', 'configuracoes', 'calculadoras'];
+    const telas = ['resumo', 'lancamentos', 'carteira', 'metas', 'calendario', 'dia', 'categoria', 'ativo-detalhe', 'novo-lancamento', 'configuracoes', 'calculadoras'];
     for (const nome of telas) {
       document.getElementById(`tela-${nome}`).hidden = nome !== telaAtual;
     }
@@ -712,6 +717,8 @@
       const acao = alvo.dataset.acao;
 
       if (acao === 'ir-tab') irParaAba(alvo.dataset.tab);
+      if (acao === 'abrir-dia') { diaAberto = alvo.dataset.dia; telaAtual = 'dia'; renderizarTudo(); }
+      if (acao === 'fechar-dia') { diaAberto = null; telaAtual = 'calendario'; renderizarTudo(); }
       if (acao === 'mes-anterior') mudarMes(-1);
       if (acao === 'mes-seguinte') mudarMes(1);
       if (acao === 'abrir-configuracoes') abrirConfiguracoes();
@@ -1031,6 +1038,30 @@
         });
         evento.target.reset();
         document.getElementById('form-operacao').close();
+        return;
+      }
+
+      if (evento.target.getAttribute('id') === 'formulario-entrada-rapida') {
+        evento.preventDefault();
+        const campo = document.getElementById('campo-entrada-rapida');
+        const interpretado = logica.interpretarLancamento(campo.value);
+        if (!interpretado.temValor) {
+          alert('Não achei um valor no texto. Tente algo como \"mercado 89,90\".');
+          return;
+        }
+        // Abre o formulário preenchido em vez de salvar direto: o palpite de categoria pode errar,
+        // e confirmar numa tela custa um toque, enquanto um lançamento errado custa uma correção.
+        abrirNovoLancamento();
+        rascunhoLancamento = {
+          ...rascunhoLancamento,
+          tipo: interpretado.tipo,
+          categoria: interpretado.categoria,
+          descricao: interpretado.descricao,
+          valorTotal: interpretado.valorTotal,
+          parcelas: interpretado.parcelas,
+        };
+        campo.value = '';
+        renderizarTudo();
         return;
       }
 

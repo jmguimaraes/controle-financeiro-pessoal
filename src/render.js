@@ -173,6 +173,7 @@ function tabBar(abaAtiva, idioma) {
     { id: 'lancamentos', rotulo: I18N.t('tabs.lancamentos', idioma) },
     { id: 'carteira', rotulo: I18N.t('tabs.carteira', idioma) },
     { id: 'metas', rotulo: I18N.t('tabs.metas', idioma) },
+    { id: 'calendario', rotulo: 'CALEND.' },
   ];
   return `
     <nav class="nv-tabbar">
@@ -299,6 +300,7 @@ function renderResumo(state, ano, mes) {
       <div class="nv-hero-sub">${variacao >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(variacao), idioma), ocultar)} ${I18N.t('resumo.emRelacaoA', idioma)} ${meses[(mes - 2 + 12) % 12].toLowerCase()}</div>
     </div>
     ${sparkline(historico)}
+    ${renderEntradaRapida()}
     <div class="nv-cells">
       <div class="nv-cell">
         <div class="nv-cell-label">${I18N.t('resumo.receitas', idioma)}</div>
@@ -448,6 +450,7 @@ function renderNovoLancamento(state, dadosIniciais) {
       <div class="nv-segmentado">
         <button type="button" data-acao="tipo-lancamento" data-tipo="despesa" class="${tipo === 'despesa' ? 'ativo' : ''}">DESPESA</button>
         <button type="button" data-acao="tipo-lancamento" data-tipo="receita" class="${tipo === 'receita' ? 'ativo' : ''}">RECEITA</button>
+        <button type="button" data-acao="tipo-lancamento" data-tipo="transferencia" class="${tipo === 'transferencia' ? 'ativo' : ''}">TRANSF.</button>
       </div>
       <input type="hidden" name="tipo" value="${tipo}" />
       <div class="nv-valor-grande">
@@ -654,6 +657,106 @@ function renderPin(erro) {
         <button type="submit" class="nv-abertura-cta">ENTRAR</button>
       </form>
     </div>`;
+}
+
+// --- Calendário financeiro ---
+
+// Grade mensal no espírito do calendário de resultado dos apps de trading: cada dia mostra quanto
+// entrou menos quanto saiu, pintado de positivo ou negativo, pra dar a leitura do mês num relance.
+// Só dia com movimento é clicável — abrir um dia vazio não teria o que mostrar.
+function renderCalendario(state, ano, mes, idioma) {
+  const lancamentos = state.lancamentos || [];
+  const ocultar = !!state.ocultarValores;
+  const dias = L.resumoDiario(lancamentos, ano, mes);
+  const primeiroDiaSemana = new Date(ano, mes - 1, 1).getDay();
+  const diasNoMes = new Date(ano, mes, 0).getDate();
+  const mesesAbrev = I18N.mesesDoIdioma ? MESES_ABREV : MESES_ABREV;
+
+  const celulasVazias = Array.from({ length: primeiroDiaSemana }, () => '<div class="nv-dia nv-dia-vazio"></div>').join('');
+  const celulas = Array.from({ length: diasNoMes }, (unused, i) => {
+    const dia = i + 1;
+    const chave = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    const resumo = dias[chave];
+    if (!resumo) return `<div class="nv-dia"><span class="nv-dia-numero">${dia}</span></div>`;
+    const classe = resumo.saldo > 0 ? 'nv-dia-positivo' : resumo.saldo < 0 ? 'nv-dia-negativo' : '';
+    const sinal = resumo.saldo > 0 ? '+' : resumo.saldo < 0 ? '−' : '';
+    return `
+      <button type="button" class="nv-dia ${classe}" data-acao="abrir-dia" data-dia="${chave}">
+        <span class="nv-dia-numero">${dia}</span>
+        <span class="nv-dia-valor">${ocultar ? OCULTO : `${sinal}${formatNumero(Math.abs(resumo.saldo), idioma)}`}</span>
+      </button>`;
+  }).join('');
+
+  const totalMes = Object.values(dias).reduce((s, d) => s + d.saldo, 0);
+  return `
+    <div class="nv-header">
+      <span class="nv-title">Calendário</span>
+      <span class="nv-month-label">${mesesAbrev[mes - 1]} ${ano}</span>
+    </div>
+    <div class="nv-calendario">
+      <div class="nv-dias-semana">${['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d) => `<span>${d}</span>`).join('')}</div>
+      <div class="nv-grade">${celulasVazias}${celulas}</div>
+      <div class="nv-calendario-rodape">
+        <span class="nv-label">RESULTADO DO MÊS</span>
+        <span class="${totalMes >= 0 ? 'nv-positivo' : 'nv-negativo'}">
+          ${ocultar ? OCULTO : `${totalMes >= 0 ? '+' : '−'} ${formatCurrency(Math.abs(totalMes), idioma)}`}
+        </span>
+      </div>
+    </div>
+    ${tabBar('calendario', idioma)}`;
+}
+
+function renderDiaDetalhe(state, data, idioma) {
+  const ocultar = !!state.ocultarValores;
+  const itens = L.lancamentosDoDia(state.lancamentos || [], data);
+  const [ano, mes, dia] = String(data).split('-').map(Number);
+  const entrada = itens.filter((i) => i.tipo === 'receita').reduce((s, i) => s + i.valor, 0);
+  const saida = itens.filter((i) => i.tipo === 'despesa').reduce((s, i) => s + i.valor, 0);
+  const saldo = entrada - saida;
+
+  const lista = itens.length
+    ? itens
+        .map((i) => {
+          const sinal = i.tipo === 'receita' ? '+' : i.tipo === 'despesa' ? '−' : '';
+          const classe = i.tipo === 'receita' ? 'positivo' : i.tipo === 'despesa' ? 'negativo' : '';
+          const parcela = i.parcelas > 1 ? ` <small>${i.numeroParcela}/${i.parcelas}</small>` : '';
+          return `
+            <div class="nv-item">
+              <div>
+                <div class="nv-item-nome">${escapeHtml(i.descricao)}${parcela}</div>
+                <div class="nv-item-meta">${escapeHtml(i.categoria)}</div>
+              </div>
+              <span class="nv-item-valor ${classe}">${sinal} ${mascarar(formatCurrency(i.valor, idioma), ocultar)}</span>
+            </div>`;
+        })
+        .join('')
+    : '<p class="nv-vazio">Nenhum lançamento neste dia.</p>';
+
+  return `
+    ${headerVoltar(`${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${ano}`, 'fechar-dia')}
+    <div class="nv-hero" style="border-bottom:1px solid var(--nv-rule-soft)">
+      <div class="nv-hero-label">SALDO DO DIA</div>
+      <div class="nv-hero-value">
+        <span class="cifrao" style="font-size:18px">R$</span>
+        <span class="numero" style="font-size:44px">${mascarar(formatNumero(saldo, idioma), ocultar)}</span>
+      </div>
+      <div class="nv-item-meta" style="margin-top:10px">
+        entrou ${mascarar(formatCurrency(entrada, idioma), ocultar)} · saiu ${mascarar(formatCurrency(saida, idioma), ocultar)}
+      </div>
+    </div>
+    ${lista}`;
+}
+
+// --- Entrada rápida por texto ---
+
+function renderEntradaRapida() {
+  return `
+    <form id="formulario-entrada-rapida" class="nv-entrada-rapida">
+      <input type="text" id="campo-entrada-rapida" name="texto" autocomplete="off"
+        placeholder="mercado 89,90" aria-label="Lançamento em texto livre" />
+      <button type="submit" class="nv-entrada-rapida-ok" aria-label="Lançar">+</button>
+    </form>
+    <p class="nv-entrada-rapida-dica">Escreva do seu jeito: “uber 32”, “salário 4500”, “notebook 3600 em 12x”.</p>`;
 }
 
 // --- Teste de perfil de investidor ---
@@ -1277,6 +1380,9 @@ if (typeof module !== 'undefined' && module.exports) {
     formatNumero,
     formatPercent,
     formatAnos,
+    renderCalendario,
+    renderDiaDetalhe,
+    renderEntradaRapida,
     renderPerguntasPerfil,
     renderResultadoPerfil,
     escapeHtml,

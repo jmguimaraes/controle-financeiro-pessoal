@@ -61,6 +61,31 @@ select option{background-color:var(--nv-bg);color:var(--nv-fg);}
 .nv-link-accent{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--nv-accent);background:none;border:none;cursor:pointer;padding:0;}
 
 
+
+/* Calendario financeiro */
+.nv-calendario{padding:16px 20px 24px;}
+.nv-dias-semana{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px;}
+.nv-dias-semana span{text-align:center;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted);}
+.nv-grade{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.nv-dia{aspect-ratio:1;border:1px solid var(--nv-rule-soft);border-radius:8px;background:none;color:inherit;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:2px;cursor:default;}
+.nv-dia-vazio{border:none;}
+.nv-dia-numero{font-size:11px;font-weight:600;color:var(--nv-muted);}
+.nv-dia-valor{font-size:9px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;}
+button.nv-dia{cursor:pointer;}
+.nv-dia-positivo{border-color:rgba(92,201,138,.45);background:rgba(92,201,138,.10);}
+.nv-dia-positivo .nv-dia-numero,.nv-dia-positivo .nv-dia-valor{color:var(--nv-positive,#5cc98a);}
+.nv-dia-negativo{border-color:rgba(230,64,42,.45);background:rgba(230,64,42,.10);}
+.nv-dia-negativo .nv-dia-numero,.nv-dia-negativo .nv-dia-valor{color:var(--nv-accent);}
+.nv-calendario-rodape{display:flex;justify-content:space-between;align-items:baseline;margin-top:18px;padding-top:14px;border-top:1px solid var(--nv-rule-soft);font-weight:600;}
+.nv-positivo{color:var(--nv-positive,#5cc98a);}
+.nv-negativo{color:var(--nv-accent);}
+
+/* Entrada rapida por texto */
+.nv-entrada-rapida{display:flex;gap:8px;padding:14px 20px 0;margin:0;}
+.nv-entrada-rapida input{flex:1;background:var(--nv-surface,rgba(255,255,255,.04));border:1px solid var(--nv-rule-soft);border-radius:999px;padding:12px 16px;color:inherit;font-family:inherit;font-size:14px;outline:none;}
+.nv-entrada-rapida-ok{flex:none;width:44px;border:none;border-radius:999px;background:var(--nv-accent);color:#17140f;font-size:22px;font-weight:600;cursor:pointer;line-height:1;}
+.nv-entrada-rapida-dica{padding:8px 20px 0;margin:0;font-size:11px;color:var(--nv-muted);}
+
 /* Teste de perfil de investidor */
 .nv-perfil-convite{margin:16px 20px 0;padding:18px;border:1px solid var(--nv-rule-soft);border-radius:14px;}
 .nv-perfil-convite-titulo{font-size:15px;font-weight:600;margin-bottom:6px;}
@@ -276,6 +301,8 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
   <main id="tela-ativo-detalhe" class="nv-tela" hidden></main>
   <main id="tela-novo-lancamento" class="nv-tela" hidden></main>
   <main id="tela-configuracoes" class="nv-tela" hidden></main>
+  <main id="tela-calendario" class="nv-tela" hidden></main>
+  <main id="tela-dia" class="nv-tela" hidden></main>
   <main id="tela-calculadoras" class="nv-tela" hidden></main>
 </div>
 

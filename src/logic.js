@@ -280,6 +280,7 @@ function filtrarLancamentos(lancamentos, ano, mes, opcoes = {}) {
     .filter((item) => {
       if (filtro === 'receitas') return item.lancamento.tipo === 'receita';
       if (filtro === 'despesas') return item.lancamento.tipo === 'despesa';
+      if (filtro === 'transferencias') return item.lancamento.tipo === 'transferencia';
       if (filtro === 'parcelados') return (item.lancamento.parcelas || 1) > 1;
       return true;
     })
@@ -295,7 +296,12 @@ function filtrarLancamentos(lancamentos, ano, mes, opcoes = {}) {
 
 function totalFiltrado(itensFiltrados) {
   return itensFiltrados.reduce(
-    (soma, l) => soma + (l.tipo === 'receita' ? parcelaValor(l) : -parcelaValor(l)),
+    // Transferência entre contas próprias não é ganho nem perda: se entrasse aqui como saída,
+    // o total da lista contradiria o saldo do mês, que já a ignora.
+    (soma, l) => {
+      if (l.tipo === 'transferencia') return soma;
+      return soma + (l.tipo === 'receita' ? parcelaValor(l) : -parcelaValor(l));
+    },
     0
   );
 }
@@ -411,6 +417,128 @@ function aporteNecessarioParaMeta({ capitalInicial = 0, meses, taxaMensal = 0, v
   const capitalFuturo = capitalInicial * Math.pow(1 + taxaMensal, meses);
   const fatorAnuidade = (Math.pow(1 + taxaMensal, meses) - 1) / taxaMensal;
   return { aporteMensal: Math.max(0, (valorAlvo - capitalFuturo) / fatorAnuidade) };
+}
+
+// --- Calendário financeiro ---
+
+// Um registro por dia COM movimento (dia parado não vira chave), no formato que a grade do
+// calendário consome: entrada, saída e o saldo do dia. Transferência de propósito não entra —
+// mover dinheiro entre contas próprias não é ganho nem perda, e pintaria o dia de vermelho à toa.
+function resumoDiario(lancamentos, ano, mes) {
+  const dias = {};
+  for (const l of lancamentos || []) {
+    if (l.tipo !== 'receita' && l.tipo !== 'despesa') continue;
+    const { noMes, numeroParcela } = parcelaNoMes(l, ano, mes);
+    if (!noMes) continue;
+    // A parcela é cobrada no mesmo DIA do mês da compra, então o dia vem da data original mas o
+    // mês/ano vêm do mês exibido — senão a parcela 3 apareceria no mês da compra.
+    const diaDoMes = Number(l.data.split('-')[2]);
+    const chave = `${ano}-${String(mes).padStart(2, '0')}-${String(diaDoMes).padStart(2, '0')}`;
+    if (!dias[chave]) dias[chave] = { data: chave, entrada: 0, saida: 0, saldo: 0, quantidade: 0 };
+    const valor = parcelaValor(l);
+    if (l.tipo === 'receita') dias[chave].entrada += valor;
+    else dias[chave].saida += valor;
+    dias[chave].saldo = dias[chave].entrada - dias[chave].saida;
+    dias[chave].quantidade += 1;
+    void numeroParcela;
+  }
+  return dias;
+}
+
+// O que aconteceu numa data específica — usado ao tocar num dia do calendário. Diferente de
+// resumoDiario, aqui a transferência aparece: ela não conta como ganho/perda, mas é movimento
+// que a pessoa fez naquele dia e faz falta no extrato do dia.
+function lancamentosDoDia(lancamentos, data) {
+  const [ano, mes, dia] = String(data).split('-').map(Number);
+  const resultado = [];
+  for (const l of lancamentos || []) {
+    const { noMes, numeroParcela } = parcelaNoMes(l, ano, mes);
+    if (!noMes) continue;
+    if (Number(l.data.split('-')[2]) !== dia) continue;
+    resultado.push({
+      id: l.id,
+      tipo: l.tipo,
+      categoria: l.categoria,
+      descricao: l.descricao || l.categoria,
+      valor: parcelaValor(l),
+      numeroParcela,
+      parcelas: l.parcelas || 1,
+    });
+  }
+  return resultado;
+}
+
+// --- Entrada por linguagem natural ---
+
+// Palavra-chave → categoria. É de propósito uma tabela burra, sem IA: roda offline, é instantânea
+// e o usuário confirma tudo numa tela antes de salvar, então errar aqui custa um toque, não um
+// lançamento errado. Interpretar frase solta de verdade ("almoço com o pessoal, dividido em 2")
+// depende de um modelo e, portanto, da migração pra app hospedado.
+const PALAVRAS_CATEGORIA = [
+  ['Alimentação', ['mercado', 'supermercado', 'feira', 'padaria', 'almoco', 'almoço', 'janta', 'jantar', 'lanche', 'ifood', 'restaurante', 'cafe', 'café', 'pizza', 'acougue', 'açougue', 'hortifruti']],
+  ['Transporte', ['uber', '99', 'taxi', 'táxi', 'onibus', 'ônibus', 'metro', 'metrô', 'gasolina', 'combustivel', 'combustível', 'etanol', 'estacionamento', 'pedagio', 'pedágio', 'passagem', 'ipva', 'oficina']],
+  ['Moradia', ['aluguel', 'condominio', 'condomínio', 'luz', 'energia', 'agua', 'água', 'gas', 'gás', 'internet', 'iptu', 'faxina', 'reforma', 'movel', 'móvel']],
+  ['Saúde', ['farmacia', 'farmácia', 'remedio', 'remédio', 'medico', 'médico', 'dentista', 'consulta', 'exame', 'plano de saude', 'academia', 'terapia', 'psicologo', 'psicólogo']],
+  ['Educação', ['curso', 'faculdade', 'mensalidade', 'livro', 'material escolar', 'escola', 'apostila']],
+  ['Lazer', ['cinema', 'show', 'bar', 'cerveja', 'viagem', 'hotel', 'jogo', 'passeio', 'balada', 'teatro']],
+  ['Assinaturas', ['netflix', 'spotify', 'disney', 'prime', 'hbo', 'max', 'youtube', 'assinatura', 'plano', 'icloud', 'chatgpt']],
+  ['Vestuário', ['roupa', 'camisa', 'calca', 'calça', 'tenis', 'tênis', 'sapato', 'vestido', 'jaqueta']],
+];
+
+const PALAVRAS_RECEITA = [
+  ['Salário', ['salario', 'salário', 'pagamento', 'holerite', 'decimo', 'décimo']],
+  ['Freelance', ['freela', 'freelance', 'bico', 'servico extra', 'serviço extra']],
+  ['Investimentos', ['dividendo', 'jcp', 'rendimento', 'juros', 'provento']],
+  ['Outras Receitas', ['presente', 'reembolso', 'restituicao', 'restituição', 'venda']],
+];
+
+// Compara sem acento e sem maiúscula, pra "SALARIO", "Salário" e "salario" caírem no mesmo lugar.
+function normalizarTexto(texto) {
+  return String(texto || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+
+// Aceita "1.450,00" (brasileiro), "7.50" (teclado de celular) e "32" (inteiro). Reaproveita a
+// mesma regra de "separador mais à direita manda" já usada em numeroDecimalFlexivel.
+// O grupo de milhar usa "+", não "*": com "*" a primeira alternativa casava parcialmente um número
+// sem separador ("4500" virava "450", perdendo o último dígito). Com "+", quem não tem separador
+// cai na segunda alternativa e é capturado inteiro.
+const REGEX_VALOR = /(?:r\$\s*)?(\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)/i;
+
+function interpretarLancamento(texto) {
+  const original = String(texto || '').trim();
+  const semParcelas = original.replace(/\bem\s+\d+\s*x\b|\b\d+\s*x\b/gi, ' ');
+
+  const casouParcelas = original.match(/(\d+)\s*x\b/i);
+  const parcelas = casouParcelas ? Math.max(1, Number(casouParcelas[1])) : 1;
+
+  const casouValor = semParcelas.match(REGEX_VALOR);
+  const valorTotal = casouValor ? numeroDecimalFlexivel(casouValor[1]) : 0;
+  const temValor = !!casouValor;
+
+  // Descrição é o que sobra depois de tirar valor, "R$" e a marcação de parcela.
+  const descricao = semParcelas
+    .replace(REGEX_VALOR, ' ')
+    .replace(/r\$/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const normalizada = normalizarTexto(descricao);
+  const contem = (palavra) => new RegExp(`(^|\\s)${palavra.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(normalizada);
+
+  for (const [categoria, palavras] of PALAVRAS_RECEITA) {
+    if (palavras.some((p) => contem(normalizarTexto(p)))) {
+      return { tipo: 'receita', categoria, descricao, valorTotal, parcelas, temValor, reconheceuCategoria: true };
+    }
+  }
+  for (const [categoria, palavras] of PALAVRAS_CATEGORIA) {
+    if (palavras.some((p) => contem(normalizarTexto(p)))) {
+      return { tipo: 'despesa', categoria, descricao, valorTotal, parcelas, temValor, reconheceuCategoria: true };
+    }
+  }
+  return { tipo: 'despesa', categoria: 'Outras Despesas', descricao, valorTotal, parcelas, temValor, reconheceuCategoria: false };
 }
 
 // --- Perfil de investidor ---
@@ -670,6 +798,9 @@ if (typeof module !== 'undefined' && module.exports) {
     perfilDeInvestidor,
     alocacaoSugeridaPorPerfil,
     TIPOS_ALOCACAO,
+    interpretarLancamento,
+    resumoDiario,
+    lancamentosDoDia,
     perguntasPerfil,
     tiposAlocacao,
   };

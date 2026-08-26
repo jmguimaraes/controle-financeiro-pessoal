@@ -5,6 +5,9 @@ const {
   formatCurrency,
   formatPercent,
   formatAnos,
+  renderCalendario,
+  renderDiaDetalhe,
+  renderEntradaRapida,
   renderPerguntasPerfil,
   renderResultadoPerfil,
   renderResumo,
@@ -707,4 +710,59 @@ test('renderResultadoPerfil escapa o perfil recebido', () => {
   const html = renderResultadoPerfil('<img src=x onerror=alert(1)>', 0, {});
   assert.ok(!html.includes('<img src=x'));
   assert.ok(html.includes('&lt;img'));
+});
+
+test('renderCalendario monta a grade do mês com os dias e o saldo de cada um', () => {
+  const state = estado({
+    lancamentos: [
+      { id: '1', data: '2026-08-05', tipo: 'receita', categoria: 'Salário', descricao: 'Salário', valorTotal: 4500, parcelas: 1 },
+      { id: '2', data: '2026-08-07', tipo: 'despesa', categoria: 'Lazer', descricao: 'Cinema', valorTotal: 90, parcelas: 1 },
+    ],
+  });
+  const html = renderCalendario(state, 2026, 8);
+  assert.match(html, /AGO 2026/);
+  assert.match(html, /data-dia="2026-08-05"/);
+  assert.match(html, /data-dia="2026-08-07"/);
+  assert.match(html, /nv-dia-positivo/); // dia 5 fechou no azul
+  assert.match(html, /nv-dia-negativo/); // dia 7 fechou no vermelho
+});
+
+test('renderCalendario marca só os dias com movimento como clicáveis', () => {
+  const state = estado({
+    lancamentos: [{ id: '1', data: '2026-08-05', tipo: 'despesa', categoria: 'Lazer', descricao: 'X', valorTotal: 10, parcelas: 1 }],
+  });
+  const html = renderCalendario(state, 2026, 8);
+  assert.equal((html.match(/data-acao="abrir-dia"/g) || []).length, 1);
+});
+
+test('renderDiaDetalhe lista os lançamentos do dia com entrada, saída e saldo', () => {
+  const state = estado({
+    lancamentos: [
+      { id: '1', data: '2026-08-05', tipo: 'receita', categoria: 'Salário', descricao: 'Salário', valorTotal: 4500, parcelas: 1 },
+      { id: '2', data: '2026-08-05', tipo: 'despesa', categoria: 'Moradia', descricao: 'Aluguel', valorTotal: 1200, parcelas: 1 },
+    ],
+  });
+  const html = renderDiaDetalhe(state, '2026-08-05');
+  assert.match(html, /Salário/);
+  assert.match(html, /Aluguel/);
+  assert.match(html, /4\.500,00/);
+  assert.match(html, /1\.200,00/);
+  assert.match(html, /3\.300,00/); // saldo do dia
+});
+
+test('renderDiaDetalhe avisa quando o dia não teve movimento', () => {
+  const html = renderDiaDetalhe(estado(), '2026-08-05');
+  assert.match(html, /Nenhum lançamento/);
+});
+
+test('renderEntradaRapida mostra o campo de texto livre e um exemplo', () => {
+  const html = renderEntradaRapida();
+  assert.match(html, /campo-entrada-rapida/);
+  assert.match(html, /mercado/i); // exemplo pra ensinar o formato
+});
+
+test('renderCalendario mostra a barra de abas, senão o usuário fica preso na tela', () => {
+  const html = renderCalendario(estado(), 2026, 8);
+  assert.match(html, /nv-tabbar/);
+  assert.match(html, /data-tab="resumo"/);
 });

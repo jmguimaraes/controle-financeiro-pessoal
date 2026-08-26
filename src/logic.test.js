@@ -41,6 +41,9 @@ const {
   perfilDeInvestidor,
   alocacaoSugeridaPorPerfil,
   TIPOS_ALOCACAO,
+  interpretarLancamento,
+  resumoDiario,
+  lancamentosDoDia,
 } = require('./logic.js');
 
 const arred = (x) => Math.round(x * 100) / 100;
@@ -823,4 +826,178 @@ test('alocacaoSugeridaPorPerfil só usa tipos que o formulário manual também e
       assert.ok(TIPOS_ALOCACAO.includes(tipo), `${tipo} não está em TIPOS_ALOCACAO`);
     }
   }
+});
+
+// --- Entrada por linguagem natural ---
+
+test('interpretarLancamento extrai valor e descrição de um texto simples', () => {
+  const r = interpretarLancamento('mercado 89,90');
+  assert.equal(r.valorTotal, 89.9);
+  assert.equal(r.descricao, 'mercado');
+  assert.equal(r.tipo, 'despesa');
+});
+
+test('interpretarLancamento aceita valor com milhar e valor inteiro', () => {
+  assert.equal(interpretarLancamento('aluguel 1.450,00').valorTotal, 1450);
+  assert.equal(interpretarLancamento('uber 32').valorTotal, 32);
+  assert.equal(interpretarLancamento('cafe 7.50').valorTotal, 7.5);
+});
+
+test('interpretarLancamento aceita o valor antes da descrição', () => {
+  const r = interpretarLancamento('45 farmácia');
+  assert.equal(r.valorTotal, 45);
+  assert.equal(r.descricao, 'farmácia');
+});
+
+test('interpretarLancamento ignora "R$" e não o confunde com a descrição', () => {
+  const r = interpretarLancamento('padaria R$ 12,50');
+  assert.equal(r.valorTotal, 12.5);
+  assert.equal(r.descricao, 'padaria');
+});
+
+test('interpretarLancamento adivinha a categoria por palavra-chave', () => {
+  assert.equal(interpretarLancamento('mercado 90').categoria, 'Alimentação');
+  assert.equal(interpretarLancamento('uber 32').categoria, 'Transporte');
+  assert.equal(interpretarLancamento('aluguel 1500').categoria, 'Moradia');
+  assert.equal(interpretarLancamento('farmácia 45').categoria, 'Saúde');
+  assert.equal(interpretarLancamento('netflix 39,90').categoria, 'Assinaturas');
+  assert.equal(interpretarLancamento('cinema 60').categoria, 'Lazer');
+});
+
+test('interpretarLancamento reconhece receita e usa categoria de receita', () => {
+  const r = interpretarLancamento('salário 4500');
+  assert.equal(r.tipo, 'receita');
+  assert.equal(r.categoria, 'Salário');
+  assert.equal(r.valorTotal, 4500);
+});
+
+test('interpretarLancamento acha a palavra-chave sem depender de acento nem maiúscula', () => {
+  assert.equal(interpretarLancamento('SALARIO 4500').tipo, 'receita');
+  assert.equal(interpretarLancamento('Farmacia 45').categoria, 'Saúde');
+});
+
+test('interpretarLancamento cai em "Outras Despesas" quando não reconhece a palavra', () => {
+  const r = interpretarLancamento('xyzabc 30');
+  assert.equal(r.categoria, 'Outras Despesas');
+  assert.equal(r.tipo, 'despesa');
+  assert.equal(r.reconheceuCategoria, false);
+});
+
+test('interpretarLancamento entende parcelamento escrito como 3x', () => {
+  const r = interpretarLancamento('notebook 3600 em 12x');
+  assert.equal(r.valorTotal, 3600);
+  assert.equal(r.parcelas, 12);
+});
+
+test('interpretarLancamento devolve valor 0 e avisa quando não acha número', () => {
+  const r = interpretarLancamento('só um texto sem número');
+  assert.equal(r.valorTotal, 0);
+  assert.equal(r.temValor, false);
+});
+
+test('interpretarLancamento lida com texto vazio sem quebrar', () => {
+  const r = interpretarLancamento('');
+  assert.equal(r.valorTotal, 0);
+  assert.equal(r.temValor, false);
+  assert.equal(r.descricao, '');
+});
+
+// --- Transferência entre contas ---
+
+test('transferência não entra em receitas nem despesas do mês', () => {
+  // Sem isso, pagar a fatura do cartão tirando da conta inflaria o gasto do mês com dinheiro
+  // que não foi gasto — o saldo do mês ficaria errado.
+  const lancamentos = [
+    { id: '1', data: '2026-08-01', tipo: 'receita', categoria: 'Salário', valorTotal: 4500, parcelas: 1 },
+    { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Moradia', valorTotal: 1200, parcelas: 1 },
+    { id: '3', data: '2026-08-03', tipo: 'transferencia', categoria: 'Transferência', valorTotal: 800, parcelas: 1, contaOrigem: 'c1', contaDestino: 'c2' },
+  ];
+  const r = resumoMensal(lancamentos, 2026, 8);
+  assert.equal(r.receitas, 4500);
+  assert.equal(r.despesas, 1200);
+  assert.equal(r.saldo, 3300);
+});
+
+test('transferência não aparece nos gastos por categoria', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-02', tipo: 'despesa', categoria: 'Moradia', valorTotal: 1200, parcelas: 1 },
+    { id: '2', data: '2026-08-03', tipo: 'transferencia', categoria: 'Transferência', valorTotal: 800, parcelas: 1 },
+  ];
+  const cats = gastosPorCategoria(lancamentos, 2026, 8);
+  assert.equal(cats.length, 1);
+  assert.equal(cats[0].categoria, 'Moradia');
+});
+
+test('filtrarLancamentos tem um filtro só de transferências', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-02', tipo: 'despesa', categoria: 'Moradia', descricao: 'Aluguel', valorTotal: 1200, parcelas: 1 },
+    { id: '2', data: '2026-08-03', tipo: 'transferencia', categoria: 'Transferência', descricao: 'Pagar fatura', valorTotal: 800, parcelas: 1 },
+  ];
+  const r = filtrarLancamentos(lancamentos, 2026, 8, { filtro: 'transferencias' });
+  assert.equal(r.length, 1);
+  assert.equal(r[0].descricao, 'Pagar fatura');
+});
+
+// --- Calendário financeiro ---
+
+test('resumoDiario devolve um dia por data com movimento, com entrada, saída e saldo', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-05', tipo: 'receita', categoria: 'Salário', valorTotal: 4500, parcelas: 1 },
+    { id: '2', data: '2026-08-05', tipo: 'despesa', categoria: 'Moradia', valorTotal: 1200, parcelas: 1 },
+    { id: '3', data: '2026-08-07', tipo: 'despesa', categoria: 'Lazer', valorTotal: 90, parcelas: 1 },
+  ];
+  const dias = resumoDiario(lancamentos, 2026, 8);
+  assert.equal(dias['2026-08-05'].entrada, 4500);
+  assert.equal(dias['2026-08-05'].saida, 1200);
+  assert.equal(dias['2026-08-05'].saldo, 3300);
+  assert.equal(dias['2026-08-07'].saldo, -90);
+  assert.equal(dias['2026-08-06'], undefined);
+});
+
+test('resumoDiario ignora transferência, que não é ganho nem perda', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-05', tipo: 'transferencia', categoria: 'Transferência', valorTotal: 800, parcelas: 1 },
+  ];
+  assert.equal(resumoDiario(lancamentos, 2026, 8)['2026-08-05'], undefined);
+});
+
+test('resumoDiario lança a parcela no dia do mês corrente, não na data da compra', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-06-12', tipo: 'despesa', categoria: 'Outras Despesas', valorTotal: 3600, parcelas: 12 },
+  ];
+  const dias = resumoDiario(lancamentos, 2026, 8);
+  assert.equal(dias['2026-08-12'].saida, 300);
+  assert.equal(dias['2026-08-12'].saldo, -300);
+});
+
+test('lancamentosDoDia lista o que aconteceu numa data, incluindo transferência', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-05', tipo: 'receita', categoria: 'Salário', descricao: 'Salário', valorTotal: 4500, parcelas: 1 },
+    { id: '2', data: '2026-08-05', tipo: 'transferencia', categoria: 'Transferência', descricao: 'Fatura', valorTotal: 800, parcelas: 1 },
+    { id: '3', data: '2026-08-09', tipo: 'despesa', categoria: 'Lazer', descricao: 'Cinema', valorTotal: 90, parcelas: 1 },
+  ];
+  const doDia = lancamentosDoDia(lancamentos, '2026-08-05');
+  assert.equal(doDia.length, 2);
+  assert.deepEqual(doDia.map((d) => d.descricao).sort(), ['Fatura', 'Salário']);
+});
+
+test('lancamentosDoDia inclui a parcela que cai naquele dia de um parcelamento antigo', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-06-12', tipo: 'despesa', categoria: 'Outras Despesas', descricao: 'Notebook', valorTotal: 3600, parcelas: 12 },
+  ];
+  const doDia = lancamentosDoDia(lancamentos, '2026-08-12');
+  assert.equal(doDia.length, 1);
+  assert.equal(doDia[0].valor, 300);
+  assert.equal(doDia[0].numeroParcela, 3);
+});
+
+test('totalFiltrado ignora transferência, que não soma nem subtrai do total do filtro', () => {
+  // Sem isso, uma transferência apareceria como saída no total da lista filtrada, contradizendo
+  // o saldo do mês (que já a ignora) — dois números diferentes pra mesma coisa na mesma tela.
+  const itens = [
+    { id: '1', tipo: 'receita', data: '2026-08-01', valorTotal: 1000, parcelas: 1 },
+    { id: '2', tipo: 'despesa', data: '2026-08-02', valorTotal: 300, parcelas: 1 },
+    { id: '3', tipo: 'transferencia', data: '2026-08-03', valorTotal: 800, parcelas: 1 },
+  ];
+  assert.equal(totalFiltrado(itens), 700);
 });
