@@ -9,7 +9,10 @@ const render = fs.readFileSync(path.join(dir, 'src', 'render.js'), 'utf8');
 const app = fs.readFileSync(path.join(dir, 'src', 'app.js'), 'utf8');
 
 const script = `<script>\n${logic}\n${i18n}\n${render}\n${app}\n</script>`;
-const saida = shell.replace('<!-- SCRIPT_INJECT -->', script);
+// Função como substituto, não string: numa string de substituição o JS interpreta $&, $` e $',
+// então qualquer código-fonte contendo esses padrões (um escape de regex com '\\$&', por exemplo)
+// sairia corrompido no bundle. Com a função, o texto vai literal.
+const saida = shell.replace('<!-- SCRIPT_INJECT -->', () => script);
 
 if (saida === shell) {
   throw new Error('Marcador <!-- SCRIPT_INJECT --> não encontrado em shell.html');
