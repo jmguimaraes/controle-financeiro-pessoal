@@ -1,3 +1,4 @@
 dist/
 design/*.html
 !design/*.dc.html
+dist-demo/
