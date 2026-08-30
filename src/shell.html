@@ -17,6 +17,9 @@
   --nv-surface-borda:rgba(32,30,29,.07);
   --nv-sombra:0 1px 2px rgba(32,30,29,.04),0 10px 24px -14px rgba(32,30,29,.22);
   --nv-raio-cartao:20px;--nv-raio-interno:14px;
+  /* Tinta de fundo para estado (dia positivo, meta estourada, alerta crítico): a cor do texto
+     sozinha não marca uma célula de calendário, e borda dura foi o que fez a tela parecer papel. */
+  --nv-tint-pos:rgba(18,133,78,.10);--nv-tint-neg:rgba(236,48,19,.09);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -32,6 +35,7 @@
     --nv-chao:#141212;--nv-surface:#211f1e;--nv-surface-2:#2a2726;
     --nv-surface-borda:rgba(243,242,242,.07);
     --nv-sombra:0 1px 2px rgba(0,0,0,.35);
+    --nv-tint-pos:rgba(127,214,163,.13);--nv-tint-neg:rgba(255,106,77,.13);
   }
 }
 :root[data-theme="dark"]{
@@ -45,6 +49,7 @@
   --nv-chao:#141212;--nv-surface:#211f1e;--nv-surface-2:#2a2726;
   --nv-surface-borda:rgba(243,242,242,.07);
   --nv-sombra:0 1px 2px rgba(0,0,0,.35);
+  --nv-tint-pos:rgba(127,214,163,.13);--nv-tint-neg:rgba(255,106,77,.13);
 }
 *{box-sizing:border-box;}
 html,body{margin:0;}
@@ -166,29 +171,15 @@ button.nv-dia{cursor:pointer;}
 .nv-perfil-resumo{font-size:12px;color:var(--nv-muted);line-height:1.5;margin:12px 0 0;}
 .nv-perfil-aviso{font-size:10px;line-height:1.5;color:var(--nv-muted);margin:18px 0 0;padding-top:12px;border-top:1px solid var(--nv-rule-soft);}
 
-.nv-hero{padding:22px 20px 18px;border-bottom:2px solid var(--nv-rule-strong);}
-.nv-hero-label{font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--nv-muted);}
-.nv-hero-value{display:flex;align-items:baseline;gap:6px;margin-top:8px;}
-.nv-hero-value .cifrao{font-size:20px;font-weight:600;color:var(--nv-muted);}
-.nv-hero-value .numero{font-size:52px;font-weight:600;letter-spacing:-.035em;line-height:.9;font-variant-numeric:tabular-nums;}
-.nv-hero-value input{font-family:inherit;background:none;border:none;color:inherit;outline:none;padding:0;width:100%;font-size:52px;font-weight:600;letter-spacing:-.035em;font-variant-numeric:tabular-nums;}
-.nv-hero-sub{margin-top:12px;font-size:11px;font-weight:600;color:var(--nv-muted);}
-
-.nv-sparkline{padding:16px 20px 14px;border-bottom:1px solid var(--nv-rule-soft);}
-.nv-sparkline-axis{display:flex;justify-content:space-between;margin-top:8px;font-size:9px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted);}
-
 .nv-cells{display:flex;border-bottom:1px solid var(--nv-rule-soft);}
-.nv-cells--linha{border-top:1px solid var(--nv-rule-soft);border-bottom:2px solid var(--nv-rule-strong);}
 .nv-cell{flex:1;padding:14px 20px;}
 .nv-cell+.nv-cell{border-left:1px solid var(--nv-rule-soft);}
 .nv-cell-label{font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--nv-muted);}
 .nv-cell-valor{font-size:17px;font-weight:600;margin-top:5px;font-variant-numeric:tabular-nums;}
 .nv-select-inline{margin-top:3px;font-size:12px;font-weight:600;background:none;border:none;color:inherit;padding:0;width:100%;}
 
-.nv-section-head{padding:16px 20px 8px;display:flex;justify-content:space-between;align-items:baseline;}
-/* .nv-label é o mesmo rótulo de seção usado solto (rodapé do calendário, patrimônio líquido,
-   resultado do perfil). Estava sem regra nenhuma e saía como texto corrido. */
-.nv-section-label,.nv-label{font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--nv-muted);}
+/* .nv-label: rótulo de seção solto (rodapé do calendário, patrimônio líquido, resultado do perfil). */
+.nv-label{font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--nv-muted);}
 
 /* Linha de item sem clique — mesma medida da linha de lançamento, sem o cursor de ponteiro.
    Também estava sem regra: no detalhe do dia o nome colava na régua de cima e o valor caía
@@ -219,20 +210,11 @@ button.nv-dia{cursor:pointer;}
 
 .nv-vazio{color:var(--nv-muted);text-align:center;padding:16px 20px;font-size:.9rem;}
 
-.nv-tabbar{display:flex;border-top:2px solid var(--nv-rule-strong);margin-top:auto;}
-.nv-tabbar button{flex:1;padding:12px 0;text-align:center;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--nv-muted-2);background:none;border:none;cursor:pointer;font-family:inherit;}
-.nv-tabbar button.ativo{color:var(--nv-accent);border-top:3px solid var(--nv-accent);margin-top:-3px;}
 
-.nv-search{padding:12px 20px 0;}
-.nv-search-box{display:flex;align-items:center;gap:8px;border:2px solid var(--nv-rule-soft);border-radius:var(--nv-radius-control);padding:9px 13px;}
-.nv-search-box input{border:none;background:none;outline:none;font:inherit;color:inherit;width:100%;}
-.nv-search-box svg{flex:none;color:var(--nv-muted);}
 .nv-chips{display:flex;gap:6px;padding:12px 20px;overflow-x:auto;}
 .nv-chip{font-size:10px;font-weight:600;letter-spacing:.1em;padding:6px 12px;border-radius:var(--nv-radius-pill);border:1px solid var(--nv-rule-soft);background:none;color:inherit;cursor:pointer;white-space:nowrap;font-family:inherit;}
 .nv-chip.ativo{background:var(--nv-accent);border-color:var(--nv-accent);color:var(--nv-on-accent);}
 
-.nv-grupo-lista{flex:1;display:flex;flex-direction:column;}
-.nv-grupo-data{padding:9px 20px 6px;font-size:9px;font-weight:600;letter-spacing:.14em;color:var(--nv-muted-2);background:var(--nv-group-bg);}
 .nv-item-lanc{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--nv-hairline);cursor:pointer;background:none;width:100%;text-align:left;border-left:none;border-right:none;border-top:none;font-family:inherit;color:inherit;}
 .nv-item-nome{font-size:13px;font-weight:600;}
 .nv-item-meta{font-size:11px;color:var(--nv-muted-2);margin-top:2px;}
@@ -249,7 +231,6 @@ button.nv-dia{cursor:pointer;}
 
 .nv-segmentado{display:flex;border-bottom:2px solid var(--nv-rule-strong);}
 .nv-segmentado button{flex:1;padding:11px 0;text-align:center;font-size:11px;font-weight:600;letter-spacing:.1em;background:none;border:none;cursor:pointer;color:inherit;font-family:inherit;border-left:1px solid var(--nv-rule-soft);}
-.nv-valor-grande{padding:18px 20px 4px;}
 .nv-segmentado button:first-child{border-left:none;}
 .nv-segmentado button.ativo{background:var(--nv-accent);color:var(--nv-on-accent);}
 
@@ -312,8 +293,6 @@ dialog .nv-combo-input{font-family:inherit;font-size:1rem;padding:8px;border-rad
 .nv-orcamento-track{height:8px;border-radius:var(--nv-radius-pill);background:var(--nv-track);margin-top:14px;}
 .nv-orcamento-fill{height:8px;border-radius:var(--nv-radius-pill);background:var(--nv-fg);}
 .nv-orcamento-sub{margin-top:8px;font-size:11px;font-weight:600;color:var(--nv-muted);}
-.nv-meta-item{padding:15px 20px;border-bottom:1px solid var(--nv-rule-soft);cursor:pointer;}
-.nv-meta-item.excedida{background:var(--nv-alert-bg);}
 .nv-meta-topo{display:flex;justify-content:space-between;align-items:baseline;}
 .nv-meta-nome{font-size:14px;font-weight:600;}
 .nv-meta-valores{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
@@ -371,6 +350,154 @@ dialog input[type="checkbox"]{accent-color:var(--nv-accent);padding:0;border:non
 .form-acoes{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
 .form-acoes button{padding:8px 16px;border-radius:8px;border:1px solid var(--nv-rule-soft);background:var(--nv-bg);color:var(--nv-fg);cursor:pointer;font-family:inherit;}
 .form-acoes button.primario{background:var(--nv-accent);border-color:var(--nv-accent);color:var(--nv-on-accent);}
+
+/* ---- Camada de cartões ----------------------------------------------------------------------
+   Leva a linguagem do Resumo para o resto do app. Vem depois das regras originais de propósito:
+   as outras telas foram desenhadas em réguas duras de ponta a ponta, e aqui cada bloco passa a
+   viver DENTRO de um cartão — que já dá a margem lateral e separa uma coisa da outra pelo espaço,
+   não por uma linha. As classes antigas continuam as mesmas; o que muda é a superfície. */
+
+.nv-tela--cartoes .nv-header{background:transparent;border-bottom:none;padding:16px 18px 4px;}
+.nv-tela--cartoes .nv-header .nv-title{font-size:24px;}
+/* Setas de mês viram botões redondos apoiados no chão: alvo de toque maior e coerente com o
+   resto — no desenho antigo eram dois caracteres soltos sem área de clique nenhuma. */
+.nv-tela--cartoes .nv-monthnav button[data-acao^="mes-"]{width:32px;height:32px;padding:0;border-radius:50%;background:var(--nv-surface);border:1px solid var(--nv-surface-borda);display:inline-flex;align-items:center;justify-content:center;font-size:18px;}
+.nv-tela--cartoes .nv-back{width:34px;height:34px;border-radius:50%;background:var(--nv-surface);border:1px solid var(--nv-surface-borda);display:inline-flex;align-items:center;justify-content:center;font-size:19px;flex:none;}
+
+/* Rótulo de seção solto no chão, entre dois cartões. */
+.nv-pilha-titulo{font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--nv-muted);text-transform:uppercase;padding:8px 4px 0;}
+
+/* Lista de linhas dentro de um cartão: sem margem lateral própria (o cartão já dá), régua fraca
+   entre as linhas e nenhuma na última — régua no fim do cartão duplicaria a borda dele. */
+.nv-lista>*{padding-left:0;padding-right:0;border-bottom:1px solid var(--nv-surface-borda);}
+.nv-cartao .nv-lista>*:first-child{padding-top:0;}
+.nv-cartao .nv-lista>*:last-child{border-bottom:none;padding-bottom:0;}
+.nv-lista .nv-item-nome{font-size:14px;}
+.nv-lista .nv-item-valor{font-size:14.5px;}
+
+/* O valor do lançamento entra em verde ou vermelho aqui também: fora do cartão essa cor vinha de
+   .nv-item-valor, e a linha de cartão (.nv-linha-valor) tinha ficado sem regra nenhuma. */
+.nv-linha-valor.positivo{color:var(--nv-positive);}
+.nv-linha-valor.negativo{color:var(--nv-negative);}
+/* Campo de valor dentro do cartão de saldo (novo lançamento) — mesma medida do número exibido. */
+.nv-saldo-valor input{font-family:inherit;background:none;border:none;color:inherit;outline:none;padding:0;width:100%;font-size:44px;font-weight:600;line-height:.95;letter-spacing:-.035em;font-variant-numeric:tabular-nums;}
+.nv-cartao .nv-row-plain{border-bottom-color:var(--nv-surface-borda);}
+
+/* Blocos herdados que traziam o próprio recuo de 20px e a própria régua de fim de seção. */
+.nv-cartao .nv-orcamento,.nv-cartao .nv-barras-meses,.nv-cartao .nv-patrimonio,
+.nv-cartao .nv-perfil,.nv-cartao .nv-composicao,.nv-cartao .nv-calendario,.nv-cartao .nv-bars,
+.nv-cartao .nv-list-plain,.nv-cartao .nv-alertas,.nv-cartao .nv-entrada-rapida,.nv-cartao .nv-cells{
+  padding:0;border:none;
+}
+.nv-cartao .nv-cell{padding:0;}
+.nv-cartao .nv-cell+.nv-cell{border-left:none;padding-left:18px;}
+.nv-cartao .nv-vazio{padding:14px 0;}
+.nv-cartao .nv-entrada-rapida-dica{padding:9px 2px 0;}
+.nv-cartao .nv-barras-meses-grid{border-bottom:1px solid var(--nv-surface-borda);}
+.nv-cartao .nv-calendario-rodape{border-top:1px solid var(--nv-surface-borda);margin-top:16px;}
+
+/* Campos de formulário empilhados dentro de um cartão. */
+.nv-cartao>.nv-campo-linha,.nv-cartao>.nv-linha-toggle,.nv-cartao>.nv-campo-dupla,.nv-cartao>.nv-meta-linha{
+  padding-left:0;padding-right:0;border-bottom:1px solid var(--nv-surface-borda);
+}
+.nv-cartao>.nv-campo-linha:first-child,.nv-cartao>.nv-linha-toggle:first-child,.nv-cartao>.nv-campo-dupla:first-child{padding-top:0;}
+.nv-cartao>.nv-campo-linha:last-child,.nv-cartao>.nv-linha-toggle:last-child,.nv-cartao>.nv-campo-dupla:last-child,.nv-cartao>.nv-meta-linha:last-child{border-bottom:none;padding-bottom:0;}
+.nv-cartao .nv-campo-dupla>div{padding:12px 0;}
+.nv-cartao .nv-campo-dupla>div:first-child{border-right:none;padding-right:14px;}
+.nv-cartao .nv-campo-dupla>div+div{padding-left:14px;border-left:1px solid var(--nv-surface-borda);}
+.nv-cartao .nv-campo-label{letter-spacing:.1em;font-size:10px;}
+.nv-cartao .nv-campo-linha input,.nv-cartao .nv-campo-linha select,
+.nv-cartao .nv-campo-dupla input,.nv-cartao .nv-campo-dupla select{margin-top:6px;}
+
+/* Busca: pílula própria, apoiada no chão como um cartão baixo. */
+.nv-busca{display:flex;align-items:center;gap:9px;background:var(--nv-surface);border:1px solid var(--nv-surface-borda);border-radius:var(--nv-radius-pill);box-shadow:var(--nv-sombra);padding:12px 16px;}
+.nv-busca input{border:none;background:none;outline:none;font:inherit;font-size:14px;color:inherit;width:100%;}
+.nv-busca input::placeholder{color:var(--nv-muted-2);}
+.nv-busca svg{flex:none;color:var(--nv-muted);}
+
+/* Filtros em pílula, rolando na horizontal sem barra visível. */
+/* Sangra até a borda da tela: dentro do recuo da pilha o último filtro era cortado no meio de um
+   vão vazio e parecia defeito, em vez de convidar a arrastar. */
+.nv-tela--cartoes .nv-chips{margin:0 -14px;padding:2px 14px 0;gap:7px;scrollbar-width:none;}
+.nv-tela--cartoes .nv-chips::-webkit-scrollbar{display:none;}
+.nv-tela--cartoes .nv-chip{background:var(--nv-surface);border:1px solid var(--nv-surface-borda);box-shadow:var(--nv-sombra);padding:9px 14px;font-size:10.5px;color:var(--nv-muted);}
+.nv-tela--cartoes .nv-chip.ativo{background:var(--nv-accent);border-color:var(--nv-accent);color:var(--nv-on-accent);}
+
+/* Segmentado: trilho macio com a opção ativa em pílula, no lugar das abas de borda dura. */
+.nv-tela--cartoes .nv-segmentado,.nv-segmentado-tema{display:flex;gap:4px;padding:4px;border:1px solid var(--nv-surface-borda);border-radius:var(--nv-radius-pill);background:var(--nv-surface);box-shadow:var(--nv-sombra);overflow:visible;}
+.nv-tela--cartoes .nv-segmentado button,.nv-segmentado-tema button{flex:1;min-width:0;border:none;border-radius:var(--nv-radius-pill);padding:11px 4px;font-size:11px;letter-spacing:.06em;color:var(--nv-muted);background:none;}
+.nv-tela--cartoes .nv-segmentado button.ativo,.nv-segmentado-tema button.ativo{background:var(--nv-accent);color:var(--nv-on-accent);}
+
+/* Botões de ação: mesma altura e mesmo raio dos cartões, conteúdo centrado. */
+.nv-tela--cartoes .nv-acao-fixa{padding:4px 0 0;}
+.nv-tela--cartoes .nv-btn-cheio,.nv-tela--cartoes .nv-btn-contorno{justify-content:center;gap:9px;border-radius:var(--nv-raio-interno);padding:16px 18px;box-shadow:var(--nv-sombra);}
+.nv-tela--cartoes .nv-btn-contorno{border:1px solid var(--nv-surface-borda);background:var(--nv-surface);}
+
+/* Calendário: dia sem borda, tingido só quando teve movimento.
+   min-width:0 é o que segura a grade dentro do cartão — item de grid tem largura mínima igual ao
+   conteúdo, e um valor que não quebra alargava a coluna até a última passar da borda. */
+.nv-tela--cartoes .nv-dia{border:none;background:var(--nv-surface-2);border-radius:11px;gap:3px;min-width:0;overflow:hidden;}
+.nv-tela--cartoes .nv-dia-valor{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nv-tela--cartoes .nv-dia-vazio{background:none;}
+.nv-tela--cartoes .nv-dia-positivo{background:var(--nv-tint-pos);}
+.nv-tela--cartoes .nv-dia-negativo{background:var(--nv-tint-neg);}
+.nv-tela--cartoes .nv-grade,.nv-tela--cartoes .nv-dias-semana{gap:5px;}
+
+/* Metas: cada meta é um cartão clicável; a que estourou fica tingida em vez de ganhar régua. */
+.nv-meta-cartao{display:block;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;}
+.nv-meta-cartao.excedida{background:var(--nv-tint-neg);border-color:transparent;}
+.nv-tela--cartoes .nv-meta-track,.nv-tela--cartoes .nv-meta-fill{height:7px;}
+.nv-tela--cartoes .nv-meta-fill{background:var(--nv-accent);}
+.nv-tela--cartoes .nv-orcamento-fill{background:var(--nv-accent);}
+
+/* Alerta dentro de cartão: fundo tingido no lugar da tarja lateral. */
+.nv-cartao .nv-alerta{border-left:none;background:var(--nv-surface-2);border-radius:var(--nv-raio-interno);padding:12px 14px;}
+.nv-cartao .nv-alerta--critico{background:var(--nv-tint-neg);}
+
+/* Ativos e contas: linha com respiro, sem régua de ponta a ponta. */
+.nv-tela--cartoes .nv-ativo-linha,.nv-tela--cartoes .nv-conta-linha,.nv-tela--cartoes .nv-item-lanc,
+.nv-tela--cartoes .nv-dado-linha,.nv-tela--cartoes .nv-item{padding-top:13px;padding-bottom:13px;}
+.nv-tela--cartoes .nv-conta-marcador{border:none;background:var(--nv-surface-2);width:34px;height:34px;border-radius:11px;font-size:13px;color:var(--nv-fg);}
+.nv-tela--cartoes .nv-badge{background:var(--nv-surface-2);color:var(--nv-fg);padding:5px 10px;border-radius:var(--nv-radius-pill);}
+
+/* Stepper de parcelas: um controle só, em pílula, no lugar de três caixas de borda dura
+   encostadas — a do meio nem tinha lateral, o que fazia o número parecer solto entre dois botões. */
+.nv-tela--cartoes .nv-stepper{background:var(--nv-surface-2);border-radius:var(--nv-radius-pill);padding:3px;gap:2px;}
+.nv-tela--cartoes .nv-stepper button{border:none;background:var(--nv-surface);border-radius:50%;width:30px;height:30px;box-shadow:var(--nv-sombra);}
+.nv-tela--cartoes .nv-stepper span{border:none;width:38px;height:30px;}
+
+/* Rendimento: o selo segue o sinal. O acento da marca é vermelho, e um "+14%" em vermelho diz o
+   contrário do que aconteceu — a mesma razão que já tinha levado "positivo" pro verde. */
+.nv-carteira-badge{background:var(--nv-tint-pos);color:var(--nv-positive);}
+.nv-carteira-badge--negativo{background:var(--nv-tint-neg);color:var(--nv-negative);}
+
+/* Convite do teste de perfil: cartão de destaque, com o acento no botão. */
+.nv-tela--cartoes .nv-perfil-convite{margin:0;border:none;border-radius:var(--nv-raio-cartao);background:var(--nv-surface);box-shadow:var(--nv-sombra);}
+.nv-tela--cartoes .nv-perfil-cta{color:var(--nv-on-accent);padding:12px 20px;}
+
+/* Rodapé do formulário: o saldo projetado é informação de apoio, não um bloco com régua dupla. */
+.nv-tela--cartoes .nv-rodape-form{padding:8px 0 0;}
+.nv-tela--cartoes .nv-rodape-saldo{border-top:none;padding:0 4px 4px;}
+.nv-tela--cartoes .nv-rodape-versao{padding:16px 4px;text-align:center;}
+
+/* Diálogos (novo ativo, conta, meta, dívida, operação) na mesma linguagem: são a metade do app
+   que se preenche, e ficavam com a caixa quadrada e o campo de borda dura do desenho antigo. */
+/* max-height + rolagem: o formulário de investimento tem sete campos e, num aparelho baixo, o
+   botão Salvar ficava fora da tela sem nenhuma forma de alcançá-lo. */
+dialog{background:var(--nv-surface);border-radius:var(--nv-raio-cartao);padding:22px 20px 18px;box-shadow:0 24px 60px -22px rgba(0,0,0,.5);max-height:88dvh;overflow-y:auto;}
+dialog h3{font-size:17px;letter-spacing:-.01em;margin-bottom:16px;}
+dialog label{gap:6px;margin-bottom:14px;}
+dialog input,dialog select,dialog textarea,dialog .nv-combo-gatilho,dialog .nv-combo-input{
+  border:1px solid var(--nv-surface-borda);background:var(--nv-surface-2);color:var(--nv-fg);
+  border-radius:var(--nv-raio-interno);padding:12px;font-size:15px;
+}
+/* Depois das regras acima de propósito: caixa de marcação não é campo de texto e não pode herdar
+   o preenchimento de 12px, senão vira um quadrado enorme ao lado do rótulo. */
+dialog input[type="checkbox"]{accent-color:var(--nv-accent);padding:0;border:none;background:none;width:auto;flex:none;}
+.nv-combo-lista{background:var(--nv-surface);border-color:var(--nv-surface-borda);border-radius:var(--nv-raio-interno);box-shadow:0 18px 40px -18px rgba(0,0,0,.45);}
+.form-acoes{margin-top:16px;gap:10px;}
+.form-acoes button{padding:12px 20px;border-radius:var(--nv-radius-pill);border:1px solid var(--nv-surface-borda);background:var(--nv-surface-2);font-size:12px;font-weight:600;letter-spacing:.08em;}
+.form-acoes button.primario{background:var(--nv-accent);border-color:var(--nv-accent);color:var(--nv-on-accent);}
 </style>
 
 <div id="banner-sync" class="banner" hidden></div>
@@ -381,17 +508,17 @@ dialog input[type="checkbox"]{accent-color:var(--nv-accent);padding:0;border:non
 
 <div id="app-shell" hidden>
   <main id="tela-resumo" class="nv-tela nv-tela--cartoes"></main>
-  <main id="tela-lancamentos" class="nv-tela" hidden></main>
-  <main id="tela-carteira" class="nv-tela" hidden></main>
-  <main id="tela-metas" class="nv-tela" hidden></main>
-  <main id="tela-categoria" class="nv-tela" hidden></main>
-  <main id="tela-ativo-detalhe" class="nv-tela" hidden></main>
-  <main id="tela-novo-lancamento" class="nv-tela" hidden></main>
-  <main id="tela-configuracoes" class="nv-tela" hidden></main>
-  <main id="tela-importar" class="nv-tela" hidden></main>
-  <main id="tela-calendario" class="nv-tela" hidden></main>
-  <main id="tela-dia" class="nv-tela" hidden></main>
-  <main id="tela-calculadoras" class="nv-tela" hidden></main>
+  <main id="tela-lancamentos" class="nv-tela nv-tela--cartoes" hidden></main>
+  <main id="tela-carteira" class="nv-tela nv-tela--cartoes" hidden></main>
+  <main id="tela-metas" class="nv-tela nv-tela--cartoes" hidden></main>
+  <main id="tela-categoria" class="nv-tela nv-tela--cartoes" hidden></main>
+  <main id="tela-ativo-detalhe" class="nv-tela nv-tela--cartoes" hidden></main>
+  <main id="tela-novo-lancamento" class="nv-tela nv-tela--cartoes" hidden></main>
+  <main id="tela-configuracoes" class="nv-tela nv-tela--cartoes" hidden></main>
+  <main id="tela-importar" class="nv-tela nv-tela--cartoes" hidden></main>
+  <main id="tela-calendario" class="nv-tela nv-tela--cartoes" hidden></main>
+  <main id="tela-dia" class="nv-tela nv-tela--cartoes" hidden></main>
+  <main id="tela-calculadoras" class="nv-tela nv-tela--cartoes" hidden></main>
 </div>
 
 <dialog id="form-investimento">

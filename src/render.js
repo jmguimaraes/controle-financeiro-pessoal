@@ -241,33 +241,6 @@ function headerVoltar(titulo, acaoVoltar) {
     </div>`;
 }
 
-function sparkline(pontos) {
-  const valores = pontos.map((p) => p.saldo);
-  const min = Math.min(0, ...valores);
-  const max = Math.max(0, ...valores);
-  const amplitude = max - min || 1;
-  const largura = 350;
-  const altura = 90;
-  const passo = pontos.length > 1 ? largura / (pontos.length - 1) : 0;
-  const coords = pontos.map((p, i) => {
-    const x = i * passo;
-    const y = altura - 6 - ((p.saldo - min) / amplitude) * (altura - 16);
-    return { x, y };
-  });
-  const linha = coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
-  const ultimo = coords[coords.length - 1];
-  const eixo = pontos.map((p) => `<span>${MESES_ABREV[p.mes - 1]}</span>`).join('');
-  return `
-    <div class="nv-sparkline">
-      <svg viewBox="0 0 ${largura} ${altura}" width="100%" height="${altura}" preserveAspectRatio="none" aria-hidden="true">
-        <line x1="0" y1="${altura - 1}" x2="${largura}" y2="${altura - 1}" stroke="var(--nv-rule-soft)" stroke-width="1"></line>
-        <polyline points="${linha}" fill="none" stroke="var(--nv-accent)" stroke-width="2"></polyline>
-        <rect x="${(ultimo.x - 5).toFixed(1)}" y="${(ultimo.y - 5).toFixed(1)}" width="10" height="10" fill="var(--nv-accent)"></rect>
-      </svg>
-      <div class="nv-sparkline-axis">${eixo}</div>
-    </div>`;
-}
-
 // Alertas de comportamento (ver alertasFinanceiros em logic.js). Bloco inteiro some quando não há
 // nada a dizer: alerta que aparece sempre vira moldura e para de ser lido.
 function renderAlertas(alertas) {
@@ -491,7 +464,6 @@ function renderLancamentos(state, ano, mes, opcoes = {}) {
   });
   const total = L.totalFiltrado(itens);
   const grupos = agruparPorDia(itens);
-  const contaAtual = contas.find((c) => c.id === contaSelecionada);
   // A lista sai de todos os lançamentos, não dos filtrados: senão escolher alguém esvaziaria o
   // próprio seletor. Só aparece depois que existe ao menos um nome — quem não usa o campo não vê.
   const pessoas = L.pessoasUsadas(state.lancamentos || []);
@@ -503,12 +475,17 @@ function renderLancamentos(state, ano, mes, opcoes = {}) {
     { id: 'parcelados', rotulo: 'PARCELADOS' },
   ];
 
+  // Um cartão por dia, com a data como rótulo no chão logo acima dele: no desenho antigo a data
+  // era uma tarja cinza de ponta a ponta separando listas que corriam juntas. Aqui o próprio
+  // cartão é a separação, e a data fica fora dele — dentro, com um só lançamento no dia, sobrava
+  // um vão grande entre o título e a única linha.
   const listaGrupos = grupos.length
     ? grupos
         .map(
           (grupo) => `
-        <div class="nv-grupo-data">${rotuloData(grupo.data)}</div>
-        ${grupo.itens
+        <div class="nv-pilha-titulo">${rotuloData(grupo.data)}</div>
+        <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-lista">${grupo.itens
           .map((l) => {
             const tag = l.parcelas > 1 ? `<span class="nv-tag-parcela">${l.numeroParcela}/${l.parcelas}</span>` : '';
             const sinal = l.tipo === 'receita' ? '+' : '−';
@@ -526,58 +503,61 @@ function renderLancamentos(state, ano, mes, opcoes = {}) {
           <div class="nv-item-valor ${classe}">${sinal} ${mascarar(formatNumero(L.parcelaValor(l)), ocultar)}</div>
         </div>`;
           })
-          .join('')}`
+          .join('')}</div>
+        </section>`
         )
         .join('')
-    : '<p class="nv-vazio">Nenhum lançamento neste mês.</p>';
+    : '<section class="nv-cartao nv-cartao--justo"><p class="nv-vazio">Nenhum lançamento neste mês.</p></section>';
 
   return `
     ${headerTituloMes('Lançamentos', ano, mes)}
-    <div class="nv-search">
-      <div class="nv-search-box">
+    <div class="nv-pilha">
+      <div class="nv-busca">
         ${iconSearch()}
         <input type="search" id="campo-busca-lancamentos" placeholder="Buscar descrição ou categoria" value="${escapeHtml(busca)}" />
       </div>
-    </div>
-    <div class="nv-chips">
-      ${chips
-        .map(
-          (chip) => `<button type="button" class="nv-chip ${chip.id === filtro ? 'ativo' : ''}" data-acao="filtrar-lancamentos" data-filtro="${chip.id}">${chip.rotulo}</button>`
-        )
-        .join('')}
-    </div>
-    <div class="nv-cells nv-cells--linha">
-      <div class="nv-cell">
-        <div class="nv-cell-label" style="font-size:9px">CONTA</div>
-        <select id="campo-conta-filtro" class="nv-select-inline">
-          <option value="">Todas</option>
-          ${contas.map((c) => `<option value="${c.id}" ${c.id === contaSelecionada ? 'selected' : ''}>${escapeHtml(c.nome)}</option>`).join('')}
-        </select>
+      <div class="nv-chips">
+        ${chips
+          .map(
+            (chip) => `<button type="button" class="nv-chip ${chip.id === filtro ? 'ativo' : ''}" data-acao="filtrar-lancamentos" data-filtro="${chip.id}">${chip.rotulo}</button>`
+          )
+          .join('')}
       </div>
-      ${
-        pessoas.length
-          ? `<div class="nv-cell">
-        <div class="nv-cell-label" style="font-size:9px">QUEM</div>
-        <select id="campo-pessoa-filtro" class="nv-select-inline">
-          <option value="">Todos</option>
-          ${pessoas.map((p) => `<option value="${escapeHtml(p)}" ${p === pessoaSelecionada ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('')}
-        </select>
-      </div>`
-          : ''
-      }
-      <div class="nv-cell">
-        <div class="nv-cell-label" style="font-size:9px">TOTAL FILTRADO</div>
-        <div class="nv-cell-valor" style="font-size:12px">${total >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(total)), ocultar)}</div>
+
+      <section class="nv-cartao nv-cartao--justo">
+        <span class="nv-cartao-titulo">TOTAL FILTRADO</span>
+        <div class="nv-num-valor ${total >= 0 ? 'positivo' : 'negativo'}" style="font-size:26px">${total >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(total)), ocultar)}</div>
+        <div class="nv-cells" style="margin-top:14px;padding-top:13px;border-top:1px solid var(--nv-surface-borda)">
+          <div class="nv-cell">
+            <div class="nv-cell-label" style="font-size:9px">CONTA</div>
+            <select id="campo-conta-filtro" class="nv-select-inline">
+              <option value="">Todas</option>
+              ${contas.map((c) => `<option value="${c.id}" ${c.id === contaSelecionada ? 'selected' : ''}>${escapeHtml(c.nome)}</option>`).join('')}
+            </select>
+          </div>
+          ${
+            pessoas.length
+              ? `<div class="nv-cell">
+            <div class="nv-cell-label" style="font-size:9px">QUEM</div>
+            <select id="campo-pessoa-filtro" class="nv-select-inline">
+              <option value="">Todos</option>
+              ${pessoas.map((p) => `<option value="${escapeHtml(p)}" ${p === pessoaSelecionada ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('')}
+            </select>
+          </div>`
+              : ''
+          }
+        </div>
+      </section>
+
+      ${listaGrupos}
+
+      <div class="nv-acao-fixa">
+        <button type="button" class="nv-btn-cheio" data-acao="novo-lancamento">
+          <span class="mais">+</span><span>NOVO LANÇAMENTO</span>
+        </button>
       </div>
-    </div>
-    <div class="nv-grupo-lista">${listaGrupos}</div>
-    <div class="nv-acao-fixa">
-      <button type="button" class="nv-btn-cheio" data-acao="novo-lancamento">
-        <span>NOVO LANÇAMENTO</span><span class="mais">+</span>
-      </button>
     </div>
     ${tabBar('lancamentos', state.idioma)}
-    ${contaAtual ? '' : ''}
   `;
 }
 
@@ -606,11 +586,11 @@ function renderNovoLancamento(state, dadosIniciais) {
   const saldoProjetado = d.saldoProjetado ?? 0;
 
   return `
-    <div class="nv-header nv-header--back">
+    <div class="nv-header">
       <span class="nv-title">Lançamento</span>
       <button type="button" class="nv-link-muted" data-acao="cancelar-lancamento">CANCELAR</button>
     </div>
-    <form id="formulario-lancamento">
+    <form id="formulario-lancamento" class="nv-pilha">
       <input type="hidden" name="id" value="${escapeHtml(d.id || '')}" />
       <div class="nv-segmentado">
         <button type="button" data-acao="tipo-lancamento" data-tipo="despesa" class="${tipo === 'despesa' ? 'ativo' : ''}">DESPESA</button>
@@ -618,69 +598,73 @@ function renderNovoLancamento(state, dadosIniciais) {
         <button type="button" data-acao="tipo-lancamento" data-tipo="transferencia" class="${tipo === 'transferencia' ? 'ativo' : ''}">TRANSF.</button>
       </div>
       <input type="hidden" name="tipo" value="${tipo}" />
-      <div class="nv-valor-grande">
-        <div class="nv-cell-label">VALOR TOTAL</div>
-        <div class="nv-hero-value">
+      <section class="nv-cartao">
+        <span class="nv-cartao-titulo">VALOR TOTAL</span>
+        <div class="nv-saldo-valor">
           <span class="cifrao">R$</span>
           <input type="text" inputmode="decimal" name="valorTotal" class="nv-campo-moeda" required value="${d.valorTotal ? formatNumero(d.valorTotal) : ''}" placeholder="0,00" />
         </div>
-      </div>
-      <div class="nv-campo-linha">
-        <label class="nv-campo-label" for="campo-descricao">DESCRIÇÃO</label>
-        <input type="text" id="campo-descricao" name="descricao" maxlength="80" value="${escapeHtml(d.descricao || '')}" />
-      </div>
-      <div class="nv-campo-linha">
-        <label class="nv-campo-label" for="campo-categoria-lancamento">CATEGORIA</label>
-        ${renderComboSelect('categoria', opcoesCategoria(tipo), d.categoria, 'campo-categoria-lancamento')}
-      </div>
-      <div class="nv-campo-linha">
-        <label class="nv-campo-label" for="campo-subcategoria">SUBCATEGORIA</label>
-        <input type="text" id="campo-subcategoria" name="subcategoria" maxlength="40" autocomplete="off"
-          list="lista-subcategorias" placeholder="opcional, ex.: Mercado"
-          value="${escapeHtml(d.subcategoria || '')}" />
-        <datalist id="lista-subcategorias">${subcategorias.map((s) => `<option value="${escapeHtml(s)}">`).join('')}</datalist>
-      </div>
-      <div class="nv-campo-linha">
-        <label class="nv-campo-label" for="campo-pessoa">QUEM GASTOU</label>
-        <input type="text" id="campo-pessoa" name="pessoa" maxlength="40" autocomplete="off"
-          list="lista-pessoas" placeholder="deixe em branco se for você"
-          value="${escapeHtml(d.pessoa || '')}" />
-        <datalist id="lista-pessoas">${pessoas.map((p) => `<option value="${escapeHtml(p)}">`).join('')}</datalist>
-      </div>
-      <div class="nv-campo-dupla">
-        <div>
-          <label class="nv-campo-label" for="campo-data">DATA</label>
-          <input type="date" id="campo-data" name="data" required value="${d.data || ''}" />
+      </section>
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-campo-linha">
+          <label class="nv-campo-label" for="campo-descricao">DESCRIÇÃO</label>
+          <input type="text" id="campo-descricao" name="descricao" maxlength="80" value="${escapeHtml(d.descricao || '')}" />
         </div>
-        <div>
-          <label class="nv-campo-label" for="campo-conta">CONTA</label>
-          <select id="campo-conta" name="contaId">
-            <option value="">Sem conta</option>
-            ${contas.map((c) => `<option value="${c.id}" ${c.id === d.contaId ? 'selected' : ''}>${escapeHtml(c.nome)}</option>`).join('')}
-          </select>
+        <div class="nv-campo-linha">
+          <label class="nv-campo-label" for="campo-categoria-lancamento">CATEGORIA</label>
+          ${renderComboSelect('categoria', opcoesCategoria(tipo), d.categoria, 'campo-categoria-lancamento')}
         </div>
-      </div>
-      <div class="nv-linha-toggle">
-        <span>Parcelado</span>
-        <label class="nv-switch-wrap">
-          <input type="checkbox" name="parcelado" id="campo-parcelado" ${parcelado ? 'checked' : ''} />
-          <span class="nv-switch"><span class="knob"></span></span>
-        </label>
-      </div>
-      <div class="nv-linha-toggle nv-stepper-linha ${parcelado ? '' : 'desabilitado'}" id="campo-parcelas-linha">
-        <span>Número de parcelas</span>
-        <div class="nv-stepper">
-          <button type="button" data-acao="parcelas-menos">−</button>
-          <span id="valor-parcelas">${d.parcelas && d.parcelas > 1 ? d.parcelas : 2}</span>
-          <button type="button" data-acao="parcelas-mais">+</button>
+        <div class="nv-campo-linha">
+          <label class="nv-campo-label" for="campo-subcategoria">SUBCATEGORIA</label>
+          <input type="text" id="campo-subcategoria" name="subcategoria" maxlength="40" autocomplete="off"
+            list="lista-subcategorias" placeholder="opcional, ex.: Mercado"
+            value="${escapeHtml(d.subcategoria || '')}" />
+          <datalist id="lista-subcategorias">${subcategorias.map((s) => `<option value="${escapeHtml(s)}">`).join('')}</datalist>
         </div>
-        <input type="hidden" name="parcelas" id="campo-parcelas" value="${d.parcelas && d.parcelas > 1 ? d.parcelas : 2}" />
-      </div>
+        <div class="nv-campo-linha">
+          <label class="nv-campo-label" for="campo-pessoa">QUEM GASTOU</label>
+          <input type="text" id="campo-pessoa" name="pessoa" maxlength="40" autocomplete="off"
+            list="lista-pessoas" placeholder="deixe em branco se for você"
+            value="${escapeHtml(d.pessoa || '')}" />
+          <datalist id="lista-pessoas">${pessoas.map((p) => `<option value="${escapeHtml(p)}">`).join('')}</datalist>
+        </div>
+        <div class="nv-campo-dupla">
+          <div>
+            <label class="nv-campo-label" for="campo-data">DATA</label>
+            <input type="date" id="campo-data" name="data" required value="${d.data || ''}" />
+          </div>
+          <div>
+            <label class="nv-campo-label" for="campo-conta">CONTA</label>
+            <select id="campo-conta" name="contaId">
+              <option value="">Sem conta</option>
+              ${contas.map((c) => `<option value="${c.id}" ${c.id === d.contaId ? 'selected' : ''}>${escapeHtml(c.nome)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      </section>
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-linha-toggle">
+          <span>Parcelado</span>
+          <label class="nv-switch-wrap">
+            <input type="checkbox" name="parcelado" id="campo-parcelado" ${parcelado ? 'checked' : ''} />
+            <span class="nv-switch"><span class="knob"></span></span>
+          </label>
+        </div>
+        <div class="nv-linha-toggle nv-stepper-linha ${parcelado ? '' : 'desabilitado'}" id="campo-parcelas-linha">
+          <span>Número de parcelas</span>
+          <div class="nv-stepper">
+            <button type="button" data-acao="parcelas-menos">−</button>
+            <span id="valor-parcelas">${d.parcelas && d.parcelas > 1 ? d.parcelas : 2}</span>
+            <button type="button" data-acao="parcelas-mais">+</button>
+          </div>
+          <input type="hidden" name="parcelas" id="campo-parcelas" value="${d.parcelas && d.parcelas > 1 ? d.parcelas : 2}" />
+        </div>
+      </section>
       ${
         d.id
-          ? `<div class="nv-campo-linha" style="border-top:1px solid var(--nv-rule-soft);border-bottom:none;padding-top:14px">
-        <button type="button" class="nv-link-muted" data-acao="excluir-lancamento-atual" style="color:var(--nv-negative)">Excluir lançamento</button>
-      </div>`
+          ? `<section class="nv-cartao nv-cartao--justo">
+        <button type="button" class="nv-link-muted" data-acao="excluir-lancamento-atual" style="color:var(--nv-negative);font-size:13px;letter-spacing:0">Excluir lançamento</button>
+      </section>`
           : ''
       }
       <div class="nv-rodape-form">
@@ -737,54 +721,65 @@ function renderCategoriaDetalhe(state, categoria, ano, mes) {
 
   return `
     ${headerVoltar(escapeHtml(categoria), 'fechar-categoria')}
-    <div class="nv-hero" style="border-bottom:1px solid var(--nv-rule-soft)">
-      <div class="nv-hero-label">GASTO EM ${MESES[mes - 1].toUpperCase()}</div>
-      <div class="nv-hero-value">
-        <span class="cifrao" style="font-size:18px">R$</span>
-        <span class="numero" style="font-size:44px">${mascarar(formatNumero(total), ocultar)}</span>
-      </div>
-      <div class="nv-hero-sub" style="display:flex;gap:16px">
-        <span>Média 6 meses ${mascarar(formatCurrency(media6), ocultar)}</span>
-        <span style="color:${variacao >= 0 ? 'var(--nv-negative)' : 'var(--nv-positive)'}">${formatPercent(variacao)}</span>
-      </div>
-    </div>
-    <div class="nv-barras-meses">
-      <div class="nv-section-label" style="margin-bottom:14px">SEIS MESES</div>
-      <div class="nv-barras-meses-grid">${barras}</div>
-      <div class="nv-barras-eixo">${eixo}</div>
-    </div>
-    ${
-      meta
-        ? `<div class="nv-meta-linha">
-      <div>
-        <div class="nv-cell-label">META DO MÊS</div>
-        <div class="nv-item-nome" style="margin-top:4px">${mascarar(formatCurrency(total), ocultar)} de ${mascarar(formatCurrency(meta.limite), ocultar)}</div>
-      </div>
-      <div class="nv-badge">${Math.round(statusMeta.percentual)}%</div>
-    </div>`
-        : ''
-    }
-    ${
-      temSubcategoria
-        ? `<div class="nv-section-head"><span class="nv-section-label">POR SUBCATEGORIA</span></div>
-    <div class="nv-bars">
-      ${porSubcategoria
-        .map(
-          (s) => `
-        <div class="nv-bar-row">
-          <div class="nv-bar-top">
-            <span${s.subcategoria ? '' : ' style="color:var(--nv-muted)"'}>${s.subcategoria ? escapeHtml(s.subcategoria) : 'Sem subcategoria'}</span>
-            <span>${mascarar(formatNumero(s.valor), ocultar)}</span>
+    <div class="nv-pilha">
+      <section class="nv-cartao">
+        <span class="nv-cartao-titulo">GASTO EM ${MESES[mes - 1].toUpperCase()}</span>
+        <div class="nv-saldo-valor">
+          <span class="cifrao">R$</span>
+          <span class="numero">${mascarar(formatNumero(total), ocultar)}</span>
+        </div>
+        <div class="nv-saldo-sub" style="gap:14px">
+          <span>Média 6 meses ${mascarar(formatCurrency(media6), ocultar)}</span>
+          <span style="color:${variacao >= 0 ? 'var(--nv-negative)' : 'var(--nv-positive)'}">${formatPercent(variacao)}</span>
+        </div>
+      </section>
+
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo"><span class="nv-cartao-titulo">SEIS MESES</span></div>
+        <div class="nv-barras-meses">
+          <div class="nv-barras-meses-grid">${barras}</div>
+          <div class="nv-barras-eixo">${eixo}</div>
+        </div>
+      </section>
+      ${
+        meta
+          ? `<section class="nv-cartao nv-cartao--justo">
+        <div class="nv-meta-linha">
+          <div>
+            <span class="nv-cartao-titulo">META DO MÊS</span>
+            <div class="nv-item-nome" style="margin-top:6px">${mascarar(formatCurrency(total), ocultar)} de ${mascarar(formatCurrency(meta.limite), ocultar)}</div>
           </div>
-          <div class="nv-bar-track"><div class="nv-bar-fill" style="width:${(s.valor / maiorSub) * 100}%;background:${s.subcategoria ? 'var(--nv-bar-neutral-strong)' : 'var(--nv-bar-neutral)'}"></div></div>
-        </div>`
-        )
-        .join('')}
-    </div>`
-        : ''
-    }
-    <div class="nv-section-head"><span class="nv-section-label">LANÇAMENTOS</span></div>
-    <div>${listaItens}</div>
+          <div class="nv-badge">${Math.round(statusMeta.percentual)}%</div>
+        </div>
+      </section>`
+          : ''
+      }
+      ${
+        temSubcategoria
+          ? `<section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo"><span class="nv-cartao-titulo">POR SUBCATEGORIA</span></div>
+        <div class="nv-bars">
+          ${porSubcategoria
+            .map(
+              (s) => `
+            <div class="nv-bar-row">
+              <div class="nv-bar-top">
+                <span${s.subcategoria ? '' : ' style="color:var(--nv-muted)"'}>${s.subcategoria ? escapeHtml(s.subcategoria) : 'Sem subcategoria'}</span>
+                <span>${mascarar(formatNumero(s.valor), ocultar)}</span>
+              </div>
+              <div class="nv-bar-track"><div class="nv-bar-fill" style="width:${(s.valor / maiorSub) * 100}%;background:${s.subcategoria ? 'var(--nv-bar-neutral-strong)' : 'var(--nv-bar-neutral)'}"></div></div>
+            </div>`
+            )
+            .join('')}
+        </div>
+      </section>`
+          : ''
+      }
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo"><span class="nv-cartao-titulo">LANÇAMENTOS</span></div>
+        <div class="nv-lista">${listaItens}</div>
+      </section>
+    </div>
     ${tabBar('resumo', state.idioma)}
   `;
 }
@@ -823,7 +818,7 @@ function renderMetas(state, ano, mes) {
           const pctBarra = Math.min(100, status.percentual);
           const subtitulo = m.nome ? L.rotuloMeta({ ...m, nome: '' }) : '';
           return `
-        <div class="nv-meta-item ${status.excedeu ? 'excedida' : ''}" data-id="${m.id}" data-acao="editar-meta" role="button" tabindex="0">
+        <section class="nv-cartao nv-cartao--justo nv-meta-cartao ${status.excedeu ? 'excedida' : ''}" data-id="${m.id}" data-acao="editar-meta" role="button" tabindex="0">
           <div class="nv-meta-topo">
             <span>
               <span class="nv-meta-nome">${escapeHtml(m.nome || L.rotuloMeta(m))}</span>
@@ -833,27 +828,31 @@ function renderMetas(state, ano, mes) {
           </div>
           <div class="nv-meta-track"><div class="nv-meta-fill ${status.excedeu ? 'excedida' : ''}" style="width:${pctBarra}%"></div></div>
           ${status.excedeu ? `<div class="nv-meta-excesso">Excedeu ${mascarar(formatCurrency(status.excedente), ocultar)}</div>` : ''}
-        </div>`;
+        </section>`;
         })
         .join('')
-    : '<p class="nv-vazio">Nenhuma meta definida ainda.</p>';
+    : '<section class="nv-cartao nv-cartao--justo"><p class="nv-vazio">Nenhuma meta definida ainda.</p></section>';
 
   return `
     ${headerTituloMes('Metas', ano, mes)}
-    <div class="nv-orcamento">
-      <div class="nv-cell-label">ORÇAMENTO USADO</div>
-      <div class="nv-orcamento-num">
-        <span class="grande">${Math.round(percentualGeral)}</span><span class="pct">%</span>
-        <span class="detalhe">${mascarar(formatCurrency(totalGasto), ocultar)} de ${mascarar(formatCurrency(totalLimite), ocultar)}</span>
+    <div class="nv-pilha">
+      <section class="nv-cartao">
+        <span class="nv-cartao-titulo">ORÇAMENTO USADO</span>
+        <div class="nv-orcamento">
+          <div class="nv-orcamento-num">
+            <span class="grande">${Math.round(percentualGeral)}</span><span class="pct">%</span>
+            <span class="detalhe">${mascarar(formatCurrency(totalGasto), ocultar)} de ${mascarar(formatCurrency(totalLimite), ocultar)}</span>
+          </div>
+          <div class="nv-orcamento-track"><div class="nv-orcamento-fill" style="width:${Math.min(100, percentualGeral)}%"></div></div>
+          <div class="nv-orcamento-sub">${diasRestantes === 1 ? 'Falta 1 dia' : `Faltam ${diasRestantes} dias`} no mês</div>
+        </div>
+      </section>
+      ${linhas}
+      <div class="nv-acao-fixa" style="margin-top:auto">
+        <button type="button" class="nv-btn-contorno" data-acao="nova-meta">
+          <span class="mais">+</span><span>DEFINIR NOVA META</span>
+        </button>
       </div>
-      <div class="nv-orcamento-track"><div class="nv-orcamento-fill" style="width:${Math.min(100, percentualGeral)}%"></div></div>
-      <div class="nv-orcamento-sub">Faltam ${diasRestantes} dias no mês</div>
-    </div>
-    <div>${linhas}</div>
-    <div class="nv-acao-fixa" style="margin-top:auto">
-      <button type="button" class="nv-btn-contorno" data-acao="nova-meta">
-        <span>DEFINIR NOVA META</span><span class="mais">+</span>
-      </button>
     </div>
     ${tabBar('metas', state.idioma)}
   `;
@@ -887,7 +886,6 @@ function renderCalendario(state, ano, mes, idioma) {
   const dias = L.resumoDiario(lancamentos, ano, mes);
   const primeiroDiaSemana = new Date(ano, mes - 1, 1).getDay();
   const diasNoMes = new Date(ano, mes, 0).getDate();
-  const mesesAbrev = I18N.mesesDoIdioma ? MESES_ABREV : MESES_ABREV;
 
   const celulasVazias = Array.from({ length: primeiroDiaSemana }, () => '<div class="nv-dia nv-dia-vazio"></div>').join('');
   const celulas = Array.from({ length: diasNoMes }, (unused, i) => {
@@ -897,26 +895,33 @@ function renderCalendario(state, ano, mes, idioma) {
     if (!resumo) return `<div class="nv-dia"><span class="nv-dia-numero">${dia}</span></div>`;
     const classe = resumo.saldo > 0 ? 'nv-dia-positivo' : resumo.saldo < 0 ? 'nv-dia-negativo' : '';
     const sinal = resumo.saldo > 0 ? '+' : resumo.saldo < 0 ? '−' : '';
+    // Sem centavos aqui: a célula tem sete por linha e "4.500,00" não quebra, então o número
+    // inteiro empurrava a coluna e a grade passava da largura do cartão — a coluna de sábado
+    // saía cortada. Quem quer o valor exato do dia abre o dia, que é justamente o que a célula faz.
+    const valor = new Intl.NumberFormat(I18N.localeDoIdioma(idioma), { maximumFractionDigits: 0 }).format(Math.abs(resumo.saldo));
     return `
-      <button type="button" class="nv-dia ${classe}" data-acao="abrir-dia" data-dia="${chave}">
+      <button type="button" class="nv-dia ${classe}" data-acao="abrir-dia" data-dia="${chave}" aria-label="Dia ${dia}, ${sinal}${formatCurrency(Math.abs(resumo.saldo), idioma)}">
         <span class="nv-dia-numero">${dia}</span>
-        <span class="nv-dia-valor">${ocultar ? OCULTO : `${sinal}${formatNumero(Math.abs(resumo.saldo), idioma)}`}</span>
+        <span class="nv-dia-valor">${ocultar ? OCULTO : `${sinal}${valor}`}</span>
       </button>`;
   }).join('');
 
   const totalMes = Object.values(dias).reduce((s, d) => s + d.saldo, 0);
-  void mesesAbrev;
   return `
     ${headerTituloMes('Calendário', ano, mes)}
-    <div class="nv-calendario">
-      <div class="nv-dias-semana">${['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d) => `<span>${d}</span>`).join('')}</div>
-      <div class="nv-grade">${celulasVazias}${celulas}</div>
-      <div class="nv-calendario-rodape">
-        <span class="nv-label">RESULTADO DO MÊS</span>
-        <span class="${totalMes >= 0 ? 'nv-positivo' : 'nv-negativo'}">
-          ${ocultar ? OCULTO : `${totalMes >= 0 ? '+' : '−'} ${formatCurrency(Math.abs(totalMes), idioma)}`}
-        </span>
-      </div>
+    <div class="nv-pilha">
+      <section class="nv-cartao">
+        <div class="nv-calendario">
+          <div class="nv-dias-semana">${['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d) => `<span>${d}</span>`).join('')}</div>
+          <div class="nv-grade">${celulasVazias}${celulas}</div>
+          <div class="nv-calendario-rodape">
+            <span class="nv-label">RESULTADO DO MÊS</span>
+            <span class="${totalMes >= 0 ? 'nv-positivo' : 'nv-negativo'}">
+              ${ocultar ? OCULTO : `${totalMes >= 0 ? '+' : '−'} ${formatCurrency(Math.abs(totalMes), idioma)}`}
+            </span>
+          </div>
+        </div>
+      </section>
     </div>
     ${tabBar('calendario', idioma)}`;
 }
@@ -949,17 +954,22 @@ function renderDiaDetalhe(state, data, idioma) {
 
   return `
     ${headerVoltar(`${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${ano}`, 'fechar-dia')}
-    <div class="nv-hero" style="border-bottom:1px solid var(--nv-rule-soft)">
-      <div class="nv-hero-label">SALDO DO DIA</div>
-      <div class="nv-hero-value">
-        <span class="cifrao" style="font-size:18px">R$</span>
-        <span class="numero" style="font-size:44px">${mascarar(formatNumero(saldo, idioma), ocultar)}</span>
-      </div>
-      <div class="nv-item-meta" style="margin-top:10px">
-        entrou ${mascarar(formatCurrency(entrada, idioma), ocultar)} · saiu ${mascarar(formatCurrency(saida, idioma), ocultar)}
-      </div>
-    </div>
-    ${lista}`;
+    <div class="nv-pilha">
+      <section class="nv-cartao">
+        <span class="nv-cartao-titulo">SALDO DO DIA</span>
+        <div class="nv-saldo-valor">
+          <span class="cifrao">R$</span>
+          <span class="numero">${mascarar(formatNumero(saldo, idioma), ocultar)}</span>
+        </div>
+        <div class="nv-saldo-sub">
+          entrou ${mascarar(formatCurrency(entrada, idioma), ocultar)} · saiu ${mascarar(formatCurrency(saida, idioma), ocultar)}
+        </div>
+      </section>
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo"><span class="nv-cartao-titulo">LANÇAMENTOS DO DIA</span></div>
+        <div class="nv-lista">${lista}</div>
+      </section>
+    </div>`;
 }
 
 // --- Entrada rápida por texto ---
@@ -1053,9 +1063,24 @@ function renderResultadoPerfil(perfil, pontos, alocacao) {
 // (em app.js), lendo os campos direto do DOM; esta função só desenha o formulário e a área de
 // resultado (vazia/oculta até o primeiro clique).
 
-function corpoJurosCompostos() {
+// Cada calculadora é um cartão: título, campos e o botão logo abaixo. O resultado entra num
+// cartão próprio, escondido até o primeiro cálculo — cartão vazio de saída na tela seria ruído.
+function cartaoCalculo(titulo, campos, acao, idResultado) {
   return `
-    <div class="nv-section-head"><span class="nv-section-label">JUROS COMPOSTOS</span></div>
+    <section class="nv-cartao nv-cartao--justo">
+      <div class="nv-cartao-topo"><span class="nv-cartao-titulo">${titulo}</span></div>
+      ${campos}
+    </section>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="${acao}"><span>CALCULAR</span></button>
+    </div>
+    <section class="nv-cartao nv-cartao--justo" id="${idResultado}" hidden></section>`;
+}
+
+function corpoJurosCompostos() {
+  return cartaoCalculo(
+    'JUROS COMPOSTOS',
+    `
     <div class="nv-campo-linha">
       <label class="nv-campo-label" for="campo-calc-compostos-capital">CAPITAL INICIAL (R$)</label>
       <input type="text" inputmode="decimal" id="campo-calc-compostos-capital" class="nv-campo-moeda" placeholder="0,00" />
@@ -1073,16 +1098,16 @@ function corpoJurosCompostos() {
         <label class="nv-campo-label" for="campo-calc-compostos-meses">PERÍODO (MESES)</label>
         <input type="number" min="0" id="campo-calc-compostos-meses" placeholder="12" />
       </div>
-    </div>
-    <div class="nv-acao-fixa">
-      <button type="button" class="nv-btn-contorno" data-acao="calcular-compostos"><span>CALCULAR</span></button>
-    </div>
-    <div id="resultado-calc-compostos" class="nv-list-plain" hidden></div>`;
+    </div>`,
+    'calcular-compostos',
+    'resultado-calc-compostos'
+  );
 }
 
 function corpoJurosSimples() {
-  return `
-    <div class="nv-section-head"><span class="nv-section-label">JUROS SIMPLES</span></div>
+  return cartaoCalculo(
+    'JUROS SIMPLES',
+    `
     <div class="nv-campo-linha">
       <label class="nv-campo-label" for="campo-calc-simples-capital">CAPITAL INICIAL (R$)</label>
       <input type="text" inputmode="decimal" id="campo-calc-simples-capital" class="nv-campo-moeda" placeholder="0,00" />
@@ -1096,16 +1121,17 @@ function corpoJurosSimples() {
         <label class="nv-campo-label" for="campo-calc-simples-meses">PERÍODO (MESES)</label>
         <input type="number" min="0" id="campo-calc-simples-meses" placeholder="12" />
       </div>
-    </div>
-    <div class="nv-acao-fixa">
-      <button type="button" class="nv-btn-contorno" data-acao="calcular-simples"><span>CALCULAR</span></button>
-    </div>
-    <div id="resultado-calc-simples" class="nv-list-plain" hidden></div>`;
+    </div>`,
+    'calcular-simples',
+    'resultado-calc-simples'
+  );
 }
 
 function corpoPorcentagem() {
   return `
-    <div class="nv-section-head"><span class="nv-section-label">QUANTO É X% DE UM VALOR</span></div>
+    ${cartaoCalculo(
+      'QUANTO É X% DE UM VALOR',
+      `
     <div class="nv-campo-dupla">
       <div>
         <label class="nv-campo-label" for="campo-calc-pct1-percentual">PERCENTUAL (%)</label>
@@ -1115,13 +1141,13 @@ function corpoPorcentagem() {
         <label class="nv-campo-label" for="campo-calc-pct1-valor">VALOR (R$)</label>
         <input type="text" inputmode="decimal" id="campo-calc-pct1-valor" class="nv-campo-moeda" placeholder="0,00" />
       </div>
-    </div>
-    <div class="nv-acao-fixa">
-      <button type="button" class="nv-btn-contorno" data-acao="calcular-pct1"><span>CALCULAR</span></button>
-    </div>
-    <div id="resultado-calc-pct1" class="nv-list-plain" hidden></div>
-
-    <div class="nv-section-head" style="border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">QUE PERCENTUAL UM VALOR REPRESENTA DE UM TOTAL</span></div>
+    </div>`,
+      'calcular-pct1',
+      'resultado-calc-pct1'
+    )}
+    ${cartaoCalculo(
+      'QUE PERCENTUAL UM VALOR REPRESENTA DE UM TOTAL',
+      `
     <div class="nv-campo-dupla">
       <div>
         <label class="nv-campo-label" for="campo-calc-pct2-valor">VALOR (R$)</label>
@@ -1131,13 +1157,13 @@ function corpoPorcentagem() {
         <label class="nv-campo-label" for="campo-calc-pct2-total">TOTAL (R$)</label>
         <input type="text" inputmode="decimal" id="campo-calc-pct2-total" class="nv-campo-moeda" placeholder="0,00" />
       </div>
-    </div>
-    <div class="nv-acao-fixa">
-      <button type="button" class="nv-btn-contorno" data-acao="calcular-pct2"><span>CALCULAR</span></button>
-    </div>
-    <div id="resultado-calc-pct2" class="nv-list-plain" hidden></div>
-
-    <div class="nv-section-head" style="border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">AUMENTAR OU DIMINUIR UM VALOR EM X%</span></div>
+    </div>`,
+      'calcular-pct2',
+      'resultado-calc-pct2'
+    )}
+    ${cartaoCalculo(
+      'AUMENTAR OU DIMINUIR UM VALOR EM X%',
+      `
     <div class="nv-campo-dupla">
       <div>
         <label class="nv-campo-label" for="campo-calc-pct3-valor">VALOR (R$)</label>
@@ -1147,21 +1173,22 @@ function corpoPorcentagem() {
         <label class="nv-campo-label" for="campo-calc-pct3-percentual">PERCENTUAL (use negativo p/ diminuir)</label>
         <input type="text" inputmode="decimal" id="campo-calc-pct3-percentual" placeholder="10 ou -10" />
       </div>
-    </div>
-    <div class="nv-acao-fixa">
-      <button type="button" class="nv-btn-contorno" data-acao="calcular-pct3"><span>CALCULAR</span></button>
-    </div>
-    <div id="resultado-calc-pct3" class="nv-list-plain" hidden></div>`;
+    </div>`,
+      'calcular-pct3',
+      'resultado-calc-pct3'
+    )}`;
 }
 
 function corpoPrimeiroMilhao(modoMilhao) {
   const modo = modoMilhao === 'aporte' ? 'aporte' : 'tempo';
   return `
-    <div class="nv-section-head"><span class="nv-section-label">PRIMEIRO MILHÃO</span></div>
     <div class="nv-segmentado">
       <button type="button" data-acao="definir-modo-milhao" data-modomilhao="tempo" class="${modo === 'tempo' ? 'ativo' : ''}">TEMPO NECESSÁRIO</button>
       <button type="button" data-acao="definir-modo-milhao" data-modomilhao="aporte" class="${modo === 'aporte' ? 'ativo' : ''}">APORTE NECESSÁRIO</button>
     </div>
+    ${cartaoCalculo(
+      'PRIMEIRO MILHÃO',
+      `
     <div class="nv-campo-linha">
       <label class="nv-campo-label" for="campo-calc-milhao-alvo">VALOR-ALVO (R$)</label>
       <input type="text" inputmode="decimal" id="campo-calc-milhao-alvo" class="nv-campo-moeda" value="${formatNumero(1000000)}" />
@@ -1186,11 +1213,10 @@ function corpoPrimeiroMilhao(modoMilhao) {
       <label class="nv-campo-label" for="campo-calc-milhao-meses">PRAZO DESEJADO (MESES)</label>
       <input type="number" min="1" id="campo-calc-milhao-meses" placeholder="120" />
     </div>`
-    }
-    <div class="nv-acao-fixa">
-      <button type="button" class="nv-btn-contorno" data-acao="calcular-milhao"><span>CALCULAR</span></button>
-    </div>
-    <div id="resultado-calc-milhao" class="nv-list-plain" hidden></div>`;
+    }`,
+      'calcular-milhao',
+      'resultado-calc-milhao'
+    )}`;
 }
 
 function renderCalculadoras(modo = 'compostos', modoMilhao = 'tempo') {
@@ -1209,14 +1235,16 @@ function renderCalculadoras(modo = 'compostos', modoMilhao = 'tempo') {
   const corpo = (corpos[modo] || corpos.compostos)();
   return `
     ${headerVoltar('Calculadoras', 'fechar-calculadoras')}
-    <div class="nv-segmentado">
-      ${abas
-        .map(
-          (a) => `<button type="button" data-acao="definir-calculadora" data-calc="${a.id}" class="${a.id === modo ? 'ativo' : ''}">${a.rotulo}</button>`
-        )
-        .join('')}
-    </div>
-    <div id="corpo-calculadora">${corpo}</div>`;
+    <div class="nv-pilha">
+      <div class="nv-segmentado">
+        ${abas
+          .map(
+            (a) => `<button type="button" data-acao="definir-calculadora" data-calc="${a.id}" class="${a.id === modo ? 'ativo' : ''}">${a.rotulo}</button>`
+          )
+          .join('')}
+      </div>
+      <div id="corpo-calculadora" class="nv-pilha" style="padding:0">${corpo}</div>
+    </div>`;
 }
 
 // Nome de cada idioma escrito nele mesmo (não traduzido) — é assim que seletor de idioma
@@ -1254,23 +1282,25 @@ function renderConfiguracoes(state, temPin) {
 
   return `
     ${headerVoltar(I18N.t('config.titulo', idioma), 'fechar-configuracoes')}
-    <div class="nv-perfil">
-      <div class="nv-avatar">${iconSymbol(24, 'var(--nv-fg-inverse)', 'var(--nv-accent)')}</div>
-      <div>
-        <div class="nv-perfil-nome">${I18N.t('config.minhaConta', idioma)}</div>
-        <div class="nv-perfil-sub">${I18N.t('config.dadosSincronizados', idioma)}</div>
-      </div>
-    </div>
-    <div class="nv-section-head" style="padding-bottom:0"><span class="nv-section-label">${I18N.t('config.aparencia', idioma)}</span></div>
-    <div style="padding:8px 20px 16px">
+    <div class="nv-pilha">
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-perfil">
+          <div class="nv-avatar">${iconSymbol(24, 'var(--nv-fg-inverse)', 'var(--nv-accent)')}</div>
+          <div>
+            <div class="nv-perfil-nome">${I18N.t('config.minhaConta', idioma)}</div>
+            <div class="nv-perfil-sub">${I18N.t('config.dadosSincronizados', idioma)}</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="nv-pilha-titulo">${I18N.t('config.aparencia', idioma)}</div>
       <div class="nv-segmentado-tema">
         <button type="button" data-acao="definir-tema" data-tema="claro" class="${tema === 'claro' ? 'ativo' : ''}">${iconSol(16)}<span>${I18N.t('config.claro', idioma)}</span></button>
         <button type="button" data-acao="definir-tema" data-tema="escuro" class="${tema === 'escuro' ? 'ativo' : ''}">${iconLua(16)}<span>${I18N.t('config.escuro', idioma)}</span></button>
         <button type="button" data-acao="definir-tema" data-tema="sistema" class="${tema === 'sistema' ? 'ativo' : ''}">${iconMonitor(16)}<span>${I18N.t('config.sistema', idioma)}</span></button>
       </div>
-    </div>
-    <div class="nv-section-head" style="padding-top:8px;padding-bottom:0;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">${I18N.t('config.idioma', idioma)}</span></div>
-    <div style="padding:8px 20px 16px">
+
+      <div class="nv-pilha-titulo">${I18N.t('config.idioma', idioma)}</div>
       <div class="nv-segmentado-tema">
         ${I18N.listaIdiomas()
           .map(
@@ -1279,36 +1309,50 @@ function renderConfiguracoes(state, temPin) {
           )
           .join('')}
       </div>
+
+      <div class="nv-pilha-titulo">${I18N.t('config.contasCartoes', idioma)}</div>
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-lista">
+          ${linhasContas}
+          <div class="nv-conta-linha">
+            <button type="button" class="nv-link-accent" data-acao="nova-conta" style="font-size:12px">${I18N.t('config.adicionarConta', idioma)}</button>
+            <span class="mais" style="color:var(--nv-accent);font-size:18px">+</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="nv-pilha-titulo">${I18N.t('config.dados', idioma)}</div>
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-lista">
+          <div class="nv-dado-linha"><span>${I18N.t('config.sincronizacao', idioma)}</span><span class="nv-item-meta" id="status-sincronizacao">verificando…</span></div>
+          <div class="nv-dado-linha">
+            <span>${I18N.t('config.ocultarValores', idioma)}</span>
+            <label class="nv-switch-wrap">
+              <input type="checkbox" id="campo-ocultar-valores" ${ocultar ? 'checked' : ''} />
+              <span class="nv-switch"><span class="knob"></span></span>
+            </label>
+          </div>
+          <div class="nv-dado-linha">
+            <span>${I18N.t('config.importarPlanilha', idioma)}</span>
+            <button type="button" class="nv-link-accent" data-acao="abrir-importacao" style="font-size:11px">${I18N.t('config.importar', idioma)}</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="nv-pilha-titulo">${I18N.t('config.seguranca', idioma)}</div>
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-dado-linha" style="padding:0;border:none">
+          <span>${I18N.t('config.pinAcesso', idioma)}</span>
+          <span style="display:flex;gap:14px;align-items:center">
+            <span class="nv-item-meta">${temPin ? I18N.t('config.ativado', idioma) : I18N.t('config.desativado', idioma)}</span>
+            <button type="button" class="nv-link-accent" data-acao="definir-pin" style="font-size:11px">${temPin ? I18N.t('config.alterar', idioma) : I18N.t('config.definir', idioma)}</button>
+            ${temPin ? `<button type="button" class="nv-link-muted" data-acao="remover-pin" style="font-size:11px;color:var(--nv-negative)">${I18N.t('config.remover', idioma)}</button>` : ''}
+          </span>
+        </div>
+      </section>
+
+      <div class="nv-rodape-versao">NUVRA 1.0.0</div>
     </div>
-    <div class="nv-section-head" style="padding-top:8px;padding-bottom:8px;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">${I18N.t('config.contasCartoes', idioma)}</span></div>
-    <div>${linhasContas}</div>
-    <div class="nv-conta-linha" style="border-bottom:2px solid var(--nv-rule-strong)">
-      <button type="button" class="nv-link-accent" data-acao="nova-conta" style="font-size:12px">${I18N.t('config.adicionarConta', idioma)}</button>
-      <span class="mais" style="color:var(--nv-accent)">+</span>
-    </div>
-    <div class="nv-section-head" style="padding-bottom:8px"><span class="nv-section-label">${I18N.t('config.dados', idioma)}</span></div>
-    <div class="nv-dado-linha"><span>${I18N.t('config.sincronizacao', idioma)}</span><span class="nv-item-meta" id="status-sincronizacao">verificando…</span></div>
-    <div class="nv-dado-linha">
-      <span>${I18N.t('config.ocultarValores', idioma)}</span>
-      <label class="nv-switch-wrap">
-        <input type="checkbox" id="campo-ocultar-valores" ${ocultar ? 'checked' : ''} />
-        <span class="nv-switch"><span class="knob"></span></span>
-      </label>
-    </div>
-    <div class="nv-dado-linha">
-      <span>${I18N.t('config.importarPlanilha', idioma)}</span>
-      <button type="button" class="nv-link-accent" data-acao="abrir-importacao" style="font-size:11px">${I18N.t('config.importar', idioma)}</button>
-    </div>
-    <div class="nv-section-head" style="padding-top:8px;padding-bottom:8px;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">${I18N.t('config.seguranca', idioma)}</span></div>
-    <div class="nv-dado-linha">
-      <span>${I18N.t('config.pinAcesso', idioma)}</span>
-      <span style="display:flex;gap:14px;align-items:center">
-        <span class="nv-item-meta">${temPin ? I18N.t('config.ativado', idioma) : I18N.t('config.desativado', idioma)}</span>
-        <button type="button" class="nv-link-accent" data-acao="definir-pin" style="font-size:11px">${temPin ? I18N.t('config.alterar', idioma) : I18N.t('config.definir', idioma)}</button>
-        ${temPin ? `<button type="button" class="nv-link-muted" data-acao="remover-pin" style="font-size:11px;color:var(--nv-negative)">${I18N.t('config.remover', idioma)}</button>` : ''}
-      </span>
-    </div>
-    <div class="nv-rodape-versao">NUVRA 1.0.0</div>
   `;
 }
 
@@ -1322,31 +1366,37 @@ function renderImportarPlanilha(state, imp) {
   if (imp && imp.resultado) {
     const { total, ignoradas } = imp.resultado;
     const listaIgnoradas = ignoradas.length
-      ? `<div class="nv-section-head"><span class="nv-section-label">LINHAS IGNORADAS</span></div>
-         ${ignoradas
-           .map(
-             (ig) =>
-               `<div class="nv-dado-linha"><span>Linha ${ig.linha}</span><span class="nv-item-meta">${escapeHtml(ig.motivo)}</span></div>`
-           )
-           .join('')}`
+      ? `<section class="nv-cartao nv-cartao--justo">
+           <div class="nv-cartao-topo"><span class="nv-cartao-titulo">LINHAS IGNORADAS</span></div>
+           <div class="nv-lista">${ignoradas
+             .map(
+               (ig) =>
+                 `<div class="nv-dado-linha"><span>Linha ${ig.linha}</span><span class="nv-item-meta">${escapeHtml(ig.motivo)}</span></div>`
+             )
+             .join('')}</div>
+         </section>`
       : '';
     return `
       ${voltar}
-      <div class="nv-hero" style="border-bottom:1px solid var(--nv-rule-soft)">
-        <div class="nv-hero-label">IMPORTADOS</div>
-        <div class="nv-hero-value"><span class="numero" style="font-size:44px">${total}</span></div>
-        <div class="nv-item-meta" style="margin-top:10px">
-          ${total} lançamento${total === 1 ? '' : 's'} adicionado${total === 1 ? '' : 's'}${
-            ignoradas.length ? ` · ${ignoradas.length} ignorada${ignoradas.length === 1 ? '' : 's'}` : ''
-          }
+      <div class="nv-pilha">
+        <section class="nv-cartao">
+          <span class="nv-cartao-titulo">IMPORTADOS</span>
+          <div class="nv-saldo-valor"><span class="numero">${total}</span></div>
+          <div class="nv-saldo-sub">
+            ${total} lançamento${total === 1 ? '' : 's'} adicionado${total === 1 ? '' : 's'}${
+              ignoradas.length ? ` · ${ignoradas.length} ignorada${ignoradas.length === 1 ? '' : 's'}` : ''
+            }
+          </div>
+        </section>
+        ${listaIgnoradas}
+        <section class="nv-cartao nv-cartao--justo">
+          <p class="nv-item-meta" style="margin:0;line-height:1.5">
+            Confira em Lançamentos. Importar o mesmo arquivo de novo cria lançamentos duplicados — não há verificação de repetidos.
+          </p>
+        </section>
+        <div class="nv-acao-fixa">
+          <button type="button" class="nv-btn-contorno" data-acao="fechar-importar"><span>CONCLUIR</span></button>
         </div>
-      </div>
-      ${listaIgnoradas}
-      <p class="nv-vazio" style="text-align:left;padding:16px 20px">
-        Confira em Lançamentos. Importar o mesmo arquivo de novo cria lançamentos duplicados — não há verificação de repetidos.
-      </p>
-      <div style="padding:8px 20px 24px">
-        <button type="button" class="nv-btn-contorno" data-acao="fechar-importar"><span>CONCLUIR</span></button>
       </div>`;
   }
 
@@ -1366,12 +1416,12 @@ function renderImportarPlanilha(state, imp) {
       </div>`;
 
     const tabela = `
-      <div style="overflow-x:auto;padding:0 20px 12px">
+      <div style="overflow-x:auto">
         <table style="border-collapse:collapse;font-size:11px;width:100%">
           <thead><tr>${imp.colunas
             .map(
               (c) =>
-                `<th style="text-align:left;padding:6px 12px 6px 0;border-bottom:1px solid var(--nv-rule-soft);white-space:nowrap">${escapeHtml(c)}</th>`
+                `<th style="text-align:left;padding:6px 12px 6px 0;border-bottom:1px solid var(--nv-surface-borda);white-space:nowrap">${escapeHtml(c)}</th>`
             )
             .join('')}</tr></thead>
           <tbody>${imp.linhas
@@ -1381,7 +1431,7 @@ function renderImportarPlanilha(state, imp) {
                 `<tr>${imp.colunas
                   .map(
                     (unused, i) =>
-                      `<td style="padding:6px 12px 6px 0;border-bottom:1px solid var(--nv-hairline);white-space:nowrap">${escapeHtml(l[i] || '')}</td>`
+                      `<td style="padding:6px 12px 6px 0;border-bottom:1px solid var(--nv-surface-borda);white-space:nowrap">${escapeHtml(l[i] || '')}</td>`
                   )
                   .join('')}</tr>`
             )
@@ -1401,37 +1451,49 @@ function renderImportarPlanilha(state, imp) {
 
     return `
       ${voltar}
-      <div class="nv-section-head"><span class="nv-section-label">${imp.linhas.length} LINHA${
-        imp.linhas.length === 1 ? '' : 'S'
-      } ENCONTRADA${imp.linhas.length === 1 ? '' : 'S'}</span></div>
-      ${tabela}
-      <div class="nv-section-head"><span class="nv-section-label">DE QUAL COLUNA VEM CADA CAMPO</span></div>
-      ${campo('map-data', 'DATA', imp.sugestao.data, true)}
-      ${campo('map-valor', 'VALOR', imp.sugestao.valor, true)}
-      ${campo('map-descricao', 'DESCRIÇÃO', imp.sugestao.descricao, false)}
-      ${campo('map-categoria', 'CATEGORIA', imp.sugestao.categoria, false)}
-      ${campo('map-subcategoria', 'SUBCATEGORIA', imp.sugestao.subcategoria, false)}
-      ${campo('map-parcelas', 'PARCELAS', imp.sugestao.parcelas, false)}
-      ${contas.length ? campo('map-conta', 'CONTA', imp.sugestao.conta, false) : ''}
-      ${seletorContaPadrao}
-      <p class="nv-vazio" style="text-align:left;padding:12px 20px">
-        Valor negativo vira despesa; positivo, receita. Sem coluna de categoria, o Nuvra adivinha pela descrição. Uma coluna de conta na planilha, quando o nome bate com uma das suas contas, tem prioridade sobre a conta escolhida acima.
-      </p>
-      <div style="padding:8px 20px 24px">
-        <button type="button" class="nv-btn-contorno" data-acao="confirmar-importacao"><span>IMPORTAR LANÇAMENTOS</span></button>
+      <div class="nv-pilha">
+        <section class="nv-cartao nv-cartao--justo">
+          <div class="nv-cartao-topo"><span class="nv-cartao-titulo">${imp.linhas.length} LINHA${
+            imp.linhas.length === 1 ? '' : 'S'
+          } ENCONTRADA${imp.linhas.length === 1 ? '' : 'S'}</span></div>
+          ${tabela}
+        </section>
+        <section class="nv-cartao nv-cartao--justo">
+          <div class="nv-cartao-topo"><span class="nv-cartao-titulo">DE QUAL COLUNA VEM CADA CAMPO</span></div>
+          ${campo('map-data', 'DATA', imp.sugestao.data, true)}
+          ${campo('map-valor', 'VALOR', imp.sugestao.valor, true)}
+          ${campo('map-descricao', 'DESCRIÇÃO', imp.sugestao.descricao, false)}
+          ${campo('map-categoria', 'CATEGORIA', imp.sugestao.categoria, false)}
+          ${campo('map-subcategoria', 'SUBCATEGORIA', imp.sugestao.subcategoria, false)}
+          ${campo('map-parcelas', 'PARCELAS', imp.sugestao.parcelas, false)}
+          ${contas.length ? campo('map-conta', 'CONTA', imp.sugestao.conta, false) : ''}
+          ${seletorContaPadrao}
+        </section>
+        <section class="nv-cartao nv-cartao--justo">
+          <p class="nv-item-meta" style="margin:0;line-height:1.5">
+            Valor negativo vira despesa; positivo, receita. Sem coluna de categoria, o Nuvra adivinha pela descrição. Uma coluna de conta na planilha, quando o nome bate com uma das suas contas, tem prioridade sobre a conta escolhida acima.
+          </p>
+        </section>
+        <div class="nv-acao-fixa">
+          <button type="button" class="nv-btn-contorno" data-acao="confirmar-importacao"><span>IMPORTAR LANÇAMENTOS</span></button>
+        </div>
       </div>`;
   }
 
   return `
     ${voltar}
-    <div style="padding:20px">
-      <p style="font-size:13px;color:var(--nv-muted);line-height:1.5;margin:0 0 16px">
-        Exporte sua planilha como CSV (no Excel: <strong>Salvar como → CSV</strong>) e escolha o arquivo abaixo. Cada linha com data e valor vira um lançamento. Nada sai do aparelho — o arquivo é lido aqui mesmo.
-      </p>
-      <input type="file" id="campo-arquivo-csv" accept=".csv,text/csv,text/plain" style="font-size:13px;width:100%;margin-bottom:20px" />
-      <p style="font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--nv-muted);margin:0 0 8px">OU COLE O CONTEÚDO</p>
-      <textarea id="campo-texto-csv" rows="6" placeholder="data,descrição,valor&#10;01/08/2026,Mercado,-89,90" style="width:100%;font-family:inherit;font-size:13px;padding:10px;border:1px solid var(--nv-rule-soft);border-radius:8px;background:var(--nv-bg);color:var(--nv-fg);resize:vertical;box-sizing:border-box"></textarea>
-      <div style="margin-top:16px">
+    <div class="nv-pilha">
+      <section class="nv-cartao">
+        <p style="font-size:13px;color:var(--nv-muted);line-height:1.5;margin:0 0 16px">
+          Exporte sua planilha como CSV (no Excel: <strong>Salvar como → CSV</strong>) e escolha o arquivo abaixo. Cada linha com data e valor vira um lançamento. Nada sai do aparelho — o arquivo é lido aqui mesmo.
+        </p>
+        <input type="file" id="campo-arquivo-csv" accept=".csv,text/csv,text/plain" style="font-size:13px;width:100%" />
+      </section>
+      <section class="nv-cartao">
+        <span class="nv-cartao-titulo">OU COLE O CONTEÚDO</span>
+        <textarea id="campo-texto-csv" rows="6" placeholder="data,descrição,valor&#10;01/08/2026,Mercado,-89,90" style="width:100%;margin-top:12px;font-family:inherit;font-size:13px;padding:12px;border:1px solid var(--nv-surface-borda);border-radius:var(--nv-raio-interno);background:var(--nv-surface-2);color:var(--nv-fg);resize:vertical;box-sizing:border-box"></textarea>
+      </section>
+      <div class="nv-acao-fixa">
         <button type="button" class="nv-btn-contorno" data-acao="analisar-csv"><span>CONTINUAR</span></button>
       </div>
     </div>`;
@@ -1545,94 +1607,112 @@ function renderInvestimentos(state) {
       <span class="nv-title">Carteira</span>
       <span class="nv-month-label">${investimentos.length} ATIVO${investimentos.length === 1 ? '' : 'S'}</span>
     </div>
-    <div class="nv-hero" style="border-bottom:1px solid var(--nv-rule-soft)">
-      <div class="nv-hero-label">VALOR ATUAL</div>
-      <div class="nv-hero-value">
-        <span class="cifrao" style="font-size:18px">R$</span>
-        <span class="numero" style="font-size:48px">${mascarar(formatNumero(carteira.totalAtual), ocultar)}</span>
-      </div>
-      <div class="nv-carteira-badge-row">
-        <span class="nv-carteira-badge">${formatPercent(carteira.rendimentoPercentual)}</span>
-        <span class="nv-item-meta">${carteira.rendimentoValor >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(carteira.rendimentoValor)), ocultar)} sobre ${mascarar(formatCurrency(carteira.totalInvestido), ocultar)}</span>
-      </div>
-    </div>
-    ${
-      investimentos.length
-        ? '<button type="button" class="nv-link-accent" data-acao="abrir-perfil" style="margin:14px 0 0 20px;font-size:10px">DESCOBRIR MEU PERFIL</button>'
-        : `<div class="nv-perfil-convite">
-            <div class="nv-perfil-convite-titulo">Não sabe por onde começar?</div>
-            <p>Responda 4 perguntas e descubra seu perfil de investidor. O app sugere uma divisão por classe de ativo pra você usar como meta.</p>
-            <button type="button" class="nv-perfil-cta" data-acao="abrir-perfil">FAZER O TESTE</button>
-          </div>`
-    }
-    ${
-      composicao.length
-        ? `<div class="nv-composicao">
-      <div class="nv-section-label" style="margin-bottom:10px">COMPOSIÇÃO</div>
-      <div class="nv-composicao-grafico">
-        ${renderGraficoComposicao(composicao, totalComposicao, cores)}
-        <div class="nv-composicao-legenda">
-          ${composicao
+    <div class="nv-pilha">
+      <section class="nv-cartao">
+        <span class="nv-cartao-titulo">VALOR ATUAL</span>
+        <div class="nv-saldo-valor">
+          <span class="cifrao">R$</span>
+          <span class="numero">${mascarar(formatNumero(carteira.totalAtual), ocultar)}</span>
+        </div>
+        <div class="nv-carteira-badge-row">
+          <span class="nv-carteira-badge ${carteira.rendimentoValor < 0 ? 'nv-carteira-badge--negativo' : ''}">${formatPercent(carteira.rendimentoPercentual)}</span>
+          <span class="nv-item-meta">${carteira.rendimentoValor >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(carteira.rendimentoValor)), ocultar)} sobre ${mascarar(formatCurrency(carteira.totalInvestido), ocultar)}</span>
+        </div>
+      </section>
+      ${
+        investimentos.length
+          ? ''
+          : `<div class="nv-perfil-convite">
+              <div class="nv-perfil-convite-titulo">Não sabe por onde começar?</div>
+              <p>Responda algumas perguntas e descubra seu perfil de investidor. O app sugere uma divisão por classe de ativo pra você usar como meta.</p>
+              <button type="button" class="nv-perfil-cta" data-acao="abrir-perfil">FAZER O TESTE</button>
+            </div>`
+      }
+      ${
+        composicao.length
+          ? `<section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo">
+          <span class="nv-cartao-titulo">COMPOSIÇÃO</span>
+          <button type="button" class="nv-link-accent" data-acao="editar-alocacao">METAS DE ALOCAÇÃO</button>
+        </div>
+        <div class="nv-composicao">
+          <div class="nv-composicao-grafico">
+            ${renderGraficoComposicao(composicao, totalComposicao, cores)}
+            <div class="nv-composicao-legenda">
+              ${composicao
+                .map(
+                  (c, i) =>
+                    `<div class="nv-composicao-item"><span class="nv-composicao-bolinha" style="background:${cores[i % cores.length]}"></span>${escapeHtml(rotuloTipoInvestimento(c.tipo)).toUpperCase()} <b>${Math.round((c.valor / totalComposicao) * 100)}%</b></div>`
+                )
+                .join('')}
+            </div>
+          </div>
+        </div>
+      </section>`
+          : ''
+      }
+      ${
+        sugestao.length
+          ? `<section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo"><span class="nv-cartao-titulo">PRÓXIMO APORTE</span></div>
+        <div class="nv-list-plain">
+          ${sugestao
             .map(
-              (c, i) =>
-                `<div class="nv-composicao-item"><span class="nv-composicao-bolinha" style="background:${cores[i % cores.length]}"></span>${escapeHtml(rotuloTipoInvestimento(c.tipo)).toUpperCase()} <b>${Math.round((c.valor / totalComposicao) * 100)}%</b></div>`
+              (s) => `<div class="nv-row-plain"><span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[s.tipo] || s.tipo)}</span><span>faltam ${mascarar(formatCurrency(s.diferenca), ocultar)}</span></div>`
             )
             .join('')}
         </div>
+      </section>`
+          : ''
+      }
+      ${
+        agendaDividendos.length
+          ? `<section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo"><span class="nv-cartao-titulo">PRÓXIMOS DIVIDENDOS</span></div>
+        <div class="nv-list-plain">
+          ${agendaDividendos
+            .map((p) => {
+              const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
+              return `<div class="nv-row-plain"><span>${escapeHtml(p.nome)} · ${dataFmt}</span><span>${mascarar(formatCurrency(p.valor), ocultar)}</span></div>`;
+            })
+            .join('')}
+        </div>
+      </section>`
+          : ''
+      }
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo">
+          <span class="nv-cartao-titulo">MEUS ATIVOS</span>
+          ${investimentos.length ? '<button type="button" class="nv-link-accent" data-acao="abrir-perfil">DESCOBRIR MEU PERFIL</button>' : ''}
+        </div>
+        <div class="nv-lista">${itens}</div>
+      </section>
+      <div class="nv-acao-fixa">
+        <button type="button" class="nv-btn-contorno" data-acao="novo-investimento">
+          <span class="mais">+</span><span>NOVO ATIVO</span>
+        </button>
       </div>
-      <button type="button" class="nv-link-accent" data-acao="editar-alocacao" style="margin-top:10px;font-size:10px">METAS DE ALOCAÇÃO</button>
-    </div>`
-        : ''
-    }
-    ${
-      sugestao.length
-        ? `<div class="nv-section-head"><span class="nv-section-label">PRÓXIMO APORTE</span></div>
-    <div class="nv-list-plain">
-      ${sugestao
-        .map(
-          (s) => `<div class="nv-row-plain"><span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[s.tipo] || s.tipo)}</span><span>faltam ${mascarar(formatCurrency(s.diferenca), ocultar)}</span></div>`
-        )
-        .join('')}
-    </div>`
-        : ''
-    }
-    ${
-      agendaDividendos.length
-        ? `<div class="nv-section-head"><span class="nv-section-label">PRÓXIMOS DIVIDENDOS</span></div>
-    <div class="nv-list-plain">
-      ${agendaDividendos
-        .map((p) => {
-          const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
-          return `<div class="nv-row-plain"><span>${escapeHtml(p.nome)} · ${dataFmt}</span><span>${mascarar(formatCurrency(p.valor), ocultar)}</span></div>`;
-        })
-        .join('')}
-    </div>`
-        : ''
-    }
-    <div>${itens}</div>
-    <div class="nv-acao-fixa" style="margin-top:auto">
-      <button type="button" class="nv-btn-contorno" data-acao="novo-investimento">
-        <span>NOVO ATIVO</span><span class="mais">+</span>
-      </button>
-    </div>
-    ${
-      imposto.length
-        ? `<div class="nv-section-head"><span class="nv-section-label">IMPOSTO ESTIMADO — ${MESES[hoje.getMonth()].toUpperCase()}</span></div>
-    <div class="nv-list-plain">
-      ${imposto
-        .map(
-          (i) => `<div class="nv-row-plain"><span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[i.tipo] || i.tipo)}${i.isento ? ' (isento)' : ` · ${Math.round(i.aliquota * 100)}%`}</span><span>${mascarar(formatCurrency(i.impostoEstimado), ocultar)}</span></div>`
-        )
-        .join('')}
-    </div>
-    <p class="nv-item-meta" style="padding:0 20px 16px">Estimativa de apoio à decisão — não substitui o cálculo de um contador pra fins de DARF.</p>`
-        : ''
-    }
-    ${blocoDividas(state, investimentos, ocultar)}
-    <div class="nv-acao-fixa">
-      <button type="button" class="nv-btn-contorno" data-acao="nova-divida">
-        <span>NOVA DÍVIDA</span><span class="mais">+</span>
-      </button>
+      ${
+        imposto.length
+          ? `<section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo"><span class="nv-cartao-titulo">IMPOSTO ESTIMADO — ${MESES[hoje.getMonth()].toUpperCase()}</span></div>
+        <div class="nv-list-plain">
+          ${imposto
+            .map(
+              (i) => `<div class="nv-row-plain"><span>${escapeHtml(ROTULOS_TIPO_INVESTIMENTO[i.tipo] || i.tipo)}${i.isento ? ' (isento)' : ` · ${Math.round(i.aliquota * 100)}%`}</span><span>${mascarar(formatCurrency(i.impostoEstimado), ocultar)}</span></div>`
+            )
+            .join('')}
+        </div>
+        <p class="nv-item-meta" style="margin-top:12px">Estimativa de apoio à decisão — não substitui o cálculo de um contador pra fins de DARF.</p>
+      </section>`
+          : ''
+      }
+      ${blocoDividas(state, investimentos, ocultar)}
+      <div class="nv-acao-fixa">
+        <button type="button" class="nv-btn-contorno" data-acao="nova-divida">
+          <span class="mais">+</span><span>NOVA DÍVIDA</span>
+        </button>
+      </div>
     </div>
     ${tabBar('carteira', state.idioma)}
   `;
@@ -1660,15 +1740,17 @@ function blocoDividas(state, investimentos, ocultar) {
     )
     .join('');
   return `
-    <div class="nv-patrimonio">
-      <div class="nv-label">PATRIMÔNIO LÍQUIDO</div>
-      <div class="nv-patrimonio-valor ${pl.negativo ? 'nv-negativo' : ''}">${mascarar(formatCurrency(pl.liquido), ocultar)}</div>
-      <div class="nv-item-meta">${mascarar(formatCurrency(pl.ativos), ocultar)} em ativos − ${mascarar(formatCurrency(pl.dividas), ocultar)} em dívidas</div>
-    </div>
-    <div class="nv-section-head" style="margin-top:18px">
-      <span class="nv-section-label">DÍVIDAS</span>
-    </div>
-    ${linhas}`;
+    <section class="nv-cartao">
+      <span class="nv-cartao-titulo">PATRIMÔNIO LÍQUIDO</span>
+      <div class="nv-patrimonio">
+        <div class="nv-patrimonio-valor ${pl.negativo ? 'nv-negativo' : ''}">${mascarar(formatCurrency(pl.liquido), ocultar)}</div>
+        <div class="nv-item-meta">${mascarar(formatCurrency(pl.ativos), ocultar)} em ativos − ${mascarar(formatCurrency(pl.dividas), ocultar)} em dívidas</div>
+      </div>
+    </section>
+    <section class="nv-cartao nv-cartao--justo">
+      <div class="nv-cartao-topo"><span class="nv-cartao-titulo">DÍVIDAS</span></div>
+      <div class="nv-lista">${linhas}</div>
+    </section>`;
 }
 
 function renderAtivoDetalhe(state, ativoId) {
@@ -1730,62 +1812,76 @@ function renderAtivoDetalhe(state, ativoId) {
       <span class="nv-title">${escapeHtml(investimento.nome)}</span>
       <button type="button" class="nv-gear" data-acao="editar-investimento" data-id="${investimento.id}" aria-label="Editar ativo" style="margin-left:auto">${iconGear(19)}</button>
     </div>
-    <div class="nv-hero" style="border-bottom:1px solid var(--nv-rule-soft)">
-      <div class="nv-hero-label">VALOR ATUAL</div>
-      <div class="nv-hero-value">
-        <span class="cifrao" style="font-size:18px">R$</span>
-        <span class="numero" style="font-size:48px">${mascarar(formatNumero(resumo.valorAtual), ocultar)}</span>
-      </div>
-      <div class="nv-carteira-badge-row">
-        <span class="nv-carteira-badge">${formatPercent(resumo.rendimentoPercentual)}</span>
-        <span class="nv-item-meta ${classeRend}">${resumo.rendimentoValor >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(resumo.rendimentoValor)), ocultar)} sobre ${mascarar(formatCurrency(resumo.valorInvestido), ocultar)}</span>
-      </div>
-      ${totalProventos ? `<div class="nv-hero-sub">Proventos recebidos: ${mascarar(formatCurrency(totalProventos), ocultar)}</div>` : ''}
-      ${investimento.reserva ? '<div class="nv-hero-sub">RESERVA DE EMERGÊNCIA</div>' : ''}
-    </div>
-    <div class="nv-cells">
-      <div class="nv-cell">
-        <div class="nv-cell-label">QUANTIDADE</div>
-        <div class="nv-cell-valor">${mascarar(formatNumero(resumo.quantidade), ocultar)}</div>
-      </div>
-      <div class="nv-cell">
-        <div class="nv-cell-label">PREÇO MÉDIO</div>
-        <div class="nv-cell-valor">${mascarar(formatCurrency(resumo.precoMedio), ocultar)}</div>
-      </div>
-    </div>
-    <div class="nv-section-head">
-      <span class="nv-section-label">OPERAÇÕES</span>
-      <button type="button" class="nv-link-accent" data-acao="nova-operacao" data-id="${investimento.id}">+ NOVA OPERAÇÃO</button>
-    </div>
-    <div>${listaOperacoes}</div>
-    <div class="nv-section-head">
-      <span class="nv-section-label">PRÓXIMOS DIVIDENDOS</span>
-      <button type="button" class="nv-link-accent" data-acao="novo-provento-previsto" data-id="${investimento.id}">+ NOVO PREVISTO</button>
-    </div>
-    <div>${
-      dividendosPrevistos.length
-        ? dividendosPrevistos
-            .map((p) => {
-              const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
-              return `
-        <div class="nv-conta-linha" data-id="${p.id}">
-          <div>
-            <div class="nv-item-nome">${dataFmt}${p.descricao ? ` · ${escapeHtml(p.descricao)}` : ''}</div>
+    <div class="nv-pilha">
+      <section class="nv-cartao">
+        <span class="nv-cartao-titulo">VALOR ATUAL</span>
+        <div class="nv-saldo-valor">
+          <span class="cifrao">R$</span>
+          <span class="numero">${mascarar(formatNumero(resumo.valorAtual), ocultar)}</span>
+        </div>
+        <div class="nv-carteira-badge-row">
+          <span class="nv-carteira-badge ${resumo.rendimentoValor < 0 ? 'nv-carteira-badge--negativo' : ''}">${formatPercent(resumo.rendimentoPercentual)}</span>
+          <span class="nv-item-meta ${classeRend}">${resumo.rendimentoValor >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(resumo.rendimentoValor)), ocultar)} sobre ${mascarar(formatCurrency(resumo.valorInvestido), ocultar)}</span>
+        </div>
+        ${totalProventos ? `<div class="nv-saldo-sub">Proventos recebidos: ${mascarar(formatCurrency(totalProventos), ocultar)}</div>` : ''}
+        ${investimento.reserva ? '<div class="nv-saldo-sub">RESERVA DE EMERGÊNCIA</div>' : ''}
+      </section>
+
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cells">
+          <div class="nv-cell">
+            <div class="nv-cell-label">QUANTIDADE</div>
+            <div class="nv-cell-valor">${mascarar(formatNumero(resumo.quantidade), ocultar)}</div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="nv-item-valor">${mascarar(formatCurrency(p.valor), ocultar)}</div>
-            <button type="button" class="nv-link-muted" data-acao="excluir-provento-previsto" data-id="${p.id}" aria-label="Excluir dividendo previsto" style="color:var(--nv-negative)">✕</button>
+          <div class="nv-cell">
+            <div class="nv-cell-label">PREÇO MÉDIO</div>
+            <div class="nv-cell-valor">${mascarar(formatCurrency(resumo.precoMedio), ocultar)}</div>
           </div>
-        </div>`;
-            })
-            .join('')
-        : '<p class="nv-vazio">Nenhum dividendo previsto cadastrado.</p>'
-    }</div>
-    <div class="nv-section-head">
-      <span class="nv-section-label">PROVENTOS</span>
-      <button type="button" class="nv-link-accent" data-acao="novo-provento" data-id="${investimento.id}">+ NOVO PROVENTO</button>
+        </div>
+      </section>
+
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo">
+          <span class="nv-cartao-titulo">OPERAÇÕES</span>
+          <button type="button" class="nv-link-accent" data-acao="nova-operacao" data-id="${investimento.id}">+ NOVA OPERAÇÃO</button>
+        </div>
+        <div class="nv-lista">${listaOperacoes}</div>
+      </section>
+
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo">
+          <span class="nv-cartao-titulo">PRÓXIMOS DIVIDENDOS</span>
+          <button type="button" class="nv-link-accent" data-acao="novo-provento-previsto" data-id="${investimento.id}">+ NOVO PREVISTO</button>
+        </div>
+        <div class="nv-lista">${
+          dividendosPrevistos.length
+            ? dividendosPrevistos
+                .map((p) => {
+                  const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
+                  return `
+          <div class="nv-conta-linha" data-id="${p.id}">
+            <div>
+              <div class="nv-item-nome">${dataFmt}${p.descricao ? ` · ${escapeHtml(p.descricao)}` : ''}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="nv-item-valor">${mascarar(formatCurrency(p.valor), ocultar)}</div>
+              <button type="button" class="nv-link-muted" data-acao="excluir-provento-previsto" data-id="${p.id}" aria-label="Excluir dividendo previsto" style="color:var(--nv-negative)">✕</button>
+            </div>
+          </div>`;
+                })
+                .join('')
+            : '<p class="nv-vazio">Nenhum dividendo previsto cadastrado.</p>'
+        }</div>
+      </section>
+
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo">
+          <span class="nv-cartao-titulo">PROVENTOS</span>
+          <button type="button" class="nv-link-accent" data-acao="novo-provento" data-id="${investimento.id}">+ NOVO PROVENTO</button>
+        </div>
+        <div class="nv-lista">${listaProventos}</div>
+      </section>
     </div>
-    <div>${listaProventos}</div>
     ${tabBar('carteira', state.idioma)}
   `;
 }

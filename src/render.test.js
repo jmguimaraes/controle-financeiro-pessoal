@@ -397,8 +397,12 @@ test('renderInvestimentos mostra o gráfico de composição (SVG) com a legenda 
   });
   const html = renderInvestimentos(state);
   assert.match(html, /<svg[^>]*aria-label="Gráfico de composição/);
-  const posFii = html.indexOf('FUNDO IMOBILIÁRIO');
-  const posAcao = html.indexOf('AÇÃO');
+  // Procura dentro da legenda, não na tela inteira: "AÇÃO" é sufixo de "METAS DE ALOCAÇÃO", que
+  // fica no cabeçalho do mesmo cartão — buscar solto acha o botão em vez do item da legenda.
+  const legenda = html.match(/<div class="nv-composicao-legenda">[\s\S]*?<\/div>\s*<\/div>/);
+  assert.ok(legenda, 'a legenda da composição deve estar no HTML');
+  const posFii = legenda[0].indexOf('FUNDO IMOBILIÁRIO');
+  const posAcao = legenda[0].indexOf('AÇÃO');
   assert.ok(posFii !== -1 && posAcao !== -1 && posFii < posAcao, 'FII (900) é maior que Ação (100), deve aparecer primeiro na legenda');
 });
 
