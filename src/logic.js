@@ -270,9 +270,24 @@ function mesPorIndice(indice) {
   return { ano: Math.floor(indice / 12), mes: (((indice % 12) + 12) % 12) + 1 };
 }
 
+// Quem gastou: campo de texto livre no lançamento, sem cadastro de pessoas. A lista de nomes é
+// derivada do que já foi digitado, e grafias que só diferem em caixa/acento ("João", "joao") contam
+// como a mesma pessoa — senão o filtro encheria de duplicata a cada digitação diferente.
+function pessoasUsadas(lancamentos) {
+  const vistas = new Map();
+  for (const l of lancamentos || []) {
+    const nome = String((l && l.pessoa) || '').trim();
+    if (!nome) continue;
+    const chave = normalizarTexto(nome);
+    if (!vistas.has(chave)) vistas.set(chave, nome);
+  }
+  return [...vistas.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
 function filtrarLancamentos(lancamentos, ano, mes, opcoes = {}) {
-  const { busca = '', filtro = 'todos', contaId = null } = opcoes;
+  const { busca = '', filtro = 'todos', contaId = null, pessoa = null } = opcoes;
   const buscaNormalizada = busca.trim().toLowerCase();
+  const pessoaNormalizada = pessoa ? normalizarTexto(pessoa).trim() : '';
 
   return lancamentos
     .map((l) => ({ lancamento: l, parcela: parcelaNoMes(l, ano, mes) }))
@@ -285,6 +300,10 @@ function filtrarLancamentos(lancamentos, ano, mes, opcoes = {}) {
       return true;
     })
     .filter((item) => !contaId || item.lancamento.contaId === contaId)
+    .filter((item) => {
+      if (!pessoaNormalizada) return true;
+      return normalizarTexto(item.lancamento.pessoa || '').trim() === pessoaNormalizada;
+    })
     .filter((item) => {
       if (!buscaNormalizada) return true;
       const alvo = `${item.lancamento.descricao} ${item.lancamento.categoria}`.toLowerCase();
@@ -1061,5 +1080,6 @@ if (typeof module !== 'undefined' && module.exports) {
     parseCSV,
     analisarPlanilha,
     converterLinhasEmLancamentos,
+    pessoasUsadas,
   };
 }

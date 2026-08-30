@@ -47,6 +47,7 @@ const {
   comprometimentoMensal,
   resumoDiario,
   lancamentosDoDia,
+  pessoasUsadas,
   parseCSV,
   analisarPlanilha,
   converterLinhasEmLancamentos,
@@ -1229,4 +1230,44 @@ test('applyAction importarLancamentos anexa em bloco e preserva o resto do estad
   });
   assert.deepEqual(s.lancamentos.map((l) => l.id), ['a1', 'i1', 'i2']);
   assert.equal(s.idioma, 'en');
+});
+
+// --- Quem gastou (pessoa) ---
+
+test('pessoasUsadas lista nomes distintos em ordem, ignorando vazios', () => {
+  const lancamentos = [
+    { id: '1', pessoa: 'Ana' },
+    { id: '2', pessoa: '' },
+    { id: '3', pessoa: 'Bruno' },
+    { id: '4' },
+    { id: '5', pessoa: '   ' },
+    { id: '6', pessoa: 'Ana' },
+  ];
+  assert.deepEqual(pessoasUsadas(lancamentos), ['Ana', 'Bruno']);
+});
+
+test('pessoasUsadas junta grafias que só diferem em caixa ou acento, mantendo a primeira vista', () => {
+  const lancamentos = [{ id: '1', pessoa: 'João' }, { id: '2', pessoa: 'joao' }, { id: '3', pessoa: 'JOÃO' }];
+  assert.deepEqual(pessoasUsadas(lancamentos), ['João']);
+});
+
+test('filtrarLancamentos filtra por pessoa sem depender de caixa ou acento', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'a', valorTotal: 10, parcelas: 1, pessoa: 'João' },
+    { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Lazer', descricao: 'b', valorTotal: 20, parcelas: 1, pessoa: 'Ana' },
+    { id: '3', data: '2026-08-03', tipo: 'despesa', categoria: 'Lazer', descricao: 'c', valorTotal: 30, parcelas: 1 },
+  ];
+  const so = filtrarLancamentos(lancamentos, 2026, 8, { pessoa: 'joao' });
+  assert.deepEqual(so.map((l) => l.id), ['1']);
+  assert.equal(filtrarLancamentos(lancamentos, 2026, 8, {}).length, 3);
+});
+
+test('filtrarLancamentos combina o filtro de pessoa com busca e tipo', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'cinema', valorTotal: 10, parcelas: 1, pessoa: 'Ana' },
+    { id: '2', data: '2026-08-02', tipo: 'receita', categoria: 'Salário', descricao: 'cinema', valorTotal: 20, parcelas: 1, pessoa: 'Ana' },
+    { id: '3', data: '2026-08-03', tipo: 'despesa', categoria: 'Lazer', descricao: 'bar', valorTotal: 30, parcelas: 1, pessoa: 'Ana' },
+  ];
+  const r = filtrarLancamentos(lancamentos, 2026, 8, { pessoa: 'Ana', filtro: 'despesas', busca: 'cine' });
+  assert.deepEqual(r.map((l) => l.id), ['1']);
 });

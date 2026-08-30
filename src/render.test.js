@@ -836,3 +836,71 @@ test('renderImportarPlanilha passo 3 resume importados e ignorados', () => {
   assert.match(html, /Valor ausente/);
   assert.match(html, /data-acao="fechar-importar"/);
 });
+
+// --- Quem gastou (pessoa) ---
+
+test('renderNovoLancamento traz campo de pessoa com sugestões de quem já foi usado', () => {
+  const state = estado({
+    lancamentos: [
+      { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'x', valorTotal: 10, parcelas: 1, pessoa: 'Ana' },
+    ],
+  });
+  const html = renderNovoLancamento(state, { tipo: 'despesa' });
+  assert.match(html, /name="pessoa"/);
+  assert.match(html, /list="lista-pessoas"/);
+  assert.match(html, /<datalist id="lista-pessoas">[\s\S]*?<option value="Ana">/);
+});
+
+test('renderNovoLancamento pré-preenche a pessoa ao editar', () => {
+  const html = renderNovoLancamento(estado(), { id: 'a1', tipo: 'despesa', pessoa: 'Bruno' });
+  assert.match(html, /name="pessoa"[^>]*value="Bruno"/);
+});
+
+test('renderLancamentos mostra quem gastou na linha do lançamento', () => {
+  const state = estado({
+    lancamentos: [
+      { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'Cinema', valorTotal: 10, parcelas: 1, pessoa: 'Ana' },
+    ],
+  });
+  assert.match(renderLancamentos(state, 2026, 8), /Lazer · Ana/);
+});
+
+test('renderLancamentos só mostra o filtro de pessoa depois que alguém foi registrado', () => {
+  const semPessoa = estado({
+    lancamentos: [{ id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'x', valorTotal: 10, parcelas: 1 }],
+  });
+  assert.doesNotMatch(renderLancamentos(semPessoa, 2026, 8), /campo-pessoa-filtro/);
+
+  const comPessoa = estado({
+    lancamentos: [{ id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'x', valorTotal: 10, parcelas: 1, pessoa: 'Ana' }],
+  });
+  const html = renderLancamentos(comPessoa, 2026, 8);
+  assert.match(html, /id="campo-pessoa-filtro"/);
+  assert.match(html, /<option value="Ana"/);
+});
+
+test('renderLancamentos marca a pessoa selecionada no filtro', () => {
+  const state = estado({
+    lancamentos: [
+      { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'x', valorTotal: 10, parcelas: 1, pessoa: 'Ana' },
+      { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Lazer', descricao: 'y', valorTotal: 10, parcelas: 1, pessoa: 'Bruno' },
+    ],
+  });
+  const html = renderLancamentos(state, 2026, 8, { pessoaSelecionada: 'Bruno' });
+  assert.match(html, /<option value="Bruno" selected>/);
+  assert.match(html, />y</);
+  assert.doesNotMatch(html, />x</);
+});
+
+test('renderLancamentos e renderNovoLancamento escapam o nome da pessoa', () => {
+  const nome = '<img src=x onerror=alert(1)>';
+  const state = estado({
+    lancamentos: [{ id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'x', valorTotal: 10, parcelas: 1, pessoa: nome }],
+  });
+  const lista = renderLancamentos(state, 2026, 8);
+  assert.equal(lista.includes('<img src=x'), false);
+  assert.match(lista, /&lt;img/);
+
+  const form = renderNovoLancamento(state, { pessoa: nome });
+  assert.equal(form.includes('<img src=x'), false);
+});

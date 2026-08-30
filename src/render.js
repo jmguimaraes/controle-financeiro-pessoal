@@ -349,11 +349,19 @@ function rotuloData(dataISO) {
 function renderLancamentos(state, ano, mes, opcoes = {}) {
   const ocultar = !!state.ocultarValores;
   const contas = state.contas || [];
-  const { busca = '', filtro = 'todos', contaSelecionada = null } = opcoes;
-  const itens = L.filtrarLancamentos(state.lancamentos, ano, mes, { busca, filtro, contaId: contaSelecionada });
+  const { busca = '', filtro = 'todos', contaSelecionada = null, pessoaSelecionada = null } = opcoes;
+  const itens = L.filtrarLancamentos(state.lancamentos, ano, mes, {
+    busca,
+    filtro,
+    contaId: contaSelecionada,
+    pessoa: pessoaSelecionada,
+  });
   const total = L.totalFiltrado(itens);
   const grupos = agruparPorDia(itens);
   const contaAtual = contas.find((c) => c.id === contaSelecionada);
+  // A lista sai de todos os lançamentos, não dos filtrados: senão escolher alguém esvaziaria o
+  // próprio seletor. Só aparece depois que existe ao menos um nome — quem não usa o campo não vê.
+  const pessoas = L.pessoasUsadas(state.lancamentos || []);
 
   const chips = [
     { id: 'todos', rotulo: 'TODOS' },
@@ -374,11 +382,12 @@ function renderLancamentos(state, ano, mes, opcoes = {}) {
             const classe = l.tipo === 'receita' ? 'positivo' : 'negativo';
             const conta = contas.find((c) => c.id === l.contaId);
             const metaConta = conta ? ` · ${escapeHtml(conta.nome)}` : '';
+            const metaPessoa = l.pessoa ? ` · ${escapeHtml(l.pessoa)}` : '';
             return `
         <div class="nv-item-lanc" data-id="${l.id}" data-acao="editar-lancamento">
           <div>
             <div class="nv-item-nome">${escapeHtml(l.descricao || l.categoria)}${tag}</div>
-            <div class="nv-item-meta">${escapeHtml(l.categoria)}${metaConta}</div>
+            <div class="nv-item-meta">${escapeHtml(l.categoria)}${metaPessoa}${metaConta}</div>
           </div>
           <div class="nv-item-valor ${classe}">${sinal} ${mascarar(formatNumero(L.parcelaValor(l)), ocultar)}</div>
         </div>`;
@@ -411,6 +420,17 @@ function renderLancamentos(state, ano, mes, opcoes = {}) {
           ${contas.map((c) => `<option value="${c.id}" ${c.id === contaSelecionada ? 'selected' : ''}>${escapeHtml(c.nome)}</option>`).join('')}
         </select>
       </div>
+      ${
+        pessoas.length
+          ? `<div class="nv-cell">
+        <div class="nv-cell-label" style="font-size:9px">QUEM</div>
+        <select id="campo-pessoa-filtro" class="nv-select-inline">
+          <option value="">Todos</option>
+          ${pessoas.map((p) => `<option value="${escapeHtml(p)}" ${p === pessoaSelecionada ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('')}
+        </select>
+      </div>`
+          : ''
+      }
       <div class="nv-cell">
         <div class="nv-cell-label" style="font-size:9px">TOTAL FILTRADO</div>
         <div class="nv-cell-valor" style="font-size:12px">${total >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(total)), ocultar)}</div>
@@ -435,6 +455,7 @@ function opcoesCategoria(tipo) {
 
 function renderNovoLancamento(state, dadosIniciais) {
   const contas = state.contas || [];
+  const pessoas = L.pessoasUsadas(state.lancamentos || []);
   const d = dadosIniciais || {};
   const tipo = d.tipo || 'despesa';
   const parcelado = (d.parcelas || 1) > 1;
@@ -467,6 +488,13 @@ function renderNovoLancamento(state, dadosIniciais) {
       <div class="nv-campo-linha">
         <label class="nv-campo-label" for="campo-categoria-lancamento">CATEGORIA</label>
         ${renderComboSelect('categoria', opcoesCategoria(tipo), d.categoria, 'campo-categoria-lancamento')}
+      </div>
+      <div class="nv-campo-linha">
+        <label class="nv-campo-label" for="campo-pessoa">QUEM GASTOU</label>
+        <input type="text" id="campo-pessoa" name="pessoa" maxlength="40" autocomplete="off"
+          list="lista-pessoas" placeholder="deixe em branco se for você"
+          value="${escapeHtml(d.pessoa || '')}" />
+        <datalist id="lista-pessoas">${pessoas.map((p) => `<option value="${escapeHtml(p)}">`).join('')}</datalist>
       </div>
       <div class="nv-campo-dupla">
         <div>

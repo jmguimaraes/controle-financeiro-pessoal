@@ -34,6 +34,7 @@
   let busca = '';
   let filtroLancamentos = 'todos';
   let contaSelecionada = null;
+  let pessoaSelecionada = null;
   let rascunhoLancamento = null; // dados em edição na tela de novo lançamento
   let descricaoSincronizacao = 'Verificando…';
   let calculadoraAtiva = 'compostos'; // compostos | simples | porcentagem | milhao
@@ -270,6 +271,7 @@
       busca,
       filtro: filtroLancamentos,
       contaSelecionada,
+      pessoaSelecionada,
     });
     document.getElementById('tela-carteira').innerHTML = renderInvestimentos(state);
     document.getElementById('tela-metas').innerHTML = renderMetas(state, anoAtual, mesAtual);
@@ -568,6 +570,7 @@
       tipo: dados.get('tipo') || 'despesa',
       valorTotal: numeroDoCampoMoeda(dados.get('valorTotal')),
       contaId: dados.get('contaId') || null,
+      pessoa: (dados.get('pessoa') || '').trim(),
       parcelas: dados.get('parcelado') === 'on' ? Number(dados.get('parcelas')) || 2 : 1,
     };
   }
@@ -896,6 +899,7 @@
           busca,
           filtro: filtroLancamentos,
           contaSelecionada,
+          pessoaSelecionada,
         });
       }
 
@@ -1015,6 +1019,7 @@
           busca,
           filtro: filtroLancamentos,
           contaSelecionada,
+          pessoaSelecionada,
         });
         const novoFoco = document.getElementById('campo-busca-lancamentos');
         if (novoFoco) {
@@ -1031,12 +1036,14 @@
       if (evento.target.name === 'tipo' && evento.target.closest('#formulario-investimento')) {
         atualizarSugestoesAtivo(evento.target.value);
       }
-      if (evento.target.id === 'campo-conta-filtro') {
-        contaSelecionada = evento.target.value || null;
+      if (evento.target.id === 'campo-conta-filtro' || evento.target.id === 'campo-pessoa-filtro') {
+        if (evento.target.id === 'campo-conta-filtro') contaSelecionada = evento.target.value || null;
+        else pessoaSelecionada = evento.target.value || null;
         document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual, {
           busca,
           filtro: filtroLancamentos,
           contaSelecionada,
+          pessoaSelecionada,
         });
       }
       if (evento.target.name === 'parcelado' && evento.target.closest('#formulario-lancamento')) {
