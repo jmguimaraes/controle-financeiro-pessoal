@@ -1347,6 +1347,14 @@ function renderAbertura() {
 function renderGraficoComposicao(composicao, total, cores) {
   const raio = 52;
   const espessura = 20;
+  // O traço é centrado no raio, então metade da espessura fica PARA FORA dele: a borda externa
+  // do desenho está em raio + espessura/2, não em raio. Com viewBox fixo em 120 e raio 52, essa
+  // borda caía em 62 contra um limite de 60 e a rosca aparecia cortada nos quatro lados. O
+  // viewBox agora é calculado a partir do raio, então mexer no raio ou na espessura não volta a
+  // cortar. O +2 é folga pra antisserrilhado não comer a borda exatamente no limite.
+  const bordaExterna = raio + espessura / 2;
+  const tamanho = bordaExterna * 2 + 2;
+  const centro = tamanho / 2;
   const circunferencia = 2 * Math.PI * raio;
   let acumulado = 0;
   const segmentos = composicao
@@ -1355,12 +1363,12 @@ function renderGraficoComposicao(composicao, total, cores) {
       const comprimento = fracao * circunferencia;
       const dashoffset = -acumulado;
       acumulado += comprimento;
-      return `<circle cx="60" cy="60" r="${raio}" fill="none" stroke="${cores[i % cores.length]}" stroke-width="${espessura}" stroke-dasharray="${comprimento.toFixed(2)} ${(circunferencia - comprimento).toFixed(2)}" stroke-dashoffset="${dashoffset.toFixed(2)}"></circle>`;
+      return `<circle cx="${centro}" cy="${centro}" r="${raio}" fill="none" stroke="${cores[i % cores.length]}" stroke-width="${espessura}" stroke-dasharray="${comprimento.toFixed(2)} ${(circunferencia - comprimento).toFixed(2)}" stroke-dashoffset="${dashoffset.toFixed(2)}"></circle>`;
     })
     .join('');
   return `
-    <svg width="120" height="120" viewBox="0 0 120 120" style="transform:rotate(-90deg);flex:none" role="img" aria-label="Gráfico de composição da carteira por tipo de ativo">
-      <circle cx="60" cy="60" r="${raio}" fill="none" stroke="var(--nv-hairline)" stroke-width="${espessura}"></circle>
+    <svg width="120" height="120" viewBox="0 0 ${tamanho} ${tamanho}" style="transform:rotate(-90deg);flex:none" role="img" aria-label="Gráfico de composição da carteira por tipo de ativo">
+      <circle cx="${centro}" cy="${centro}" r="${raio}" fill="none" stroke="var(--nv-hairline)" stroke-width="${espessura}"></circle>
       ${segmentos}
     </svg>`;
 }

@@ -1194,3 +1194,27 @@ test('renderNovoLancamento sugere subcategoria da categoria valida para o tipo e
   assert.match(html, /<datalist id="lista-subcategorias">[\s\S]*?<option value="Bônus">/);
   assert.doesNotMatch(html, /<datalist id="lista-subcategorias">[\s\S]*?<option value="Luz">/);
 });
+
+test('grafico de composicao cabe inteiro no viewBox, sem cortar a espessura do traco', () => {
+  const state = estado({
+    investimentos: [
+      { id: 'i1', nome: 'A', tipo: 'acao', precoAtual: 60, operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: 60 }] },
+      { id: 'i2', nome: 'B', tipo: 'fii', precoAtual: 40, operacoes: [{ id: 'o2', tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: 40 }] },
+    ],
+  });
+  const html = renderInvestimentos(state);
+  const svg = html.match(/<svg[^>]*viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"[\s\S]*?<\/svg>/);
+  assert.ok(svg, 'svg do grafico encontrado');
+  const [largura, altura] = [Number(svg[1]), Number(svg[2])];
+
+  const circulos = [...svg[0].matchAll(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"[^>]*stroke-width="([\d.]+)"/g)];
+  assert.ok(circulos.length >= 2, 'trilha de fundo + segmentos');
+  for (const [, cx, cy, r, w] of circulos) {
+    // O traco fica centrado no raio: metade dele passa pra fora.
+    const bordaExterna = Number(r) + Number(w) / 2;
+    assert.ok(Number(cx) - bordaExterna >= 0, `corta a esquerda: ${Number(cx) - bordaExterna}`);
+    assert.ok(Number(cy) - bordaExterna >= 0, `corta em cima: ${Number(cy) - bordaExterna}`);
+    assert.ok(Number(cx) + bordaExterna <= largura, `corta a direita: ${largura - (Number(cx) + bordaExterna)}`);
+    assert.ok(Number(cy) + bordaExterna <= altura, `corta embaixo: ${altura - (Number(cy) + bordaExterna)}`);
+  }
+});
