@@ -919,9 +919,9 @@ function detectarSeparadorCSV(primeiraLinha) {
 }
 
 // O Excel em português salva "CSV" no code page do Windows (1252), não em UTF-8 — e é exatamente
-// esse o caminho que a tela de importação sugere. Lido como UTF-8, "Almoço" vira "Almo�o" e fica
-// gravado torto pra sempre. Tenta UTF-8 estrito primeiro; se o arquivo não for UTF-8 válido, cai
-// pro 1252, que aceita qualquer byte.
+// esse o caminho que a tela de importação sugere. Lido como UTF-8, o "ç" de "Almoço" vira o
+// caractere de substituição e fica gravado torto pra sempre. Tenta UTF-8 estrito primeiro; se o
+// arquivo não for UTF-8 válido, cai pro 1252, que aceita qualquer byte.
 function decodificarCSV(bufferOuTexto) {
   if (typeof bufferOuTexto === 'string') return bufferOuTexto;
   try {

@@ -403,7 +403,7 @@
 
   // Lê como bytes, não como texto: readAsText assume UTF-8, mas o Excel em português salva CSV no
   // code page do Windows — e é justamente esse caminho que a tela sugere. decodificarCSV escolhe a
-  // codificação certa (ver logic.js); ler errado gravaria "Almo�o" pra sempre.
+  // codificação certa (ver logic.js); ler errado gravaria acento quebrado pra sempre.
   function lerArquivoCSV(arquivo) {
     if (!arquivo) return;
     const leitor = new FileReader();
