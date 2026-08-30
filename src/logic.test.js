@@ -17,6 +17,9 @@ const {
   estadoInicial,
   applyAction,
   posicaoAtivo,
+  criarSegredoPin,
+  conferirPin,
+  PIN_ITERACOES,
   migrarInvestimentoLegado,
   resumoInvestimento,
   composicaoPorTipo,
@@ -1720,4 +1723,69 @@ test('apagar uma compra só é impossível quando o que sobra não cobre as vend
   // Mas com uma venda que cabe no que sobra, apagar a mesma compra é legítimo e não pode ser barrado.
   const vendaMenor = operacoes.map((o) => (o.id === 'ov' ? { ...o, quantidade: 80 } : o));
   assert.equal(posicaoAtivo(vendaMenor.filter((o) => o.id !== 'oc2')).quantidade, 20);
+});
+
+// --- Segredo do PIN ----------------------------------------------------------------------------
+// O formato antigo (hashSimples) devolvia o PIN digitado em milissegundos: 32 bits, sem sal e sem
+// custo. Estes testes prendem as três propriedades que a troca precisa manter: o segredo gravado
+// não pode conter o PIN, o PIN antigo tem que continuar entrando, e a migração tem que ser sozinha.
+
+test('criarSegredoPin não guarda o PIN, nem o hash antigo dele', async () => {
+  const segredo = await criarSegredoPin('428391');
+  assert.ok(!segredo.includes('428391'), 'o PIN apareceu no que foi gravado');
+  assert.ok(!segredo.includes(hashSimples('428391')), 'o hash reversível antigo apareceu no registro');
+});
+
+test('criarSegredoPin usa sal novo a cada vez, então dois PINs iguais não têm o mesmo registro', async () => {
+  const a = await criarSegredoPin('1234');
+  const b = await criarSegredoPin('1234');
+  assert.notEqual(a, b);
+  assert.equal((await conferirPin('1234', a)).ok, true);
+  assert.equal((await conferirPin('1234', b)).ok, true);
+});
+
+test('conferirPin aceita o PIN certo e recusa o errado no formato novo', async () => {
+  const segredo = await criarSegredoPin('428391');
+  assert.equal((await conferirPin('428391', segredo)).ok, true);
+  assert.equal((await conferirPin('428390', segredo)).ok, false);
+  assert.equal((await conferirPin('', segredo)).ok, false);
+});
+
+test('o custo fica gravado no registro e é ele que vale na conferência, não a constante atual', async () => {
+  // É isto que permite subir PIN_ITERACOES depois sem invalidar quem já definiu PIN: a conferência
+  // tem que usar o número que está no registro. Se usasse a constante, trocar o valor trancaria
+  // todo mundo pra fora — e o jeito de provar isso é adulterar o campo e ver a conferência falhar.
+  const registro = JSON.parse(await criarSegredoPin('1234'));
+  assert.equal(registro.iter, PIN_ITERACOES);
+  assert.equal((await conferirPin('1234', JSON.stringify(registro))).ok, true);
+  const adulterado = JSON.stringify({ ...registro, iter: registro.iter + 1 });
+  assert.equal(
+    (await conferirPin('1234', adulterado)).ok,
+    false,
+    'a conferência ignorou o custo gravado no registro'
+  );
+});
+
+test('quem já tinha PIN no formato antigo continua entrando, e é marcado pra migrar', async () => {
+  const legado = hashSimples('9182');
+  const certo = await conferirPin('9182', legado);
+  assert.equal(certo.ok, true);
+  assert.equal(certo.precisaMigrar, true, 'o acesso com formato antigo tem que pedir a regravação');
+  const errado = await conferirPin('0000', legado);
+  assert.equal(errado.ok, false);
+  assert.equal(errado.precisaMigrar, false, 'PIN errado não pode disparar migração');
+});
+
+test('depois de migrado, o PIN antigo não abre mais pelo caminho antigo', async () => {
+  const novo = await criarSegredoPin('9182');
+  assert.equal((await conferirPin('9182', novo)).precisaMigrar, false);
+  // E o registro novo não é aceito como se fosse o formato antigo.
+  assert.notEqual(novo, hashSimples('9182'));
+});
+
+test('um registro corrompido não deixa qualquer PIN entrar', async () => {
+  for (const ruim of ['{', '{"v":2}', '{"v":9,"sal":"a","hash":"b","iter":1}', '{"v":2,"sal":"a","hash":"b","iter":0}']) {
+    const r = await conferirPin('1234', ruim);
+    assert.equal(r.ok, false, `registro ${ruim} deixou entrar`);
+  }
 });

@@ -1,7 +1,7 @@
 (function () {
   const logica = typeof require !== 'undefined' ? require('./logic.js') : window;
   const renderizacao = typeof require !== 'undefined' ? require('./render.js') : window;
-  const { uid, applyAction, estadoInicial, hashSimples } = logica;
+  const { uid, applyAction, estadoInicial } = logica;
   const {
     renderResumo,
     renderLancamentos,
@@ -79,6 +79,38 @@
     document.getElementById('app-shell').hidden = true;
     const campo = document.querySelector('#formulario-pin [name="pin"]');
     if (campo) campo.focus();
+  }
+
+  // Conferir o PIN agora custa umas centenas de milissegundos de propósito (é o que encarece
+  // testar os 10^6 PINs), então a espera precisa aparecer na tela — senão o toque em ENTRAR
+  // parece não ter feito nada e a pessoa aperta de novo.
+  async function conferirPinDigitado(digitado) {
+    const botao = document.querySelector('#formulario-pin button[type="submit"]');
+    const rotuloOriginal = botao ? botao.textContent : null;
+    if (botao) {
+      botao.disabled = true;
+      botao.textContent = 'VERIFICANDO…';
+    }
+    const guardado = localStorage_get(CHAVE_PIN);
+    const resultado = await logica.conferirPin(digitado, guardado);
+    if (resultado.ok) {
+      // Primeiro acesso de quem tinha PIN no formato antigo: regrava no formato novo sem pedir
+      // nada. Se a regravação falhar, o PIN antigo continua valendo — não dá pra trancar ninguém.
+      if (resultado.precisaMigrar) {
+        try {
+          localStorage_set(CHAVE_PIN, await logica.criarSegredoPin(digitado));
+        } catch (erro) {
+          console.error('Não foi possível migrar o PIN para o formato novo:', erro);
+        }
+      }
+      prosseguirAposPin();
+      return;
+    }
+    if (botao) {
+      botao.disabled = false;
+      if (rotuloOriginal !== null) botao.textContent = rotuloOriginal;
+    }
+    mostrarTelaPin(resultado.indisponivel ? 'indisponivel' : true);
   }
 
   function localStorage_get(chave) {
@@ -1249,13 +1281,7 @@
       // spec faz esse controle "sombrear" a propriedade .id do próprio elemento <form>.
       if (evento.target.getAttribute('id') === 'formulario-pin') {
         evento.preventDefault();
-        const dados = new FormData(evento.target);
-        const digitado = dados.get('pin') || '';
-        if (hashSimples(digitado) === localStorage_get(CHAVE_PIN)) {
-          prosseguirAposPin();
-        } else {
-          mostrarTelaPin(true);
-        }
+        conferirPinDigitado(new FormData(evento.target).get('pin') || '');
         return;
       }
 
@@ -1268,8 +1294,13 @@
           document.getElementById('erro-definir-pin').style.display = 'block';
           return;
         }
-        localStorage_set(CHAVE_PIN, hashSimples(pin));
-        renderizarTudo();
+        // Derivar leva algumas centenas de milissegundos; o diálogo fecha sozinho (method="dialog")
+        // e a gravação termina logo depois. renderizarTudo só depois de gravar, senão a tela de
+        // Configurações ainda leria o estado anterior e mostraria o PIN como desativado.
+        logica.criarSegredoPin(pin).then((segredo) => {
+          localStorage_set(CHAVE_PIN, segredo);
+          renderizarTudo();
+        });
         return;
       }
 

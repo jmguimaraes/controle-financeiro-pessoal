@@ -894,7 +894,16 @@ function renderPin(erro) {
           <input type="password" inputmode="numeric" pattern="[0-9]*" name="pin" maxlength="6" autofocus
             style="background:none;border:none;border-bottom:2px solid rgba(243,242,242,.35);color:#f3f2f2;font-size:36px;letter-spacing:.4em;text-align:center;padding:10px 0;outline:none;font-family:inherit" />
         </label>
-        ${erro ? '<div style="color:var(--nv-negative);font-size:12px;font-weight:600;text-align:center">PIN incorreto</div>' : ''}
+        ${
+          erro === 'indisponivel'
+            ? `<div style="color:var(--nv-negative);font-size:12px;font-weight:600;line-height:1.5;text-align:center">
+                 Este navegador não consegue conferir o PIN.<br />
+                 <span style="font-weight:500;opacity:.85">Abra o Nuvra no navegador de sempre. Seus dados continuam salvos.</span>
+               </div>`
+            : erro
+              ? '<div style="color:var(--nv-negative);font-size:12px;font-weight:600;text-align:center">PIN incorreto</div>'
+              : ''
+        }
         <button type="submit" class="nv-abertura-cta">ENTRAR</button>
       </form>
     </div>`;

@@ -58,6 +58,106 @@ function hashSimples(texto) {
   return hash.toString(36);
 }
 
+// --- Segredo do PIN -----------------------------------------------------------------------------
+// hashSimples guardava o PIN de um jeito que devolvia o número digitado em 30ms: 32 bits, sem sal
+// e sem custo nenhum pra calcular. Como não colide para 4 nem 6 dígitos, o valor recuperado é
+// exatamente o PIN da pessoa — e PIN é o tipo de segredo que se repete no banco e no celular.
+//
+// O que muda: PBKDF2-SHA256 com sal aleatório por aparelho e iterações suficientes pra que testar
+// os 10^6 PINs deixe de ser instantâneo. O que NÃO muda: seis dígitos continuam um espaço pequeno,
+// então isto encarece a recuperação, não a impede. E o PIN segue sem cifrar nada — quem abre o
+// armazenamento do navegador lê os dados sem passar por aqui.
+//
+// As iterações vão gravadas no registro: dá pra subir o número depois sem invalidar quem já tem
+// PIN definido.
+const PIN_ITERACOES = 600000;
+const PIN_VERSAO = 2;
+
+function cryptoDisponivel() {
+  const c = typeof globalThis !== 'undefined' ? globalThis.crypto : null;
+  return !!(c && c.subtle && c.getRandomValues);
+}
+
+function bytesParaBase64(bytes) {
+  let binario = '';
+  for (const b of bytes) binario += String.fromCharCode(b);
+  return btoa(binario);
+}
+
+function base64ParaBytes(texto) {
+  const binario = atob(texto);
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i += 1) bytes[i] = binario.charCodeAt(i);
+  return bytes;
+}
+
+async function derivarPin(pin, sal, iteracoes) {
+  const material = await globalThis.crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(String(pin)),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+  const bits = await globalThis.crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: sal, iterations: iteracoes, hash: 'SHA-256' },
+    material,
+    256
+  );
+  return new Uint8Array(bits);
+}
+
+// Sem WebCrypto não dá pra derivar. Cair no formato antigo é pior do que impedir de definir PIN?
+// Não: o PIN é uma tranca de conveniência declarada como tal na própria tela, e recusar a definição
+// deixaria a pessoa sem tranca nenhuma. Guarda no formato antigo e segue.
+async function criarSegredoPin(pin) {
+  if (!cryptoDisponivel()) return hashSimples(String(pin));
+  const sal = globalThis.crypto.getRandomValues(new Uint8Array(16));
+  const derivado = await derivarPin(pin, sal, PIN_ITERACOES);
+  return JSON.stringify({
+    v: PIN_VERSAO,
+    iter: PIN_ITERACOES,
+    sal: bytesParaBase64(sal),
+    hash: bytesParaBase64(derivado),
+  });
+}
+
+function lerSegredoPin(guardado) {
+  if (typeof guardado !== 'string' || guardado[0] !== '{') return null;
+  try {
+    const r = JSON.parse(guardado);
+    if (r && r.v === PIN_VERSAO && r.sal && r.hash && r.iter > 0) return r;
+    return null;
+  } catch (erro) {
+    return null;
+  }
+}
+
+function iguaisEmTempoConstante(a, b) {
+  if (a.length !== b.length) return false;
+  let diferenca = 0;
+  for (let i = 0; i < a.length; i += 1) diferenca |= a[i] ^ b[i];
+  return diferenca === 0;
+}
+
+// Devolve { ok, precisaMigrar, indisponivel }. `precisaMigrar` marca o PIN que ainda está no
+// formato antigo e acabou de ser conferido: quem chama regrava no formato novo, então a troca
+// acontece sozinha no primeiro acesso, sem pedir nada à pessoa.
+async function conferirPin(pin, guardado) {
+  const registro = lerSegredoPin(guardado);
+  if (!registro) {
+    const ok = hashSimples(String(pin)) === guardado;
+    return { ok, precisaMigrar: ok, indisponivel: false };
+  }
+  if (!cryptoDisponivel()) return { ok: false, precisaMigrar: false, indisponivel: true };
+  const derivado = await derivarPin(pin, base64ParaBytes(registro.sal), registro.iter);
+  return {
+    ok: iguaisEmTempoConstante(derivado, base64ParaBytes(registro.hash)),
+    precisaMigrar: false,
+    indisponivel: false,
+  };
+}
+
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -1413,6 +1513,9 @@ if (typeof module !== 'undefined' && module.exports) {
     historicoRealizado,
     impostoEstimadoMes,
     hashSimples,
+    criarSegredoPin,
+    conferirPin,
+    PIN_ITERACOES,
     listaSugeridaPorTipo,
     jurosCompostos,
     jurosSimples,
