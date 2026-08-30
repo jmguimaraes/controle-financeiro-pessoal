@@ -1262,3 +1262,89 @@ test('renderCalendario permite navegar entre meses, como as outras telas', () =>
   assert.match(html, /data-acao="mes-seguinte"/);
   assert.match(html, /AGOSTO 2026/);
 });
+
+// --- Escape de dados do usuário em toda tela ---------------------------------------------------
+// Varredura, não teste por tela: qualquer campo livre (descrição, categoria, subcategoria, pessoa,
+// nome de conta, de ativo, de dívida, de meta) pode conter "<" — vindo de digitação, de uma
+// planilha importada ou de um state.json antigo. Se uma tela nova esquecer o escapeHtml, este
+// teste quebra antes de virar XSS no aparelho de alguém.
+const CARGA_XSS = '<img src=x onerror="alert(1)">';
+
+function estadoComCargaXSS() {
+  return {
+    ...estadoInicial(),
+    tema: 'claro',
+    idioma: 'pt',
+    lancamentos: [
+      {
+        id: 'l1',
+        data: '2026-08-05',
+        tipo: 'despesa',
+        categoria: CARGA_XSS,
+        subcategoria: CARGA_XSS,
+        descricao: CARGA_XSS,
+        pessoa: CARGA_XSS,
+        valorTotal: 100,
+        parcelas: 1,
+      },
+    ],
+    contas: [{ id: 'c1', nome: CARGA_XSS, tipo: 'cartao', fechamento: 10 }],
+    metas: [{ id: 'm1', nome: CARGA_XSS, categoria: CARGA_XSS, limite: 50 }],
+    dividas: [{ id: 'd1', nome: CARGA_XSS, tipo: 'cartao', saldoDevedor: 10 }],
+    investimentos: [
+      {
+        id: 'i1',
+        nome: CARGA_XSS,
+        tipo: 'acao',
+        precoAtual: 10,
+        operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: 10 }],
+        proventos: [{ id: 'p1', tipo: 'dividendo', data: '2026-07-15', valor: 1 }],
+        proventosPrevistos: [{ id: 'pp1', data: '2026-09-15', valor: 1, descricao: CARGA_XSS }],
+      },
+    ],
+  };
+}
+
+test('nenhuma tela deixa passar HTML de campo preenchido pelo usuário', () => {
+  const s = estadoComCargaXSS();
+  const telas = {
+    resumo: () => renderResumo(s, 2026, 8),
+    lancamentos: () => renderLancamentos(s, 2026, 8),
+    carteira: () => renderInvestimentos(s),
+    metas: () => renderMetas(s, 2026, 8),
+    calendario: () => renderCalendario(s, 2026, 8, 'pt'),
+    dia: () => renderDiaDetalhe(s, '2026-08-05', 'pt'),
+    categoria: () => renderCategoriaDetalhe(s, CARGA_XSS, 2026, 8),
+    ativoDetalhe: () => renderAtivoDetalhe(s, 'i1'),
+    novoLancamento: () => renderNovoLancamento(s, s.lancamentos[0]),
+    configuracoes: () => renderConfiguracoes(s, false),
+  };
+  // O Calendário é o único que não exibe texto do usuário: só números de dia e saldos. Por isso a
+  // carga não aparece nem escapada lá, e cobrar a forma escapada dele daria falso negativo.
+  const semTextoDoUsuario = new Set(['calendario']);
+  for (const [nome, montar] of Object.entries(telas)) {
+    const html = montar();
+    assert.ok(
+      !html.includes('<img src=x'),
+      `${nome} inseriu a tag do usuário no HTML — o campo saiu sem escapeHtml`
+    );
+    if (!semTextoDoUsuario.has(nome)) {
+      assert.ok(html.includes('&lt;img src=x'), `${nome} deveria mostrar a carga como texto escapado`);
+    }
+  }
+});
+
+test('headerVoltar e headerTituloMes escapam o título que recebem', () => {
+  // Escapar é responsabilidade do cabeçalho, não de quem chama: quem acrescentar uma tela com
+  // nome de conta ou de ativo no título não precisa saber dessa regra pra estar seguro.
+  const html = renderCategoriaDetalhe(estadoComCargaXSS(), CARGA_XSS, 2026, 8);
+  assert.ok(!html.includes('<span class="nv-title"><img'));
+  assert.match(html, /<span class="nv-title">&lt;img/);
+});
+
+test('renderCategoriaDetalhe escapa o título uma vez só, sem escapar o escape', () => {
+  // O escape ficava no chamador; ao mover pra dentro do cabeçalho, deixar os dois faria a tela
+  // exibir "&amp;lt;img" em vez do texto que a pessoa digitou.
+  const html = renderCategoriaDetalhe(estadoComCargaXSS(), CARGA_XSS, 2026, 8);
+  assert.ok(!html.includes('&amp;lt;'), 'título saiu escapado duas vezes');
+});

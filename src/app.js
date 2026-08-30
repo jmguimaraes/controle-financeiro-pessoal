@@ -261,8 +261,13 @@
   // As subcategorias sugeridas dependem da categoria escolhida, que muda sem re-render nos dois
   // formulários (combo custom no de meta, combo custom no de lançamento) — daí repor o <datalist>
   // na mão em vez de deixar pro render.
+  // Usa o escapeHtml de render.js, não um escape próprio. A versão anterior trocava só as aspas
+  // duplas: continha o valor dentro do atributo, mas deixava passar o "&", então uma subcategoria
+  // chamada 'Mercado &quot;bom&quot;' voltava da lista como 'Mercado "bom"' — o app corrompia o
+  // texto que a própria pessoa digitou. E manter uma segunda regra de escape ao lado da boa é
+  // como o buraco aparece: basta alguém trocar a aspa do atributo ou acrescentar outro campo.
   function opcoesDatalist(nomes) {
-    return nomes.map((s) => `<option value="${s.replace(/"/g, '&quot;')}">`).join('');
+    return nomes.map((s) => `<option value="${renderizacao.escapeHtml(s)}">`).join('');
   }
 
   // Reserva de emergência não tem cotas: quem só quer registrar quanto guardou não deve precisar
@@ -300,41 +305,62 @@
     else delete raiz.dataset.theme;
   }
 
+  // Desenha uma tela sem deixar que ela leve o app junto. Antes, qualquer erro dentro de um
+  // render subia por renderizarTudo e parava a função ANTES do laço que decide qual <main> fica
+  // visível: a pessoa ficava presa na tela em que estava e todo toque seguinte falhava igual, sem
+  // nenhuma mensagem. Só recarregar resolvia, e não havia como adivinhar isso.
+  // As cinco telas de aba mantêm a barra de abas mesmo quando falham: sem ela a pessoa fica presa
+  // na tela quebrada, e recarregar não adianta quando o dado ruim já está gravado.
+  const ABAS_PRINCIPAIS = ['resumo', 'lancamentos', 'carteira', 'metas', 'calendario'];
+
+  function desenharTela(id, montar) {
+    const alvo = document.getElementById(id);
+    try {
+      alvo.innerHTML = montar();
+    } catch (erro) {
+      console.error(`Falha ao desenhar ${id}:`, erro);
+      const aba = ABAS_PRINCIPAIS.find((nome) => id === `tela-${nome}`) || null;
+      alvo.innerHTML = renderizacao.renderFalhaDeTela(erro && erro.message, aba, state && state.idioma);
+    }
+  }
+
   function renderizarTudo() {
-    document.getElementById('tela-resumo').innerHTML = renderResumo(state, anoAtual, mesAtual);
-    document.getElementById('tela-lancamentos').innerHTML = renderLancamentos(state, anoAtual, mesAtual, {
-      busca,
-      filtro: filtroLancamentos,
-      contaSelecionada,
-      pessoaSelecionada,
-    });
-    document.getElementById('tela-carteira').innerHTML = renderInvestimentos(state);
-    document.getElementById('tela-metas').innerHTML = renderMetas(state, anoAtual, mesAtual);
+    desenharTela('tela-resumo', () => renderResumo(state, anoAtual, mesAtual));
+    desenharTela('tela-lancamentos', () =>
+      renderLancamentos(state, anoAtual, mesAtual, {
+        busca,
+        filtro: filtroLancamentos,
+        contaSelecionada,
+        pessoaSelecionada,
+      })
+    );
+    desenharTela('tela-carteira', () => renderInvestimentos(state));
+    desenharTela('tela-metas', () => renderMetas(state, anoAtual, mesAtual));
 
     if (telaAtual === 'categoria' && categoriaAberta) {
-      document.getElementById('tela-categoria').innerHTML = renderCategoriaDetalhe(state, categoriaAberta, anoAtual, mesAtual);
+      desenharTela('tela-categoria', () => renderCategoriaDetalhe(state, categoriaAberta, anoAtual, mesAtual));
     }
     if (telaAtual === 'ativo-detalhe' && ativoAberto) {
-      document.getElementById('tela-ativo-detalhe').innerHTML = renderAtivoDetalhe(state, ativoAberto);
+      desenharTela('tela-ativo-detalhe', () => renderAtivoDetalhe(state, ativoAberto));
     }
     if (telaAtual === 'novo-lancamento') {
-      document.getElementById('tela-novo-lancamento').innerHTML = renderNovoLancamento(state, rascunhoLancamento);
+      desenharTela('tela-novo-lancamento', () => renderNovoLancamento(state, rascunhoLancamento));
       atualizarSaldoProjetado();
     }
     if (telaAtual === 'configuracoes') {
-      document.getElementById('tela-configuracoes').innerHTML = renderConfiguracoes(state, !!localStorage_get(CHAVE_PIN));
+      desenharTela('tela-configuracoes', () => renderConfiguracoes(state, !!localStorage_get(CHAVE_PIN)));
       const statusEl = document.getElementById('status-sincronizacao');
       if (statusEl) statusEl.textContent = descricaoSincronizacao;
     }
-    document.getElementById('tela-calendario').innerHTML = renderizacao.renderCalendario(state, anoAtual, mesAtual, state.idioma);
+    desenharTela('tela-calendario', () => renderizacao.renderCalendario(state, anoAtual, mesAtual, state.idioma));
     if (telaAtual === 'dia' && diaAberto) {
-      document.getElementById('tela-dia').innerHTML = renderizacao.renderDiaDetalhe(state, diaAberto, state.idioma);
+      desenharTela('tela-dia', () => renderizacao.renderDiaDetalhe(state, diaAberto, state.idioma));
     }
     if (telaAtual === 'calculadoras') {
-      document.getElementById('tela-calculadoras').innerHTML = renderCalculadoras(calculadoraAtiva, modoMilhao);
+      desenharTela('tela-calculadoras', () => renderCalculadoras(calculadoraAtiva, modoMilhao));
     }
     if (telaAtual === 'importar') {
-      document.getElementById('tela-importar').innerHTML = renderImportarPlanilha(state, importCSV);
+      desenharTela('tela-importar', () => renderImportarPlanilha(state, importCSV));
     }
     if (telaAtual === 'perfil' && perfilTeste) {
       const alvo = document.getElementById('tela-perfil');
@@ -1044,10 +1070,20 @@
 
       if (acao === 'nova-operacao') abrirFormularioOperacao(alvo.dataset.id);
       if (acao === 'excluir-operacao') {
-        if (!ativoAberto || !confirm('Excluir esta operação?')) return;
+        if (!ativoAberto) return;
         const item = state.investimentos.find((i) => i.id === ativoAberto);
         const migrado = logica.migrarInvestimentoLegado(item);
         const operacoes = migrado.operacoes.filter((op) => op.id !== alvo.dataset.id);
+        // Mesma checagem que a inclusão de operação já fazia, e que faltava aqui: apagar uma
+        // compra pode deixar uma venda posterior sem posição pra sair. O histórico impossível
+        // fazia processarOperacoes lançar no meio da renderização e travar o app inteiro.
+        try {
+          logica.posicaoAtivo(operacoes);
+        } catch (erro) {
+          alert(`Não dá pra excluir esta operação: sem ela o histórico fica impossível.\n\n${erro.message}\n\nExclua antes as vendas que dependem desta compra.`);
+          return;
+        }
+        if (!confirm('Excluir esta operação?')) return;
         despachar({ type: 'editInvestimento', id: ativoAberto, changes: { operacoes, precoAtual: migrado.precoAtual } });
       }
 
@@ -1067,6 +1103,7 @@
       if (acao === 'voltar-perfil') voltarPerfil();
       if (acao === 'fechar-perfil') fecharTestePerfil();
       if (acao === 'refazer-perfil') abrirTestePerfil();
+      if (acao === 'recarregar-app') window.location.reload();
 
       if (acao === 'novo-provento') abrirFormularioProvento(alvo.dataset.id);
       if (acao === 'excluir-provento') {

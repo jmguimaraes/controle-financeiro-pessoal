@@ -1699,3 +1699,25 @@ test('reserva de emergencia nao entra nos tipos que participam da meta de alocac
   // Reserva não é uma classe pra distribuir percentual: é o colchão que fica de fora do jogo.
   assert.equal(tiposAlocacao().includes('reserva_emergencia'), false);
 });
+
+// --- Histórico de operações impossível ---------------------------------------------------------
+// Apagar uma compra pode deixar uma venda posterior sem posição pra sair. A inclusão de operação
+// sempre checou isso; a exclusão não checava, e o histórico impossível só estourava depois, no
+// meio da renderização — o que travava o app inteiro em vez de recusar a ação.
+test('posicaoAtivo recusa histórico em que a venda excede a posição', () => {
+  const orfa = [{ id: 'ov', tipo: 'venda', data: '2026-02-10', quantidade: 50, precoUnitario: 38 }];
+  assert.throws(() => posicaoAtivo(orfa), /excede a posição/);
+});
+
+test('apagar uma compra só é impossível quando o que sobra não cobre as vendas', () => {
+  const operacoes = [
+    { id: 'oc1', tipo: 'compra', data: '2026-01-10', quantidade: 100, precoUnitario: 30 },
+    { id: 'oc2', tipo: 'compra', data: '2026-01-20', quantidade: 50, precoUnitario: 32 },
+    { id: 'ov', tipo: 'venda', data: '2026-02-10', quantidade: 120, precoUnitario: 38 },
+  ];
+  // Tirar a compra menor ainda deixa 100 pra cobrir 120? Não — e é isso que a tela precisa recusar.
+  assert.throws(() => posicaoAtivo(operacoes.filter((o) => o.id !== 'oc2')), /excede a posição/);
+  // Mas com uma venda que cabe no que sobra, apagar a mesma compra é legítimo e não pode ser barrado.
+  const vendaMenor = operacoes.map((o) => (o.id === 'ov' ? { ...o, quantidade: 80 } : o));
+  assert.equal(posicaoAtivo(vendaMenor.filter((o) => o.id !== 'oc2')).quantidade, 20);
+});

@@ -221,10 +221,13 @@ function headerResumo(ano, mes, idioma) {
     </div>`;
 }
 
+// Os dois cabeçalhos escapam o próprio título. Antes o escape era responsabilidade de quem
+// chamava, e só um dos seis chamadores tinha o que escapar — quem acrescentasse um cabeçalho com
+// nome de conta ou de ativo herdaria um buraco sem perceber que existia essa regra.
 function headerTituloMes(titulo, ano, mes) {
   return `
     <div class="nv-header">
-      <span class="nv-title">${titulo}</span>
+      <span class="nv-title">${escapeHtml(titulo)}</span>
       <div class="nv-monthnav">
         <button type="button" data-acao="mes-anterior" aria-label="Mês anterior">${'‹'}</button>
         <span>${MESES[mes - 1].toUpperCase()} ${ano}</span>
@@ -237,8 +240,30 @@ function headerVoltar(titulo, acaoVoltar) {
   return `
     <div class="nv-header nv-header--back">
       <button type="button" class="nv-back" data-acao="${acaoVoltar}" aria-label="Voltar">${'‹'}</button>
-      <span class="nv-title">${titulo}</span>
+      <span class="nv-title">${escapeHtml(titulo)}</span>
     </div>`;
+}
+
+// Mostrada no lugar de uma tela que não conseguiu se desenhar (ver desenharTela em app.js).
+// Diz o que houve e oferece a saída que resolve — recarregar descarta a alteração em memória que
+// deixou o estado impossível, porque nada chega a ser gravado quando a renderização falha.
+function renderFalhaDeTela(mensagem, aba, idioma) {
+  return `
+    <div class="nv-pilha">
+      <section class="nv-cartao">
+        <span class="nv-cartao-titulo">NÃO FOI POSSÍVEL MOSTRAR ESTA TELA</span>
+        <p class="nv-perfil-resumo">
+          Algo nos seus dados deixou esta tela impossível de montar. As outras abas continuam
+          funcionando normalmente. Se isto apareceu logo depois de uma alteração, recarregar
+          desfaz a alteração — ela não chega a ser gravada quando a tela falha.
+        </p>
+        ${mensagem ? `<p class="nv-item-meta" style="margin-top:12px">${escapeHtml(mensagem)}</p>` : ''}
+      </section>
+      <div class="nv-acao-fixa">
+        <button type="button" class="nv-btn-contorno" data-acao="recarregar-app"><span>RECARREGAR</span></button>
+      </div>
+    </div>
+    ${aba ? tabBar(aba, idioma) : ''}`;
 }
 
 // Alertas de comportamento (ver alertasFinanceiros em logic.js). Bloco inteiro some quando não há
@@ -343,7 +368,7 @@ function renderResumo(state, ano, mes) {
           const dataFmt = l.data.split('-').reverse().slice(0, 2).join('/');
           const sub = l.subcategoria ? `${l.categoria} › ${l.subcategoria}` : l.categoria;
           return `
-        <button type="button" class="nv-linha nv-linha-botao" data-id="${l.id}" data-acao="editar-lancamento">
+        <button type="button" class="nv-linha nv-linha-botao" data-id="${escapeHtml(l.id)}" data-acao="editar-lancamento">
           <span>
             <span class="nv-linha-nome">${escapeHtml(l.descricao || l.categoria)}</span>
             <span class="nv-linha-meta" style="display:block">${dataFmt} · ${escapeHtml(sub)}</span>
@@ -495,7 +520,7 @@ function renderLancamentos(state, ano, mes, opcoes = {}) {
             const metaPessoa = l.pessoa ? ` · ${escapeHtml(l.pessoa)}` : '';
             const metaSub = l.subcategoria ? ` › ${escapeHtml(l.subcategoria)}` : '';
             return `
-        <div class="nv-item-lanc" data-id="${l.id}" data-acao="editar-lancamento">
+        <div class="nv-item-lanc" data-id="${escapeHtml(l.id)}" data-acao="editar-lancamento">
           <div>
             <div class="nv-item-nome">${escapeHtml(l.descricao || l.categoria)}${tag}</div>
             <div class="nv-item-meta">${escapeHtml(l.categoria)}${metaSub}${metaPessoa}${metaConta}</div>
@@ -597,7 +622,7 @@ function renderNovoLancamento(state, dadosIniciais) {
         <button type="button" data-acao="tipo-lancamento" data-tipo="receita" class="${tipo === 'receita' ? 'ativo' : ''}">RECEITA</button>
         <button type="button" data-acao="tipo-lancamento" data-tipo="transferencia" class="${tipo === 'transferencia' ? 'ativo' : ''}">TRANSF.</button>
       </div>
-      <input type="hidden" name="tipo" value="${tipo}" />
+      <input type="hidden" name="tipo" value="${escapeHtml(tipo)}" />
       <section class="nv-cartao">
         <span class="nv-cartao-titulo">VALOR TOTAL</span>
         <div class="nv-saldo-valor">
@@ -708,7 +733,7 @@ function renderCategoriaDetalhe(state, categoria, ano, mes) {
           const conta = contas.find((c) => c.id === l.contaId);
           const dataFmt = l.data.split('-').reverse().slice(0, 2).join('/');
           return `
-        <div class="nv-item-lanc" data-id="${l.id}" data-acao="editar-lancamento">
+        <div class="nv-item-lanc" data-id="${escapeHtml(l.id)}" data-acao="editar-lancamento">
           <div>
             <div class="nv-item-nome">${escapeHtml(l.descricao || l.categoria)}</div>
             <div class="nv-item-meta">${dataFmt}${conta ? ` · ${escapeHtml(conta.nome)}` : ''}</div>
@@ -720,7 +745,7 @@ function renderCategoriaDetalhe(state, categoria, ano, mes) {
     : '<p class="nv-vazio">Nenhum lançamento nesta categoria.</p>';
 
   return `
-    ${headerVoltar(escapeHtml(categoria), 'fechar-categoria')}
+    ${headerVoltar(categoria, 'fechar-categoria')}
     <div class="nv-pilha">
       <section class="nv-cartao">
         <span class="nv-cartao-titulo">GASTO EM ${MESES[mes - 1].toUpperCase()}</span>
@@ -818,7 +843,7 @@ function renderMetas(state, ano, mes) {
           const pctBarra = Math.min(100, status.percentual);
           const subtitulo = m.nome ? L.rotuloMeta({ ...m, nome: '' }) : '';
           return `
-        <section class="nv-cartao nv-cartao--justo nv-meta-cartao ${status.excedeu ? 'excedida' : ''}" data-id="${m.id}" data-acao="editar-meta" role="button" tabindex="0">
+        <section class="nv-cartao nv-cartao--justo nv-meta-cartao ${status.excedeu ? 'excedida' : ''}" data-id="${escapeHtml(m.id)}" data-acao="editar-meta" role="button" tabindex="0">
           <div class="nv-meta-topo">
             <span>
               <span class="nv-meta-nome">${escapeHtml(m.nome || L.rotuloMeta(m))}</span>
@@ -1321,14 +1346,14 @@ function renderConfiguracoes(state, temPin) {
   const linhasContas = contas
     .map(
       (c) => `
-    <div class="nv-conta-linha" data-id="${c.id}">
+    <div class="nv-conta-linha" data-id="${escapeHtml(c.id)}">
       <span style="display:flex;align-items:center;gap:12px">
         <span class="nv-conta-marcador">${escapeHtml((c.nome || '?').slice(0, 1).toUpperCase())}</span>
         <span class="nv-item-nome">${escapeHtml(c.nome)}</span>
       </span>
       <span style="display:flex;align-items:center;gap:10px">
         <span class="nv-item-meta">${escapeHtml(rotuloTipoConta(c.tipo, idioma))}${c.fechamento ? ` · ${I18N.t('config.fechaDia', idioma)} ${c.fechamento}` : ''}</span>
-        <button type="button" class="nv-link-muted" data-acao="excluir-conta" data-id="${c.id}" aria-label="Remover conta">✕</button>
+        <button type="button" class="nv-link-muted" data-acao="excluir-conta" data-id="${escapeHtml(c.id)}" aria-label="Remover conta">✕</button>
       </span>
     </div>`
     )
@@ -1403,6 +1428,10 @@ function renderConfiguracoes(state, temPin) {
             ${temPin ? `<button type="button" class="nv-link-muted" data-acao="remover-pin" style="font-size:11px;color:var(--nv-negative)">${I18N.t('config.remover', idioma)}</button>` : ''}
           </span>
         </div>
+        <!-- O PIN esconde a tela, não protege o dado: ele fica em claro no armazenamento do
+             navegador, e a checagem roda no próprio aparelho. Dizer isso na tela é parte do
+             controle — sem essa linha o rótulo "Segurança" promete o que o recurso não entrega. -->
+        <p class="nv-item-meta" style="margin:12px 0 0;line-height:1.5">${I18N.t('config.pinExplicacao', idioma)}</p>
       </section>
 
       <div class="nv-rodape-versao">NUVRA 1.0.0</div>
@@ -1639,7 +1668,7 @@ function renderInvestimentos(state) {
           const classe = r.rendimentoValor > 0 ? 'positivo' : r.rendimentoValor < 0 ? 'negativo' : '';
           const rotuloTipo = ROTULOS_TIPO_INVESTIMENTO[i.tipo] || i.tipo;
           return `
-        <div class="nv-ativo-linha" data-id="${i.id}" data-acao="abrir-ativo">
+        <div class="nv-ativo-linha" data-id="${escapeHtml(i.id)}" data-acao="abrir-ativo">
           <div style="display:flex;align-items:center;gap:12px">
             ${monogramaAtivo(i.nome, 34)}
             <div>
@@ -1696,7 +1725,10 @@ function renderInvestimentos(state) {
               ${composicao
                 .map(
                   (c, i) =>
-                    `<div class="nv-composicao-item"><span class="nv-composicao-bolinha" style="background:${cores[i % cores.length]}"></span>${escapeHtml(rotuloTipoInvestimento(c.tipo)).toUpperCase()} <b>${Math.round((c.valor / totalComposicao) * 100)}%</b></div>`
+                    // O rótulo precisa ser um elemento próprio: como texto solto dentro do flex ele
+                    // vira um item de largura mínima igual ao conteúdo, e um tipo de nome comprido
+                    // empurrava o percentual pra fora do cartão em tela estreita.
+                    `<div class="nv-composicao-item"><span class="nv-composicao-bolinha" style="background:${cores[i % cores.length]}"></span><span class="nv-composicao-rotulo">${escapeHtml(rotuloTipoInvestimento(c.tipo)).toUpperCase()}</span><b>${Math.round((c.valor / totalComposicao) * 100)}%</b></div>`
                 )
                 .join('')}
             </div>
@@ -1782,7 +1814,7 @@ function blocoDividas(state, investimentos, ocultar) {
   const linhas = dividas
     .map(
       (d) => `
-      <div class="nv-item" data-id="${d.id}" data-acao="editar-divida">
+      <div class="nv-item" data-id="${escapeHtml(d.id)}" data-acao="editar-divida">
         <div>
           <div class="nv-item-nome">${escapeHtml(d.nome)}</div>
           <div class="nv-item-meta">${escapeHtml(ROTULOS_TIPO_DIVIDA[d.tipo] || d.tipo)}${
@@ -1825,13 +1857,13 @@ function renderAtivoDetalhe(state, ativoId) {
         .map((p) => {
           const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
           return `
-        <div class="nv-conta-linha" data-id="${p.id}">
+        <div class="nv-conta-linha" data-id="${escapeHtml(p.id)}">
           <div>
             <div class="nv-item-nome">${p.tipo === 'jcp' ? 'JCP' : 'DIVIDENDO'} · ${dataFmt}</div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
             <div class="nv-item-valor">${mascarar(formatCurrency(p.valor), ocultar)}</div>
-            <button type="button" class="nv-link-muted" data-acao="excluir-provento" data-id="${p.id}" aria-label="Excluir provento" style="color:var(--nv-negative)">✕</button>
+            <button type="button" class="nv-link-muted" data-acao="excluir-provento" data-id="${escapeHtml(p.id)}" aria-label="Excluir provento" style="color:var(--nv-negative)">✕</button>
           </div>
         </div>`;
         })
@@ -1845,14 +1877,14 @@ function renderAtivoDetalhe(state, ativoId) {
           const dataFmt = op.data.split('-').reverse().slice(0, 2).join('/');
           const valorOperacao = op.quantidade * op.precoUnitario;
           return `
-        <div class="nv-conta-linha" data-id="${op.id}">
+        <div class="nv-conta-linha" data-id="${escapeHtml(op.id)}">
           <div>
             <div class="nv-item-nome">${op.tipo === 'compra' ? 'COMPRA' : 'VENDA'} · ${dataFmt}</div>
             <div class="nv-item-meta">${formatNumero(op.quantidade)} × ${mascarar(formatCurrency(op.precoUnitario), ocultar)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
             <div class="nv-item-valor">${mascarar(formatCurrency(valorOperacao), ocultar)}</div>
-            <button type="button" class="nv-link-muted" data-acao="excluir-operacao" data-id="${op.id}" aria-label="Excluir operação" style="color:var(--nv-negative)">✕</button>
+            <button type="button" class="nv-link-muted" data-acao="excluir-operacao" data-id="${escapeHtml(op.id)}" aria-label="Excluir operação" style="color:var(--nv-negative)">✕</button>
           </div>
         </div>`;
         })
@@ -1864,7 +1896,7 @@ function renderAtivoDetalhe(state, ativoId) {
       <button type="button" class="nv-back" data-acao="fechar-ativo" aria-label="Voltar">${'‹'}</button>
       ${monogramaAtivo(investimento.nome, 24)}
       <span class="nv-title">${escapeHtml(investimento.nome)}</span>
-      <button type="button" class="nv-gear" data-acao="editar-investimento" data-id="${investimento.id}" aria-label="Editar ativo" style="margin-left:auto">${iconGear(19)}</button>
+      <button type="button" class="nv-gear" data-acao="editar-investimento" data-id="${escapeHtml(investimento.id)}" aria-label="Editar ativo" style="margin-left:auto">${iconGear(19)}</button>
     </div>
     <div class="nv-pilha">
       <section class="nv-cartao">
@@ -1897,7 +1929,7 @@ function renderAtivoDetalhe(state, ativoId) {
       <section class="nv-cartao nv-cartao--justo">
         <div class="nv-cartao-topo">
           <span class="nv-cartao-titulo">OPERAÇÕES</span>
-          <button type="button" class="nv-link-accent" data-acao="nova-operacao" data-id="${investimento.id}">+ NOVA OPERAÇÃO</button>
+          <button type="button" class="nv-link-accent" data-acao="nova-operacao" data-id="${escapeHtml(investimento.id)}">+ NOVA OPERAÇÃO</button>
         </div>
         <div class="nv-lista">${listaOperacoes}</div>
       </section>
@@ -1905,7 +1937,7 @@ function renderAtivoDetalhe(state, ativoId) {
       <section class="nv-cartao nv-cartao--justo">
         <div class="nv-cartao-topo">
           <span class="nv-cartao-titulo">PRÓXIMOS DIVIDENDOS</span>
-          <button type="button" class="nv-link-accent" data-acao="novo-provento-previsto" data-id="${investimento.id}">+ NOVO PREVISTO</button>
+          <button type="button" class="nv-link-accent" data-acao="novo-provento-previsto" data-id="${escapeHtml(investimento.id)}">+ NOVO PREVISTO</button>
         </div>
         <div class="nv-lista">${
           dividendosPrevistos.length
@@ -1913,13 +1945,13 @@ function renderAtivoDetalhe(state, ativoId) {
                 .map((p) => {
                   const dataFmt = p.data.split('-').reverse().slice(0, 2).join('/');
                   return `
-          <div class="nv-conta-linha" data-id="${p.id}">
+          <div class="nv-conta-linha" data-id="${escapeHtml(p.id)}">
             <div>
               <div class="nv-item-nome">${dataFmt}${p.descricao ? ` · ${escapeHtml(p.descricao)}` : ''}</div>
             </div>
             <div style="display:flex;align-items:center;gap:10px">
               <div class="nv-item-valor">${mascarar(formatCurrency(p.valor), ocultar)}</div>
-              <button type="button" class="nv-link-muted" data-acao="excluir-provento-previsto" data-id="${p.id}" aria-label="Excluir dividendo previsto" style="color:var(--nv-negative)">✕</button>
+              <button type="button" class="nv-link-muted" data-acao="excluir-provento-previsto" data-id="${escapeHtml(p.id)}" aria-label="Excluir dividendo previsto" style="color:var(--nv-negative)">✕</button>
             </div>
           </div>`;
                 })
@@ -1931,7 +1963,7 @@ function renderAtivoDetalhe(state, ativoId) {
       <section class="nv-cartao nv-cartao--justo">
         <div class="nv-cartao-topo">
           <span class="nv-cartao-titulo">PROVENTOS</span>
-          <button type="button" class="nv-link-accent" data-acao="novo-provento" data-id="${investimento.id}">+ NOVO PROVENTO</button>
+          <button type="button" class="nv-link-accent" data-acao="novo-provento" data-id="${escapeHtml(investimento.id)}">+ NOVO PROVENTO</button>
         </div>
         <div class="nv-lista">${listaProventos}</div>
       </section>
@@ -1949,6 +1981,7 @@ if (typeof module !== 'undefined' && module.exports) {
     renderCalendario,
     renderDiaDetalhe,
     renderEntradaRapida,
+    renderFalhaDeTela,
     renderPerfilPergunta,
     renderPerfilCalculando,
     renderResultadoPerfil,

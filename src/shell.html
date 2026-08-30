@@ -503,6 +503,48 @@ dialog input[type="checkbox"]{accent-color:var(--nv-accent);padding:0;border:non
 .nv-tela--cartoes .nv-rodape-saldo{border-top:none;padding:0 4px 4px;}
 .nv-tela--cartoes .nv-rodape-versao{padding:16px 4px;text-align:center;}
 
+/* ---- Contenção de texto longo ----
+   Um nome sem espaço — URL colada na descrição, ticker comprido, categoria vinda de planilha —
+   não quebra sozinho, e item de flex tem largura mínima igual ao conteúdo. O resultado era a
+   linha inteira crescendo e empurrando o valor pra fora da tela: o número sumia sem aviso, e no
+   detalhe do ativo a página inteira passava a rolar na horizontal. Duas regras resolvem: deixar
+   os itens encolherem (min-width:0) e deixar a palavra quebrar (overflow-wrap). */
+.nv-linha,.nv-item-lanc,.nv-item,.nv-ativo-linha,.nv-conta-linha,.nv-dado-linha,
+.nv-meta-topo,.nv-row-plain,.nv-bar-top,.nv-cartao-topo,.nv-header,.nv-perfil,.nv-opcao{min-width:0;}
+.nv-linha>*,.nv-item-lanc>*,.nv-item>*,.nv-ativo-linha>*,.nv-conta-linha>*,.nv-dado-linha>*,
+.nv-meta-topo>*,.nv-row-plain>*,.nv-bar-top>*,.nv-cartao-topo>*,.nv-header>*,.nv-perfil>*,
+.nv-ativo-linha>div>div,.nv-opcao>*{min-width:0;}
+
+.nv-linha-nome,.nv-linha-meta,.nv-item-nome,.nv-item-meta,.nv-meta-nome,.nv-title,.nv-wordmark,
+.nv-alerta-titulo,.nv-alerta-detalhe,.nv-perfil-nome,.nv-perfil-sub,.nv-perfil-resultado-nome,
+.nv-perfil-pergunta,.nv-combo-valor,.nv-combo-item,.nv-opcao,.nv-bar-top>span,
+.nv-row-plain>span:first-child,.nv-cartao-titulo{overflow-wrap:anywhere;}
+
+/* O valor é a informação que não pode desaparecer: nunca encolhe e nunca quebra.
+   Vale pro último filho da linha em geral, não só pras classes de valor: no detalhe do ativo esse
+   lugar é um grupo com valor + botão de excluir, e sem isto o min-width:0 acima deixava o grupo
+   encolher e o ✕ escapava do cartão. */
+.nv-linha-valor,.nv-item-valor,.nv-meta-valores,.nv-ativo-valor,.nv-cell-valor,
+.nv-row-plain>span:last-child,.nv-bar-top>span:last-child,
+.nv-conta-linha>*:last-child,.nv-dado-linha>*:last-child,.nv-item>*:last-child,
+.nv-item-lanc>*:last-child,.nv-ativo-linha>*:last-child{flex:none;}
+
+/* Legenda da composição: o rótulo encolhe com reticências, o percentual fica inteiro. */
+.nv-composicao-rotulo{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nv-composicao-item b{margin-left:0;flex:none;}
+/* Controles do cabeçalho e do topo do cartão idem — some o "voltar" e a pessoa fica presa. */
+.nv-header>.nv-gear,.nv-header>.nv-back,.nv-header>.nv-monthnav,.nv-cartao-topo>button,
+.nv-conta-marcador,.nv-monograma,.nv-opcao-marca{flex:none;}
+
+/* Número grande: encolhe com a tela e, no extremo, quebra em vez de ser cortado no meio.
+   Um saldo de nove dígitos aparecia como "1.000.003.104,0" — sem o último algarismo. */
+.nv-saldo-valor{flex-wrap:wrap;min-width:0;}
+.nv-saldo-valor .numero,.nv-saldo-valor input{font-size:clamp(26px,8.6vw,44px);overflow-wrap:anywhere;min-width:0;}
+.nv-num-valor,.nv-patrimonio-valor,.nv-orcamento-num .grande,.nv-perfil-resultado-nome{overflow-wrap:anywhere;}
+
+/* Segmentado em tela estreita: "COMPOSTOS" não cabia em 320px e saía cortado. */
+.nv-tela--cartoes .nv-segmentado button,.nv-segmentado-tema button{font-size:clamp(9px,2.9vw,11px);}
+
 /* Diálogos (novo ativo, conta, meta, dívida, operação) na mesma linguagem: são a metade do app
    que se preenche, e ficavam com a caixa quadrada e o campo de borda dura do desenho antigo. */
 /* max-height + rolagem: o formulário de investimento tem sete campos e, num aparelho baixo, o
