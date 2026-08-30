@@ -306,7 +306,7 @@ function filtrarLancamentos(lancamentos, ano, mes, opcoes = {}) {
     })
     .filter((item) => {
       if (!buscaNormalizada) return true;
-      const alvo = `${item.lancamento.descricao} ${item.lancamento.categoria}`.toLowerCase();
+      const alvo = `${item.lancamento.descricao} ${item.lancamento.categoria} ${item.lancamento.subcategoria || ''}`.toLowerCase();
       return alvo.includes(buscaNormalizada);
     })
     .map((item) => ({ ...item.lancamento, numeroParcela: item.parcela.numeroParcela }))
@@ -347,6 +347,54 @@ function gastosPorCategoria(lancamentos, ano, mes) {
   return [...totais.entries()]
     .map(([categoria, valor]) => ({ categoria, valor }))
     .sort((a, b) => b.valor - a.valor);
+}
+
+// Segundo nível de categoria. Assim como "quem gastou", a subcategoria é texto livre no próprio
+// lançamento e a lista sai do que já foi digitado — não há cadastro de subcategorias a manter, e
+// lançamento antigo simplesmente fica sem uma. São dois níveis de propósito: com três, a tela vira
+// planilha, e nesse jogo a planilha ganha.
+function subcategoriasUsadas(lancamentos, categoria) {
+  const vistas = new Map();
+  for (const l of lancamentos || []) {
+    if (!l || l.categoria !== categoria) continue;
+    const nome = String(l.subcategoria || '').trim();
+    if (!nome) continue;
+    const chave = normalizarTexto(nome);
+    if (!vistas.has(chave)) vistas.set(chave, nome);
+  }
+  return [...vistas.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
+// O que não tem subcategoria cai sob a chave vazia, em vez de sumir: senão a soma das
+// subcategorias não bateria com o total da categoria, e a tela mentiria por omissão.
+function gastosPorSubcategoria(lancamentos, categoria, ano, mes) {
+  const totais = new Map();
+  for (const l of lancamentos || []) {
+    if (l.tipo !== 'despesa' || l.categoria !== categoria) continue;
+    const { noMes } = parcelaNoMes(l, ano, mes);
+    if (!noMes) continue;
+    const chave = String(l.subcategoria || '').trim();
+    totais.set(chave, (totais.get(chave) || 0) + parcelaValor(l));
+  }
+  return [...totais.entries()]
+    .map(([subcategoria, valor]) => ({ subcategoria, valor }))
+    .sort((a, b) => b.valor - a.valor);
+}
+
+// Quanto uma meta está medindo neste mês: a categoria inteira, ou só uma subcategoria dela quando
+// a meta define uma. Fonte única pra tela de Metas, o detalhe da categoria e os alertas — se cada
+// uma calculasse por conta própria, uma acabaria discordando das outras.
+function gastoDaMeta(lancamentos, meta, ano, mes) {
+  if (!meta) return 0;
+  const alvo = String(meta.subcategoria || '').trim();
+  if (!alvo) {
+    const item = gastosPorCategoria(lancamentos, ano, mes).find((c) => c.categoria === meta.categoria);
+    return item ? item.valor : 0;
+  }
+  const alvoNormalizado = normalizarTexto(alvo);
+  return gastosPorSubcategoria(lancamentos, meta.categoria, ano, mes)
+    .filter((s) => normalizarTexto(s.subcategoria) === alvoNormalizado)
+    .reduce((soma, s) => soma + s.valor, 0);
 }
 
 function gastoCategoriaUltimosMeses(lancamentos, categoria, ano, mes, quantidade = 6) {
@@ -511,17 +559,26 @@ function formatBR(valor, casas = 2) {
   return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas }).format(valor);
 }
 
+// Como a meta se chama na tela: o apelido quando existe, senão "Categoria › Subcategoria" pra
+// meta de subcategoria, senão só a categoria.
+function rotuloMeta(meta) {
+  if (meta.nome) return `${meta.categoria} (${meta.nome})`;
+  const sub = String(meta.subcategoria || '').trim();
+  return sub ? `${meta.categoria} › ${sub}` : meta.categoria;
+}
+
 function alertasFinanceiros(state, ano, mes) {
   const lancamentos = (state && state.lancamentos) || [];
   const alertas = [];
 
   for (const meta of (state && state.metas) || []) {
-    const gasto = gastosPorCategoria(lancamentos, ano, mes).find((c) => c.categoria === meta.categoria);
-    const { percentual, excedeu, excedente } = statusMeta(gasto ? gasto.valor : 0, meta.limite);
-    const nome = meta.nome ? `${meta.categoria} (${meta.nome})` : meta.categoria;
+    const { percentual, excedeu, excedente } = statusMeta(gastoDaMeta(lancamentos, meta, ano, mes), meta.limite);
+    // O id é o da meta, não a categoria: com meta de subcategoria dá pra ter duas na mesma
+    // categoria (o teto de Alimentação e o do iFood), e por categoria elas colidiriam.
+    const nome = rotuloMeta(meta);
     if (excedeu) {
       alertas.push({
-        id: `meta:${meta.categoria}`,
+        id: `meta:${meta.id}`,
         nivel: 'critico',
         titulo: `${nome} passou da meta`,
         detalhe: `R$ ${formatBR(excedente)} acima do limite de R$ ${formatBR(meta.limite)} deste mês.`,
@@ -529,7 +586,7 @@ function alertasFinanceiros(state, ano, mes) {
       });
     } else if (percentual >= PERCENTUAL_META_ATENCAO) {
       alertas.push({
-        id: `meta:${meta.categoria}`,
+        id: `meta:${meta.id}`,
         nivel: 'atencao',
         titulo: `${nome} perto da meta`,
         detalhe: `Já usou ${formatBR(percentual, 0)}% do limite de R$ ${formatBR(meta.limite)} deste mês.`,
@@ -914,6 +971,7 @@ const CHAVES_MAPEAMENTO_CSV = {
   valor: ['valor', 'value', 'amount', 'montante', 'quantia', 'preco', 'total', 'vlr'],
   descricao: ['descricao', 'description', 'historico', 'memo', 'nome', 'detalhe', 'lancamento', 'estabelecimento', 'titulo', 'referencia'],
   categoria: ['categoria', 'category', 'tipo', 'classe', 'class', 'grupo', 'rubrica'],
+  subcategoria: ['subcategoria', 'subcategory', 'subgrupo', 'subtipo', 'sub'],
   parcelas: ['parcela', 'parcelas', 'installment', 'parc'],
   conta: ['conta', 'account', 'banco', 'carteira', 'cartao'],
 };
@@ -1038,6 +1096,7 @@ function converterLinhasEmLancamentos(linhas, mapa, opcoes = {}) {
       data,
       tipo,
       categoria,
+      subcategoria: temColuna(mapa.subcategoria) ? cel(mapa.subcategoria) : '',
       descricao,
       valorTotal: Math.abs(valor),
       parcelas,
@@ -1193,5 +1252,9 @@ if (typeof module !== 'undefined' && module.exports) {
     reservaEmergencia,
     despesaMediaMensal,
     alertasFinanceiros,
+    subcategoriasUsadas,
+    gastosPorSubcategoria,
+    gastoDaMeta,
+    rotuloMeta,
   };
 }

@@ -958,3 +958,115 @@ test('renderAtivoDetalhe mostra a marca de reserva de emergência quando o ativo
   });
   assert.doesNotMatch(renderAtivoDetalhe(semReserva, 'i1'), /RESERVA DE EMERG/i);
 });
+
+// --- Subcategorias na interface ---
+
+const lancComSub = [
+  { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'Mercado', descricao: 'Compras', valorTotal: 500, parcelas: 1 },
+  { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'Restaurante', descricao: 'Almoço', valorTotal: 300, parcelas: 1 },
+  { id: '3', data: '2026-08-03', tipo: 'despesa', categoria: 'Alimentação', descricao: 'Padaria', valorTotal: 100, parcelas: 1 },
+];
+
+test('renderNovoLancamento traz campo de subcategoria com as já usadas na categoria', () => {
+  const html = renderNovoLancamento(estado({ lancamentos: lancComSub }), { tipo: 'despesa', categoria: 'Alimentação' });
+  assert.match(html, /name="subcategoria"/);
+  assert.match(html, /<datalist id="lista-subcategorias">[\s\S]*?<option value="Mercado">/);
+  assert.match(html, /<option value="Restaurante">/);
+});
+
+test('renderNovoLancamento pré-preenche a subcategoria ao editar', () => {
+  const html = renderNovoLancamento(estado(), { id: 'a1', tipo: 'despesa', categoria: 'Lazer', subcategoria: 'Cinema' });
+  assert.match(html, /name="subcategoria"[^>]*value="Cinema"/);
+});
+
+test('renderLancamentos mostra a subcategoria depois da categoria', () => {
+  const html = renderLancamentos(estado({ lancamentos: lancComSub }), 2026, 8);
+  assert.match(html, /Alimentação › Mercado/);
+  // lançamento sem subcategoria continua mostrando só a categoria
+  assert.match(html, /<div class="nv-item-meta">Alimentação<\/div>/);
+});
+
+test('renderCategoriaDetalhe abre a quebra por subcategoria', () => {
+  const html = renderCategoriaDetalhe(estado({ lancamentos: lancComSub }), 'Alimentação', 2026, 8);
+  assert.match(html, /POR SUBCATEGORIA/);
+  assert.match(html, /Mercado/);
+  assert.match(html, /Restaurante/);
+  assert.match(html, /Sem subcategoria/);
+});
+
+test('renderCategoriaDetalhe não mostra a seção quando ninguém usou subcategoria', () => {
+  const state = estado({
+    lancamentos: [{ id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'x', valorTotal: 10, parcelas: 1 }],
+  });
+  assert.doesNotMatch(renderCategoriaDetalhe(state, 'Lazer', 2026, 8), /POR SUBCATEGORIA/);
+});
+
+test('renderCategoriaDetalhe escapa a subcategoria', () => {
+  const state = estado({
+    lancamentos: [
+      { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', subcategoria: '<img src=x onerror=alert(1)>', descricao: 'x', valorTotal: 10, parcelas: 1 },
+    ],
+  });
+  const html = renderCategoriaDetalhe(state, 'Lazer', 2026, 8);
+  assert.equal(html.includes('<img src=x'), false);
+  assert.match(html, /&lt;img/);
+});
+
+test('renderMetas mede a meta de subcategoria só pela subcategoria', () => {
+  const state = estado({
+    lancamentos: lancComSub,
+    metas: [{ id: 'm1', categoria: 'Alimentação', subcategoria: 'Restaurante', limite: 200 }],
+  });
+  const html = renderMetas(state, 2026, 8);
+  assert.match(html, /Alimentação › Restaurante/);
+  assert.match(html, /300,00 \/ 200,00/); // gasto do Restaurante, não os 900 da categoria
+  assert.match(html, /Excedeu/);
+});
+
+test('renderMetas continua medindo a categoria inteira quando a meta não tem subcategoria', () => {
+  const state = estado({ lancamentos: lancComSub, metas: [{ id: 'm1', categoria: 'Alimentação', limite: 2000 }] });
+  assert.match(renderMetas(state, 2026, 8), /900,00 \/ 2\.000,00/);
+});
+
+test('renderImportarPlanilha oferece o mapeamento de subcategoria', () => {
+  const imp = {
+    colunas: ['data', 'valor', 'categoria', 'subcategoria'],
+    linhas: [['01/08/2026', '10', 'a', 'b']],
+    sugestao: { data: 0, valor: 1, categoria: 2, subcategoria: 3, descricao: null, parcelas: null, conta: null },
+  };
+  const html = renderImportarPlanilha(estado(), imp);
+  assert.match(html, /<select id="map-subcategoria">[\s\S]*?<option value="3" selected>/);
+});
+
+test('renderMetas nao conta o limite duas vezes quando ha meta de categoria e de subcategoria', () => {
+  const state = estado({
+    lancamentos: [
+      { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'iFood', descricao: 'x', valorTotal: 300, parcelas: 1 },
+      { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Lazer', descricao: 'y', valorTotal: 5000, parcelas: 1 },
+    ],
+    metas: [
+      { id: 'm1', categoria: 'Alimentação', limite: 1000 },
+      { id: 'm2', categoria: 'Alimentação', subcategoria: 'iFood', limite: 100 },
+    ],
+  });
+  // formatCurrency separa "R$" do número com NBSP (ver o teste de formatCurrency) — normaliza antes.
+  const html = renderMetas(state, 2026, 8).replace(/\s/g, ' ');
+  // orçamento: só a meta da categoria entra no total (1.000, não 1.100), e o gasto considerado
+  // é o das metas — os 5.000 de Lazer, que não tem meta, ficam de fora do "orçamento usado".
+  assert.match(html, /R\$ 300,00 de R\$ 1\.000,00/);
+  assert.match(html, />30</);
+});
+
+test('renderNovoLancamento sugere subcategorias da categoria que o combo exibe por padrao', () => {
+  // Lancamento novo nao tem categoria no rascunho, mas o combo ja mostra a primeira da lista
+  // (Moradia): a sugestao tem que seguir essa, e nao a de outra categoria qualquer.
+  const state = estado({
+    lancamentos: [
+      { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'Mercado', descricao: 'x', valorTotal: 10, parcelas: 1 },
+      { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Moradia', subcategoria: 'Luz', descricao: 'y', valorTotal: 10, parcelas: 1 },
+    ],
+  });
+  const html = renderNovoLancamento(state, { tipo: 'despesa' });
+  assert.match(html, /<datalist id="lista-subcategorias">[\s\S]*?<option value="Luz">/);
+  assert.doesNotMatch(html, /<datalist id="lista-subcategorias">[\s\S]*?<option value="Mercado">/);
+});

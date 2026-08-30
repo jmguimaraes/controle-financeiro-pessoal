@@ -51,6 +51,9 @@ const {
   reservaEmergencia,
   despesaMediaMensal,
   alertasFinanceiros,
+  subcategoriasUsadas,
+  gastosPorSubcategoria,
+  gastoDaMeta,
   parseCSV,
   analisarPlanilha,
   converterLinhasEmLancamentos,
@@ -1322,8 +1325,9 @@ test('alertasFinanceiros aponta meta estourada como crítico e meta perto do lim
     ],
   };
   const alertas = alertasFinanceiros(state, 2026, 8);
-  const estourada = alertas.find((a) => a.id === 'meta:Lazer');
-  const perto = alertas.find((a) => a.id === 'meta:Moradia');
+  // id vem do id da meta, não da categoria: duas metas podem dividir a mesma categoria.
+  const estourada = alertas.find((a) => a.id === 'meta:m1');
+  const perto = alertas.find((a) => a.id === 'meta:m2');
   assert.equal(estourada.nivel, 'critico');
   assert.match(estourada.detalhe, /80,00/);
   assert.equal(perto.nivel, 'atencao');
@@ -1416,4 +1420,114 @@ test('applyAction marca um ativo como reserva', () => {
   s = applyAction(s, { type: 'addInvestimento', investimento: { id: 'i1', nome: 'CDB', tipo: 'renda_fixa', operacoes: [] } });
   s = applyAction(s, { type: 'editInvestimento', id: 'i1', changes: { reserva: true } });
   assert.equal(s.investimentos[0].reserva, true);
+});
+
+// --- Subcategorias (2º nível) ---
+
+test('subcategoriasUsadas lista as subcategorias já usadas naquela categoria', () => {
+  const lancamentos = [
+    { id: '1', categoria: 'Alimentação', subcategoria: 'Mercado' },
+    { id: '2', categoria: 'Alimentação', subcategoria: 'Restaurante' },
+    { id: '3', categoria: 'Alimentação', subcategoria: 'Mercado' },
+    { id: '4', categoria: 'Alimentação' },
+    { id: '5', categoria: 'Alimentação', subcategoria: '   ' },
+    { id: '6', categoria: 'Transporte', subcategoria: 'Uber' },
+  ];
+  assert.deepEqual(subcategoriasUsadas(lancamentos, 'Alimentação'), ['Mercado', 'Restaurante']);
+  assert.deepEqual(subcategoriasUsadas(lancamentos, 'Transporte'), ['Uber']);
+  assert.deepEqual(subcategoriasUsadas(lancamentos, 'Lazer'), []);
+});
+
+test('subcategoriasUsadas junta grafias que só diferem em caixa ou acento', () => {
+  const lancamentos = [
+    { id: '1', categoria: 'Alimentação', subcategoria: 'Café' },
+    { id: '2', categoria: 'Alimentação', subcategoria: 'cafe' },
+  ];
+  assert.deepEqual(subcategoriasUsadas(lancamentos, 'Alimentação'), ['Café']);
+});
+
+test('gastosPorSubcategoria soma por subcategoria dentro da categoria, do maior pro menor', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'Mercado', valorTotal: 500, parcelas: 1 },
+    { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'Restaurante', valorTotal: 300, parcelas: 1 },
+    { id: '3', data: '2026-08-03', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'Mercado', valorTotal: 200, parcelas: 1 },
+    { id: '4', data: '2026-08-04', tipo: 'despesa', categoria: 'Transporte', subcategoria: 'Uber', valorTotal: 900, parcelas: 1 },
+    { id: '5', data: '2026-07-01', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'Mercado', valorTotal: 999, parcelas: 1 },
+  ];
+  assert.deepEqual(gastosPorSubcategoria(lancamentos, 'Alimentação', 2026, 8), [
+    { subcategoria: 'Mercado', valor: 700 },
+    { subcategoria: 'Restaurante', valor: 300 },
+  ]);
+});
+
+test('gastosPorSubcategoria agrupa o que não tem subcategoria sob string vazia', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', valorTotal: 100, parcelas: 1 },
+    { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Lazer', subcategoria: 'Cinema', valorTotal: 50, parcelas: 1 },
+  ];
+  const r = gastosPorSubcategoria(lancamentos, 'Lazer', 2026, 8);
+  assert.deepEqual(r, [{ subcategoria: '', valor: 100 }, { subcategoria: 'Cinema', valor: 50 }]);
+});
+
+test('gastosPorSubcategoria conta só a parcela do mês, como gastosPorCategoria', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', subcategoria: 'Viagem', valorTotal: 1200, parcelas: 12 },
+  ];
+  assert.deepEqual(gastosPorSubcategoria(lancamentos, 'Lazer', 2026, 9), [{ subcategoria: 'Viagem', valor: 100 }]);
+});
+
+test('gastoDaMeta mede a categoria inteira quando a meta não tem subcategoria', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'Mercado', valorTotal: 500, parcelas: 1 },
+    { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'iFood', valorTotal: 200, parcelas: 1 },
+  ];
+  assert.equal(gastoDaMeta(lancamentos, { categoria: 'Alimentação', limite: 900 }, 2026, 8), 700);
+});
+
+test('gastoDaMeta mede só a subcategoria quando a meta tem uma', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'Mercado', valorTotal: 500, parcelas: 1 },
+    { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'iFood', valorTotal: 200, parcelas: 1 },
+    { id: '3', data: '2026-08-03', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'ifood', valorTotal: 50, parcelas: 1 },
+  ];
+  assert.equal(gastoDaMeta(lancamentos, { categoria: 'Alimentação', subcategoria: 'iFood', limite: 200 }, 2026, 8), 250);
+});
+
+test('filtrarLancamentos acha pela subcategoria na busca', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'Restaurante', descricao: 'almoço', valorTotal: 50, parcelas: 1 },
+    { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'Mercado', descricao: 'compras', valorTotal: 200, parcelas: 1 },
+  ];
+  assert.deepEqual(filtrarLancamentos(lancamentos, 2026, 8, { busca: 'restaur' }).map((l) => l.id), ['1']);
+});
+
+test('alertasFinanceiros dispara meta de subcategoria sem confundir com a da categoria', () => {
+  const state = {
+    ...estadoInicial(),
+    metas: [
+      { id: 'm1', categoria: 'Alimentação', limite: 5000 },
+      { id: 'm2', categoria: 'Alimentação', subcategoria: 'iFood', limite: 100 },
+    ],
+    lancamentos: [
+      { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Alimentação', subcategoria: 'iFood', valorTotal: 300, parcelas: 1 },
+    ],
+  };
+  const alertas = alertasFinanceiros(state, 2026, 8);
+  // a meta da categoria (5.000) está tranquila; só a do iFood estourou
+  assert.equal(alertas.length, 1);
+  assert.equal(alertas[0].id, 'meta:m2');
+  assert.match(alertas[0].titulo, /iFood/);
+});
+
+test('converterLinhasEmLancamentos importa a coluna de subcategoria quando mapeada', () => {
+  const linhas = [['01/08/2026', 'Almoço', '-45,00', 'Alimentação', 'Restaurante']];
+  const { lancamentos } = converterLinhasEmLancamentos(linhas, { data: 0, descricao: 1, valor: 2, categoria: 3, subcategoria: 4 });
+  assert.equal(lancamentos[0].categoria, 'Alimentação');
+  assert.equal(lancamentos[0].subcategoria, 'Restaurante');
+});
+
+test('analisarPlanilha sugere a coluna de subcategoria', () => {
+  const { sugestao } = analisarPlanilha('data;valor;categoria;subcategoria\n01/08/2026;10;a;b\n');
+  assert.equal(sugestao.subcategoria, 3);
+  assert.equal(sugestao.categoria, 2);
 });

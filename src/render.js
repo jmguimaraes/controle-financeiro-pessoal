@@ -405,11 +405,12 @@ function renderLancamentos(state, ano, mes, opcoes = {}) {
             const conta = contas.find((c) => c.id === l.contaId);
             const metaConta = conta ? ` · ${escapeHtml(conta.nome)}` : '';
             const metaPessoa = l.pessoa ? ` · ${escapeHtml(l.pessoa)}` : '';
+            const metaSub = l.subcategoria ? ` › ${escapeHtml(l.subcategoria)}` : '';
             return `
         <div class="nv-item-lanc" data-id="${l.id}" data-acao="editar-lancamento">
           <div>
             <div class="nv-item-nome">${escapeHtml(l.descricao || l.categoria)}${tag}</div>
-            <div class="nv-item-meta">${escapeHtml(l.categoria)}${metaPessoa}${metaConta}</div>
+            <div class="nv-item-meta">${escapeHtml(l.categoria)}${metaSub}${metaPessoa}${metaConta}</div>
           </div>
           <div class="nv-item-valor ${classe}">${sinal} ${mascarar(formatNumero(L.parcelaValor(l)), ocultar)}</div>
         </div>`;
@@ -480,6 +481,14 @@ function renderNovoLancamento(state, dadosIniciais) {
   const pessoas = L.pessoasUsadas(state.lancamentos || []);
   const d = dadosIniciais || {};
   const tipo = d.tipo || 'despesa';
+  // Sugestões da categoria escolhida: "Mercado" só faz sentido dentro de Alimentação. Quando a
+  // pessoa troca a categoria no formulário, app.js repõe esta lista (ver atualizarSugestoesSubcategoria).
+  // Em lançamento novo o rascunho ainda não tem categoria, mas o combo já exibe a primeira da
+  // lista — então a sugestão tem que seguir essa mesma, senão o campo mostra "Moradia" e sugere
+  // subcategoria de outra categoria qualquer.
+  const categoriasDoTipo = opcoesCategoria(tipo);
+  const categoriaAtual = d.categoria || (categoriasDoTipo[0] ? categoriasDoTipo[0].valor : '');
+  const subcategorias = L.subcategoriasUsadas(state.lancamentos || [], categoriaAtual);
   const parcelado = (d.parcelas || 1) > 1;
   const saldoProjetado = d.saldoProjetado ?? 0;
 
@@ -510,6 +519,13 @@ function renderNovoLancamento(state, dadosIniciais) {
       <div class="nv-campo-linha">
         <label class="nv-campo-label" for="campo-categoria-lancamento">CATEGORIA</label>
         ${renderComboSelect('categoria', opcoesCategoria(tipo), d.categoria, 'campo-categoria-lancamento')}
+      </div>
+      <div class="nv-campo-linha">
+        <label class="nv-campo-label" for="campo-subcategoria">SUBCATEGORIA</label>
+        <input type="text" id="campo-subcategoria" name="subcategoria" maxlength="40" autocomplete="off"
+          list="lista-subcategorias" placeholder="opcional, ex.: Mercado"
+          value="${escapeHtml(d.subcategoria || '')}" />
+        <datalist id="lista-subcategorias">${subcategorias.map((s) => `<option value="${escapeHtml(s)}">`).join('')}</datalist>
       </div>
       <div class="nv-campo-linha">
         <label class="nv-campo-label" for="campo-pessoa">QUEM GASTOU</label>
@@ -573,8 +589,13 @@ function renderCategoriaDetalhe(state, categoria, ano, mes) {
   const media6 = historico.reduce((s, h) => s + h.valor, 0) / (historico.length || 1);
   const variacao = media6 ? ((total - media6) / media6) * 100 : 0;
   const maiorHistorico = Math.max(1, ...historico.map((h) => h.valor));
-  const meta = (state.metas || []).find((m) => m.categoria === categoria);
+  const meta = (state.metas || []).find((m) => m.categoria === categoria && !m.subcategoria);
   const statusMeta = meta ? L.statusMeta(total, meta.limite) : null;
+  // Só vale mostrar a quebra quando alguém de fato subdividiu: com uma linha só ("Sem
+  // subcategoria" com 100% do gasto) a seção não diria nada que o total acima já não diga.
+  const porSubcategoria = L.gastosPorSubcategoria(state.lancamentos, categoria, ano, mes);
+  const temSubcategoria = porSubcategoria.some((s) => s.subcategoria !== '');
+  const maiorSub = Math.max(1, ...porSubcategoria.map((s) => s.valor));
   const itens = L.filtrarLancamentos(state.lancamentos, ano, mes, {}).filter((l) => l.categoria === categoria && l.tipo === 'despesa');
 
   const barras = historico
@@ -630,6 +651,25 @@ function renderCategoriaDetalhe(state, categoria, ano, mes) {
     </div>`
         : ''
     }
+    ${
+      temSubcategoria
+        ? `<div class="nv-section-head"><span class="nv-section-label">POR SUBCATEGORIA</span></div>
+    <div class="nv-bars">
+      ${porSubcategoria
+        .map(
+          (s) => `
+        <div class="nv-bar-row">
+          <div class="nv-bar-top">
+            <span${s.subcategoria ? '' : ' style="color:var(--nv-muted)"'}>${s.subcategoria ? escapeHtml(s.subcategoria) : 'Sem subcategoria'}</span>
+            <span>${mascarar(formatNumero(s.valor), ocultar)}</span>
+          </div>
+          <div class="nv-bar-track"><div class="nv-bar-fill" style="width:${(s.valor / maiorSub) * 100}%;background:${s.subcategoria ? 'var(--nv-bar-neutral-strong)' : 'var(--nv-bar-neutral)'}"></div></div>
+        </div>`
+        )
+        .join('')}
+    </div>`
+        : ''
+    }
     <div class="nv-section-head"><span class="nv-section-label">LANÇAMENTOS</span></div>
     <div>${listaItens}</div>
     ${tabBar('resumo', state.idioma)}
@@ -639,10 +679,16 @@ function renderCategoriaDetalhe(state, categoria, ano, mes) {
 function renderMetas(state, ano, mes) {
   const ocultar = !!state.ocultarValores;
   const metas = state.metas || [];
-  const gastos = L.gastosPorCategoria(state.lancamentos, ano, mes);
-  const gastoPorCategoria = new Map(gastos.map((g) => [g.categoria, g.valor]));
-  const totalGasto = gastos.reduce((s, g) => s + g.valor, 0);
-  const totalLimite = metas.reduce((s, m) => s + m.limite, 0);
+  // "Orçamento usado" compara o planejado com o gasto dentro do que foi planejado. Meta de
+  // subcategoria é um recorte dentro da meta da categoria: quando as duas existem, só a da
+  // categoria entra no total, senão o mesmo gasto entraria duas vezes de um lado e os dois
+  // limites do outro. Antes das subcategorias o numerador somava TODA despesa do mês, inclusive
+  // de categoria sem meta nenhuma — o que fazia o percentual estourar sem o orçamento ter
+  // estourado. Agora os dois lados falam das mesmas metas.
+  const categoriasComMetaPropria = new Set(metas.filter((m) => !m.subcategoria).map((m) => m.categoria));
+  const metasDoTotal = metas.filter((m) => !m.subcategoria || !categoriasComMetaPropria.has(m.categoria));
+  const totalGasto = metasDoTotal.reduce((s, m) => s + L.gastoDaMeta(state.lancamentos, m, ano, mes), 0);
+  const totalLimite = metasDoTotal.reduce((s, m) => s + m.limite, 0);
   const percentualGeral = totalLimite ? (totalGasto / totalLimite) * 100 : 0;
   const hoje = new Date();
   const ehMesAtual = hoje.getFullYear() === ano && hoje.getMonth() + 1 === mes;
@@ -652,15 +698,16 @@ function renderMetas(state, ano, mes) {
   const linhas = metas.length
     ? metas
         .map((m) => {
-          const gasto = gastoPorCategoria.get(m.categoria) || 0;
+          const gasto = L.gastoDaMeta(state.lancamentos, m, ano, mes);
           const status = L.statusMeta(gasto, m.limite);
           const pctBarra = Math.min(100, status.percentual);
+          const subtitulo = m.nome ? L.rotuloMeta({ ...m, nome: '' }) : '';
           return `
         <div class="nv-meta-item ${status.excedeu ? 'excedida' : ''}" data-id="${m.id}" data-acao="editar-meta" role="button" tabindex="0">
           <div class="nv-meta-topo">
             <span>
-              <span class="nv-meta-nome">${escapeHtml(m.nome || m.categoria)}</span>
-              ${m.nome ? `<div class="nv-item-meta">${escapeHtml(m.categoria)}</div>` : ''}
+              <span class="nv-meta-nome">${escapeHtml(m.nome || L.rotuloMeta(m))}</span>
+              ${subtitulo ? `<div class="nv-item-meta">${escapeHtml(subtitulo)}</div>` : ''}
             </span>
             <span class="nv-meta-valores ${status.excedeu ? 'excedida' : ''}">${mascarar(formatNumero(gasto), ocultar)} / ${mascarar(formatNumero(m.limite), ocultar)}</span>
           </div>
@@ -1245,6 +1292,7 @@ function renderImportarPlanilha(state, imp) {
       ${campo('map-valor', 'VALOR', imp.sugestao.valor, true)}
       ${campo('map-descricao', 'DESCRIÇÃO', imp.sugestao.descricao, false)}
       ${campo('map-categoria', 'CATEGORIA', imp.sugestao.categoria, false)}
+      ${campo('map-subcategoria', 'SUBCATEGORIA', imp.sugestao.subcategoria, false)}
       ${campo('map-parcelas', 'PARCELAS', imp.sugestao.parcelas, false)}
       ${contas.length ? campo('map-conta', 'CONTA', imp.sugestao.conta, false) : ''}
       ${seletorContaPadrao}

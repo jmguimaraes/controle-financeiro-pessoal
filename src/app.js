@@ -258,6 +258,23 @@
     if (vazio) vazio.hidden = algumVisivel;
   }
 
+  // As subcategorias sugeridas dependem da categoria escolhida, que muda sem re-render nos dois
+  // formulários (combo custom no de meta, combo custom no de lançamento) — daí repor o <datalist>
+  // na mão em vez de deixar pro render.
+  function opcoesDatalist(nomes) {
+    return nomes.map((s) => `<option value="${s.replace(/"/g, '&quot;')}">`).join('');
+  }
+
+  function atualizarSugestoesSubcategoriaMeta(categoria) {
+    const lista = document.getElementById('lista-subcategorias-meta');
+    if (lista) lista.innerHTML = opcoesDatalist(logica.subcategoriasUsadas(state.lancamentos || [], categoria));
+  }
+
+  function atualizarSugestoesSubcategoria(categoria) {
+    const lista = document.getElementById('lista-subcategorias');
+    if (lista) lista.innerHTML = opcoesDatalist(logica.subcategoriasUsadas(state.lancamentos || [], categoria));
+  }
+
   function aplicarTema(tema) {
     const raiz = document.documentElement;
     if (tema === 'claro') raiz.dataset.theme = 'light';
@@ -412,6 +429,7 @@
       valor: indiceDoCampo('map-valor'),
       descricao: indiceDoCampo('map-descricao'),
       categoria: indiceDoCampo('map-categoria'),
+      subcategoria: indiceDoCampo('map-subcategoria'),
       parcelas: indiceDoCampo('map-parcelas'),
       conta: indiceDoCampo('map-conta'),
     };
@@ -567,6 +585,7 @@
       data: dados.get('data') || '',
       descricao: dados.get('descricao') || '',
       categoria: dados.get('categoria') || '',
+      subcategoria: (dados.get('subcategoria') || '').trim(),
       tipo: dados.get('tipo') || 'despesa',
       valorTotal: numeroDoCampoMoeda(dados.get('valorTotal')),
       contaId: dados.get('contaId') || null,
@@ -805,11 +824,14 @@
       const item = state.metas.find((m) => m.id === id);
       form.elements.id.value = item.id;
       definirComboPorValor(comboCategoria, item.categoria);
+      form.elements.subcategoria.value = item.subcategoria || '';
       form.elements.nome.value = item.nome || '';
       form.elements.limite.value = renderizacao.formatNumero(item.limite);
+      atualizarSugestoesSubcategoriaMeta(item.categoria);
     } else {
       form.elements.id.value = '';
       definirComboPorValor(comboCategoria, 'Moradia');
+      atualizarSugestoesSubcategoriaMeta('Moradia');
     }
     document.getElementById('botao-excluir-meta').hidden = !id;
     document.getElementById('form-meta').showModal();
@@ -990,6 +1012,13 @@
         fecharTodosCombos();
         // trocar o tipo de ativo muda quais tickers fazem sentido sugerir no nome
         if (alvo.closest('#combo-tipo-investimento')) atualizarSugestoesAtivo(alvo.dataset.valor);
+        // e trocar a categoria muda quais subcategorias fazem sentido sugerir
+        if (alvo.closest('#combo-categoria-meta')) atualizarSugestoesSubcategoriaMeta(alvo.dataset.valor);
+        // o id do combo fica no botão, não no wrapper, então o item clicado não está "dentro"
+        // dele — a identificação aqui é pelo formulário + data-combo do wrapper.
+        if (alvo.closest('#formulario-lancamento') && alvo.closest('[data-combo="categoria"]')) {
+          atualizarSugestoesSubcategoria(alvo.dataset.valor);
+        }
       }
     });
 
@@ -1298,6 +1327,7 @@
         const meta = {
           id,
           categoria: dados.get('categoria'),
+          subcategoria: (dados.get('subcategoria') || '').trim(),
           nome: dados.get('nome') || '',
           limite: numeroDoCampoMoeda(dados.get('limite')),
         };

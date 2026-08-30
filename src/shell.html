@@ -469,6 +469,9 @@ dialog input[type="checkbox"]{accent-color:var(--nv-accent);padding:0;border:non
     <input type="hidden" name="id" />
     <label for="campo-categoria-meta">Categoria</label>
     <div id="combo-categoria-meta"></div>
+    <!-- Meta de subcategoria mede só aquele recorte (ex.: teto de iFood dentro de Alimentação). -->
+    <label>Subcategoria (opcional)<input type="text" name="subcategoria" maxlength="40" autocomplete="off" list="lista-subcategorias-meta" placeholder="deixe vazio para a categoria toda" /></label>
+    <datalist id="lista-subcategorias-meta"></datalist>
     <label>Nome (opcional)<input type="text" name="nome" maxlength="40" placeholder="ex.: Carro novo" /></label>
     <label>Limite mensal<input type="text" inputmode="decimal" name="limite" class="nv-campo-moeda" required /></label>
     <div class="form-acoes">
