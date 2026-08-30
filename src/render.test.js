@@ -8,7 +8,8 @@ const {
   renderCalendario,
   renderDiaDetalhe,
   renderEntradaRapida,
-  renderPerguntasPerfil,
+  renderPerfilPergunta,
+  renderPerfilCalculando,
   renderResultadoPerfil,
   renderResumo,
   renderLancamentos,
@@ -693,18 +694,36 @@ test('renderAtivoDetalhe mostra o monograma do ativo no cabeçalho', () => {
   assert.ok(html.includes('AA'));
 });
 
-test('renderPerguntasPerfil mostra as 4 perguntas com 4 opções de rádio cada', () => {
-  const html = renderPerguntasPerfil();
-  for (const p of PERGUNTAS_PERFIL) {
-    assert.ok(html.includes(p.pergunta), `faltou a pergunta: ${p.pergunta}`);
-    for (const o of p.opcoes) assert.ok(html.includes(o.texto), `faltou a opção: ${o.texto}`);
+test('renderPerfilPergunta mostra uma pergunta por vez, com as quatro opções como alvo de toque', () => {
+  const html = renderPerfilPergunta(0, {});
+  const primeira = PERGUNTAS_PERFIL[0];
+  assert.ok(html.includes(primeira.pergunta), 'faltou o enunciado da pergunta');
+  for (const o of primeira.opcoes) assert.ok(html.includes(o.texto), `faltou a opção: ${o.texto}`);
+  assert.equal((html.match(/data-acao="responder-perfil"/g) || []).length, 4);
+  // Nenhuma outra pergunta pode aparecer junto — o ponto da tela é ser uma de cada vez.
+  for (const p of PERGUNTAS_PERFIL.slice(1)) {
+    assert.ok(!html.includes(p.pergunta), `a pergunta "${p.pergunta}" vazou pra tela da primeira`);
   }
-  assert.equal((html.match(/type="radio"/g) || []).length, 16);
 });
 
-test('renderPerguntasPerfil marca a primeira opção de cada pergunta, pra nunca enviar vazio', () => {
-  const html = renderPerguntasPerfil();
-  assert.equal((html.match(/checked/g) || []).length, 4);
+test('renderPerfilPergunta mostra em que ponto do teste a pessoa está', () => {
+  const total = PERGUNTAS_PERFIL.length;
+  assert.match(renderPerfilPergunta(0, {}), new RegExp(`PERGUNTA 1 DE ${total}`));
+  assert.match(renderPerfilPergunta(total - 1, {}), new RegExp(`PERGUNTA ${total} DE ${total}`));
+});
+
+test('renderPerfilPergunta nao marca nada por padrao, e marca a opcao ja escolhida ao voltar', () => {
+  const semResposta = renderPerfilPergunta(0, {});
+  assert.equal((semResposta.match(/aria-checked="true"/g) || []).length, 0);
+  const comResposta = renderPerfilPergunta(0, { [PERGUNTAS_PERFIL[0].id]: 2 });
+  assert.equal((comResposta.match(/aria-checked="true"/g) || []).length, 1);
+  assert.match(comResposta, /class="nv-opcao escolhida"[^>]*data-pontos="2"/);
+});
+
+test('renderPerfilCalculando mostra a tela de cálculo entre a última resposta e o resultado', () => {
+  const html = renderPerfilCalculando();
+  assert.match(html, /role="progressbar"/);
+  assert.ok(/perfil/i.test(html));
 });
 
 test('renderResultadoPerfil mostra o nome do perfil e a alocação sugerida', () => {

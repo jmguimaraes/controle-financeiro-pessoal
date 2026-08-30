@@ -986,24 +986,58 @@ function renderEntradaRapida() {
 
 // --- Teste de perfil de investidor ---
 
-// Um radio por opção, com a primeira já marcada: assim o formulário nunca é enviado com pergunta
-// em branco, e a resposta default é sempre a mais conservadora (pontos 0).
-function renderPerguntasPerfil() {
-  return L.perguntasPerfil().map(
-    (p) => `
-      <fieldset class="nv-perfil-bloco">
-        <legend>${escapeHtml(p.pergunta)}</legend>
-        ${p.opcoes
+// Uma pergunta por vez, em tela cheia. O formulário com as catorze de uma vez cabia num diálogo
+// só porque cada opção era um rádio minúsculo: ninguém lia, todo mundo enviava as respostas já
+// marcadas por padrão e o resultado saía sempre igual. Aqui a opção é o alvo de toque, e a única
+// coisa na tela é a pergunta que está sendo respondida.
+function renderPerfilPergunta(indice, respostas = {}) {
+  const perguntas = L.perguntasPerfil();
+  const pergunta = perguntas[indice];
+  if (!pergunta) return '';
+  const escolhida = respostas[pergunta.id];
+  const progresso = ((indice + 1) / perguntas.length) * 100;
+  return `
+    <div class="nv-header nv-header--back">
+      <button type="button" class="nv-back" data-acao="voltar-perfil" aria-label="Voltar">${'‹'}</button>
+      <span class="nv-title" style="font-size:17px">Perfil de investidor</span>
+    </div>
+    <div class="nv-pilha">
+      <div class="nv-perfil-progresso">
+        <span>PERGUNTA ${indice + 1} DE ${perguntas.length}</span>
+        <div class="nv-perfil-barra"><i style="width:${progresso}%"></i></div>
+      </div>
+      <section class="nv-cartao">
+        <h2 class="nv-perfil-pergunta">${escapeHtml(pergunta.pergunta)}</h2>
+      </section>
+      <div class="nv-perfil-opcoes" role="radiogroup" aria-label="${escapeHtml(pergunta.pergunta)}">
+        ${pergunta.opcoes
           .map(
-            (o, i) => `
-          <label class="nv-perfil-opcao">
-            <input type="radio" name="${escapeHtml(p.id)}" value="${o.pontos}" ${i === 0 ? 'checked' : ''} />
-            <span>${escapeHtml(o.texto)}</span>
-          </label>`
+            (o) => `
+        <button type="button" role="radio" aria-checked="${escolhida === o.pontos ? 'true' : 'false'}"
+          class="nv-opcao ${escolhida === o.pontos ? 'escolhida' : ''}"
+          data-acao="responder-perfil" data-pontos="${o.pontos}">
+          <span class="nv-opcao-marca"></span>
+          <span>${escapeHtml(o.texto)}</span>
+        </button>`
           )
           .join('')}
-      </fieldset>`
-  ).join('');
+      </div>
+    </div>`;
+}
+
+// Tela de cálculo. O resultado sai de uma soma que roda em menos de um milissegundo — a espera é
+// deliberada, pra separar "acabei de responder" de "este é o meu perfil". Sem ela o resultado
+// aparece no mesmo toque da última opção e passa despercebido.
+function renderPerfilCalculando() {
+  return `
+    <div class="nv-perfil-calculando">
+      ${iconSymbol(56)}
+      <div>
+        <div class="nv-perfil-calculando-titulo">Montando seu perfil</div>
+        <p class="nv-perfil-calculando-texto">Cruzando suas respostas sobre prazo, reserva e tolerância a oscilação.</p>
+      </div>
+      <div class="nv-perfil-carregando-barra" role="progressbar" aria-label="Calculando"><i></i></div>
+    </div>`;
 }
 
 const ROTULOS_TIPO_DIVIDA = {
@@ -1030,7 +1064,8 @@ const RESUMO_PERFIL = {
 // O aviso de que isto não é recomendação de investimento é obrigatório e coberto por teste:
 // sugerir ativo a uma pessoa é atividade regulada pela CVM. Aqui só se distribui percentual por
 // CLASSE de ativo, que é conteúdo educativo — nenhum papel específico é citado em lugar nenhum.
-function renderResultadoPerfil(perfil, pontos, alocacao) {
+function renderResultadoPerfil(perfil, pontos, alocacao, pontosMaximos) {
+  const maximo = pontosMaximos || L.pontosMaximosPerfil();
   const linhas = Object.entries(alocacao || {})
     .sort((a, b) => b[1] - a[1])
     .map(
@@ -1042,18 +1077,37 @@ function renderResultadoPerfil(perfil, pontos, alocacao) {
     )
     .join('');
   return `
-    <div class="nv-perfil-resultado">
-      <div class="nv-label">SEU PERFIL</div>
-      <div class="nv-perfil-nome">${escapeHtml(ROTULO_PERFIL[perfil] || perfil)}</div>
-      <div class="nv-perfil-pontos">${pontos} de 12 pontos</div>
-      <p class="nv-perfil-resumo">${escapeHtml(RESUMO_PERFIL[perfil] || '')}</p>
-      <div class="nv-label" style="margin-top:22px">SUGESTÃO DE ALOCAÇÃO POR CLASSE</div>
-      ${linhas}
-      <p class="nv-perfil-aviso">
-        Isto é material educativo e não é recomendação de investimento. A sugestão distribui
-        percentuais por classe de ativo e não indica nenhum ativo específico. Decisões de
-        investimento são suas; se precisar de orientação, procure um profissional habilitado.
-      </p>
+    <div class="nv-header nv-header--back">
+      <button type="button" class="nv-back" data-acao="fechar-perfil" aria-label="Voltar">${'‹'}</button>
+      <span class="nv-title" style="font-size:17px">Perfil de investidor</span>
+    </div>
+    <div class="nv-pilha nv-perfil-resultado">
+      <section class="nv-cartao">
+        <span class="nv-cartao-titulo">SEU PERFIL</span>
+        <div class="nv-perfil-resultado-nome">${escapeHtml(ROTULO_PERFIL[perfil] || perfil)}</div>
+        <div class="nv-perfil-pontos">${pontos} de ${maximo} pontos</div>
+        <div class="nv-perfil-escala" aria-hidden="true"><i style="width:${maximo ? Math.min(100, (pontos / maximo) * 100) : 0}%"></i></div>
+        <p class="nv-perfil-resumo">${escapeHtml(RESUMO_PERFIL[perfil] || '')}</p>
+      </section>
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo"><span class="nv-cartao-titulo">SUGESTÃO DE ALOCAÇÃO POR CLASSE</span></div>
+        <div class="nv-list-plain">${linhas}</div>
+      </section>
+      <section class="nv-cartao nv-cartao--justo">
+        <p class="nv-perfil-aviso">
+          Isto é material educativo e não é recomendação de investimento. A sugestão distribui
+          percentuais por classe de ativo e não indica nenhum ativo específico. Decisões de
+          investimento são suas; se precisar de orientação, procure um profissional habilitado.
+        </p>
+      </section>
+      <div class="nv-acao-fixa">
+        <button type="button" class="nv-btn-cheio" data-acao="aplicar-alocacao-perfil">
+          <span>USAR COMO MINHA META</span>
+        </button>
+      </div>
+      <div class="nv-acao-fixa">
+        <button type="button" class="nv-btn-contorno" data-acao="refazer-perfil"><span>REFAZER O TESTE</span></button>
+      </div>
     </div>`;
 }
 
@@ -1624,7 +1678,7 @@ function renderInvestimentos(state) {
           ? ''
           : `<div class="nv-perfil-convite">
               <div class="nv-perfil-convite-titulo">Não sabe por onde começar?</div>
-              <p>Responda algumas perguntas e descubra seu perfil de investidor. O app sugere uma divisão por classe de ativo pra você usar como meta.</p>
+              <p>Responda ${L.perguntasPerfil().length} perguntas rápidas, uma de cada vez, e descubra seu perfil de investidor. O app sugere uma divisão por classe de ativo pra você usar como meta.</p>
               <button type="button" class="nv-perfil-cta" data-acao="abrir-perfil">FAZER O TESTE</button>
             </div>`
       }
@@ -1895,7 +1949,8 @@ if (typeof module !== 'undefined' && module.exports) {
     renderCalendario,
     renderDiaDetalhe,
     renderEntradaRapida,
-    renderPerguntasPerfil,
+    renderPerfilPergunta,
+    renderPerfilCalculando,
     renderResultadoPerfil,
     escapeHtml,
     mascarar,

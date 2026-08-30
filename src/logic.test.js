@@ -38,6 +38,7 @@ const {
   corIndiceAtivo,
   numeroDecimalFlexivel,
   PERGUNTAS_PERFIL,
+  pontosMaximosPerfil,
   perfilDeInvestidor,
   alocacaoSugeridaPorPerfil,
   TIPOS_ALOCACAO,
@@ -770,35 +771,83 @@ test('numeroDecimalFlexivel devolve 0 pra texto vazio ou inválido', () => {
   assert.equal(numeroDecimalFlexivel('abc'), 0);
 });
 
-test('PERGUNTAS_PERFIL tem 4 perguntas, cada uma com opções pontuadas de 0 a 3', () => {
-  assert.equal(PERGUNTAS_PERFIL.length, 4);
+test('toda pergunta do perfil tem id e enunciado', () => {
   for (const p of PERGUNTAS_PERFIL) {
     assert.ok(p.id && p.pergunta, 'pergunta precisa de id e enunciado');
-    assert.equal(p.opcoes.length, 4);
-    assert.deepEqual(p.opcoes.map((o) => o.pontos), [0, 1, 2, 3]);
   }
 });
 
+// Responde todas as perguntas com a mesma pontuação — assim os testes de faixa não dependem de
+// quais perguntas existem hoje, só da escala.
+function respostasTodas(pontos) {
+  const r = {};
+  for (const p of PERGUNTAS_PERFIL) r[p.id] = pontos;
+  return r;
+}
+
+test('o teste de perfil tem pelo menos 10 perguntas, com 4 opções cada', () => {
+  assert.ok(PERGUNTAS_PERFIL.length >= 10, `são só ${PERGUNTAS_PERFIL.length} perguntas`);
+  for (const p of PERGUNTAS_PERFIL) {
+    assert.equal(p.opcoes.length, 4, `a pergunta "${p.pergunta}" não tem 4 opções`);
+    assert.deepEqual(
+      p.opcoes.map((o) => o.pontos),
+      [0, 1, 2, 3],
+      `a pergunta "${p.pergunta}" não vai de 0 a 3 na ordem`
+    );
+  }
+});
+
+test('cada pergunta do perfil tem id único, senão uma resposta sobrescreveria a outra', () => {
+  const ids = PERGUNTAS_PERFIL.map((p) => p.id);
+  assert.equal(new Set(ids).size, ids.length);
+});
+
+test('pontosMaximosPerfil sai da própria lista de perguntas, não de um número escrito à mão', () => {
+  assert.equal(pontosMaximosPerfil(), PERGUNTAS_PERFIL.length * 3);
+  assert.equal(perfilDeInvestidor(respostasTodas(3)).pontosMaximos, pontosMaximosPerfil());
+});
+
 test('perfilDeInvestidor classifica como conservador quem pontua baixo', () => {
-  const r = perfilDeInvestidor({ reacaoQueda: 0, prazo: 0, experiencia: 0, reserva: 1 });
-  assert.equal(r.pontos, 1);
+  const r = perfilDeInvestidor(respostasTodas(0));
+  assert.equal(r.pontos, 0);
   assert.equal(r.perfil, 'conservador');
 });
 
 test('perfilDeInvestidor classifica como moderado na faixa do meio', () => {
-  const r = perfilDeInvestidor({ reacaoQueda: 2, prazo: 2, experiencia: 1, reserva: 1 });
-  assert.equal(r.pontos, 6);
+  const r = perfilDeInvestidor(respostasTodas(2));
+  assert.equal(r.pontos, PERGUNTAS_PERFIL.length * 2);
   assert.equal(r.perfil, 'moderado');
 });
 
 test('perfilDeInvestidor classifica como arrojado quem pontua alto', () => {
-  const r = perfilDeInvestidor({ reacaoQueda: 3, prazo: 3, experiencia: 3, reserva: 3 });
-  assert.equal(r.pontos, 12);
+  const r = perfilDeInvestidor(respostasTodas(3));
+  assert.equal(r.pontos, pontosMaximosPerfil());
   assert.equal(r.perfil, 'arrojado');
 });
 
+// As faixas são um terço e dois terços do máximo. Sem este teste, acrescentar pergunta e esquecer
+// de mexer no corte passaria despercebido — foi exatamente o risco de sair de 4 para 14.
+test('as faixas do perfil acompanham a quantidade de perguntas', () => {
+  const max = pontosMaximosPerfil();
+  assert.equal(perfilDeInvestidor(respostasTodas(1)).perfil, 'conservador');
+  const naBorda = (pontos) => {
+    const r = {};
+    let restante = pontos;
+    for (const p of PERGUNTAS_PERFIL) {
+      const v = Math.min(3, restante);
+      r[p.id] = v;
+      restante -= v;
+    }
+    return r;
+  };
+  assert.equal(perfilDeInvestidor(naBorda(Math.floor(max / 3))).perfil, 'conservador');
+  assert.equal(perfilDeInvestidor(naBorda(Math.floor(max / 3) + 1)).perfil, 'moderado');
+  assert.equal(perfilDeInvestidor(naBorda(Math.floor((max * 2) / 3))).perfil, 'moderado');
+  assert.equal(perfilDeInvestidor(naBorda(Math.floor((max * 2) / 3) + 1)).perfil, 'arrojado');
+});
+
 test('perfilDeInvestidor trata resposta faltando como zero, sem quebrar', () => {
-  const r = perfilDeInvestidor({ reacaoQueda: 3 });
+  const r = perfilDeInvestidor({ [PERGUNTAS_PERFIL[0].id]: 3 });
   assert.equal(r.pontos, 3);
   assert.equal(r.perfil, 'conservador');
 });

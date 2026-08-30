@@ -336,8 +336,23 @@
     if (telaAtual === 'importar') {
       document.getElementById('tela-importar').innerHTML = renderImportarPlanilha(state, importCSV);
     }
+    if (telaAtual === 'perfil' && perfilTeste) {
+      const alvo = document.getElementById('tela-perfil');
+      if (perfilTeste.fase === 'calculando') {
+        alvo.innerHTML = renderizacao.renderPerfilCalculando();
+      } else if (perfilTeste.fase === 'resultado') {
+        alvo.innerHTML = renderizacao.renderResultadoPerfil(
+          perfilTeste.perfil,
+          perfilTeste.pontos,
+          alocacaoSugeridaPendente,
+          perfilTeste.pontosMaximos
+        );
+      } else {
+        alvo.innerHTML = renderizacao.renderPerfilPergunta(perfilTeste.indice, perfilTeste.respostas);
+      }
+    }
 
-    const telas = ['resumo', 'lancamentos', 'carteira', 'metas', 'calendario', 'dia', 'categoria', 'ativo-detalhe', 'novo-lancamento', 'configuracoes', 'importar', 'calculadoras'];
+    const telas = ['resumo', 'lancamentos', 'carteira', 'metas', 'calendario', 'dia', 'categoria', 'ativo-detalhe', 'novo-lancamento', 'configuracoes', 'importar', 'calculadoras', 'perfil'];
     for (const nome of telas) {
       document.getElementById(`tela-${nome}`).hidden = nome !== telaAtual;
     }
@@ -768,28 +783,83 @@
   // de verdade se a pessoa confirmar; ver resultado sozinho não altera nada da carteira dela.
   let alocacaoSugeridaPendente = null;
 
-  function abrirTestePerfil() {
-    const form = document.getElementById('formulario-perfil');
-    form.reset();
-    document.getElementById('perfil-perguntas').innerHTML = renderizacao.renderPerguntasPerfil();
-    document.getElementById('form-perfil').showModal();
+  // Estado do teste de perfil: em que pergunta está, o que já respondeu e qual das três fases da
+  // tela mostrar. Os temporizadores (o respiro depois de escolher e a tela de cálculo) ficam no
+  // mesmo lugar pra poderem ser cancelados quando a pessoa sai no meio — senão um deles dispara
+  // depois e joga a tela do teste por cima de onde ela já está.
+  let perfilTeste = null;
+  let temporizadorPerfil = null;
+
+  function cancelarTemporizadorPerfil() {
+    if (temporizadorPerfil) {
+      clearTimeout(temporizadorPerfil);
+      temporizadorPerfil = null;
+    }
   }
 
-  function mostrarResultadoPerfil(respostas) {
-    const { perfil, pontos } = logica.perfilDeInvestidor(respostas);
+  function abrirTestePerfil() {
+    cancelarTemporizadorPerfil();
+    perfilTeste = { indice: 0, respostas: {}, fase: 'perguntas' };
+    telaAtual = 'perfil';
+    renderizarTudo();
+  }
+
+  function fecharTestePerfil() {
+    cancelarTemporizadorPerfil();
+    perfilTeste = null;
+    telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  function responderPerfil(pontos) {
+    if (!perfilTeste || perfilTeste.fase !== 'perguntas' || temporizadorPerfil) return;
+    const perguntas = logica.perguntasPerfil();
+    const pergunta = perguntas[perfilTeste.indice];
+    if (!pergunta) return;
+    perfilTeste.respostas[pergunta.id] = pontos;
+    // Redesenha já com a opção marcada e só então avança: sem esse respiro o toque na opção
+    // troca a pergunta no mesmo quadro e não dá pra ver o que foi escolhido.
+    renderizarTudo();
+    temporizadorPerfil = setTimeout(() => {
+      temporizadorPerfil = null;
+      if (!perfilTeste) return;
+      if (perfilTeste.indice < perguntas.length - 1) {
+        perfilTeste.indice += 1;
+        renderizarTudo();
+      } else {
+        calcularPerfil();
+      }
+    }, 180);
+  }
+
+  function voltarPerfil() {
+    if (!perfilTeste) return;
+    cancelarTemporizadorPerfil();
+    if (perfilTeste.fase !== 'perguntas' || perfilTeste.indice === 0) {
+      fecharTestePerfil();
+      return;
+    }
+    perfilTeste.indice -= 1;
+    renderizarTudo();
+  }
+
+  function calcularPerfil() {
+    const { perfil, pontos, pontosMaximos } = logica.perfilDeInvestidor(perfilTeste.respostas);
     alocacaoSugeridaPendente = logica.alocacaoSugeridaPorPerfil(perfil);
-    document.getElementById('perfil-resultado-conteudo').innerHTML = renderizacao.renderResultadoPerfil(
-      perfil,
-      pontos,
-      alocacaoSugeridaPendente
-    );
-    document.getElementById('resultado-perfil').showModal();
+    perfilTeste.fase = 'calculando';
+    renderizarTudo();
+    temporizadorPerfil = setTimeout(() => {
+      temporizadorPerfil = null;
+      if (!perfilTeste) return;
+      Object.assign(perfilTeste, { fase: 'resultado', perfil, pontos, pontosMaximos });
+      renderizarTudo();
+    }, 1400);
   }
 
   function aplicarAlocacaoDoPerfil() {
     if (!alocacaoSugeridaPendente) return;
     despachar({ type: 'setAlocacaoAlvo', alocacaoAlvo: { ...alocacaoSugeridaPendente } });
-    document.getElementById('resultado-perfil').close();
+    fecharTestePerfil();
   }
 
   function abrirFormularioDivida(id) {
@@ -993,6 +1063,10 @@
         }
       }
       if (acao === 'aplicar-alocacao-perfil') aplicarAlocacaoDoPerfil();
+      if (acao === 'responder-perfil') responderPerfil(Number(alvo.dataset.pontos));
+      if (acao === 'voltar-perfil') voltarPerfil();
+      if (acao === 'fechar-perfil') fecharTestePerfil();
+      if (acao === 'refazer-perfil') abrirTestePerfil();
 
       if (acao === 'novo-provento') abrirFormularioProvento(alvo.dataset.id);
       if (acao === 'excluir-provento') {
@@ -1286,14 +1360,6 @@
         };
         campo.value = '';
         renderizarTudo();
-        return;
-      }
-
-      if (evento.target.getAttribute('id') === 'formulario-perfil') {
-        const dados = new FormData(evento.target);
-        const respostas = {};
-        for (const p of logica.perguntasPerfil()) respostas[p.id] = Number(dados.get(p.id));
-        mostrarResultadoPerfil(respostas);
         return;
       }
 

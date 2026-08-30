@@ -799,19 +799,137 @@ const PERGUNTAS_PERFIL = [
       { pontos: 3, texto: 'Tenho mais de 6 meses guardados' },
     ],
   },
+  {
+    id: 'objetivo',
+    pergunta: 'Qual é o principal objetivo desse dinheiro?',
+    opcoes: [
+      { pontos: 0, texto: 'Preservar o que já tenho, sem correr risco' },
+      { pontos: 1, texto: 'Render um pouco acima da poupança' },
+      { pontos: 2, texto: 'Crescer no médio prazo, aceitando oscilação' },
+      { pontos: 3, texto: 'Multiplicar o patrimônio no longo prazo' },
+    ],
+  },
+  {
+    id: 'sobraDaRenda',
+    pergunta: 'Quanto da sua renda mensal sobra pra investir?',
+    opcoes: [
+      { pontos: 0, texto: 'Hoje não sobra nada' },
+      { pontos: 1, texto: 'Até 10%' },
+      { pontos: 2, texto: 'De 10% a 30%' },
+      { pontos: 3, texto: 'Mais de 30%' },
+    ],
+  },
+  {
+    id: 'estabilidadeRenda',
+    pergunta: 'Como é a sua renda?',
+    opcoes: [
+      { pontos: 0, texto: 'Instável, varia muito de um mês pro outro' },
+      { pontos: 1, texto: 'Varia um pouco' },
+      { pontos: 2, texto: 'Estável na maior parte do tempo' },
+      { pontos: 3, texto: 'Estável e com mais de uma fonte' },
+    ],
+  },
+  {
+    id: 'dividas',
+    pergunta: 'Você tem dívidas hoje?',
+    opcoes: [
+      { pontos: 0, texto: 'Sim, inclusive cartão ou cheque especial' },
+      { pontos: 1, texto: 'Sim, financiamento ou empréstimo em dia' },
+      { pontos: 2, texto: 'Só dívidas pequenas e planejadas' },
+      { pontos: 3, texto: 'Não tenho dívida nenhuma' },
+    ],
+  },
+  {
+    id: 'acompanhamento',
+    pergunta: 'Com que frequência você olharia a carteira?',
+    opcoes: [
+      { pontos: 0, texto: 'Todo dia, e ficaria aflito com a variação' },
+      { pontos: 1, texto: 'Toda semana' },
+      { pontos: 2, texto: 'Uma vez por mês' },
+      { pontos: 3, texto: 'Poucas vezes por ano — invisto e deixo quieto' },
+    ],
+  },
+  {
+    id: 'conhecimento',
+    pergunta: 'Quais produtos você entende bem o suficiente pra explicar?',
+    opcoes: [
+      { pontos: 0, texto: 'Só a poupança' },
+      { pontos: 1, texto: 'Poupança, CDB e Tesouro Direto' },
+      { pontos: 2, texto: 'Os anteriores, mais fundos e fundos imobiliários' },
+      { pontos: 3, texto: 'Os anteriores, mais ações e ETFs' },
+    ],
+  },
+  {
+    id: 'perdaAceitavel',
+    pergunta: 'Qual perda você aceitaria num ano ruim?',
+    opcoes: [
+      { pontos: 0, texto: 'Nenhuma — não quero ver o valor cair' },
+      { pontos: 1, texto: 'Até 5%' },
+      { pontos: 2, texto: 'Até 20%' },
+      { pontos: 3, texto: 'Mais de 20%, se o plano for de longo prazo' },
+    ],
+  },
+  {
+    id: 'imprevisto',
+    pergunta: 'Se aparecesse um gasto grande e inesperado, de onde sairia o dinheiro?',
+    opcoes: [
+      { pontos: 0, texto: 'Teria que resgatar os investimentos' },
+      { pontos: 1, texto: 'Parte da reserva, parte dos investimentos' },
+      { pontos: 2, texto: 'Da reserva de emergência' },
+      { pontos: 3, texto: 'Da reserva, sem precisar mexer em nada investido' },
+    ],
+  },
+  {
+    id: 'aporteRegular',
+    pergunta: 'Você consegue investir todo mês, mesmo que pouco?',
+    opcoes: [
+      { pontos: 0, texto: 'Não, só quando sobra' },
+      { pontos: 1, texto: 'Quase sempre, mas o valor varia bastante' },
+      { pontos: 2, texto: 'Sim, um valor parecido todo mês' },
+      { pontos: 3, texto: 'Sim, e já é automático' },
+    ],
+  },
+  {
+    id: 'liquidez',
+    pergunta: 'Você aceitaria deixar parte do dinheiro preso por alguns anos em troca de render mais?',
+    opcoes: [
+      { pontos: 0, texto: 'Não, preciso poder resgatar a qualquer momento' },
+      { pontos: 1, texto: 'Uma parte pequena' },
+      { pontos: 2, texto: 'Boa parte, se o prazo for claro' },
+      { pontos: 3, texto: 'Sim, a maior parte' },
+    ],
+  },
 ];
 
-// Soma as respostas (0-12) e corta em três faixas. Resposta faltando conta zero, então um
-// questionário incompleto cai pro lado conservador em vez de quebrar.
+// A pontuação máxima sai da própria lista, não de um número escrito à mão: as faixas são um terço
+// e dois terços do total, então acrescentar ou tirar pergunta reclassifica sozinho. Antes eram 4
+// perguntas com corte fixo em 4 e 8, e qualquer pergunta nova quebraria a classificação em
+// silêncio — todo mundo viraria conservador.
+const PONTOS_MAXIMOS_PERFIL = PERGUNTAS_PERFIL.reduce(
+  (total, p) => total + Math.max(...p.opcoes.map((o) => o.pontos)),
+  0
+);
+
+// Soma as respostas e corta em três faixas. Resposta faltando conta zero, então um questionário
+// incompleto cai pro lado conservador em vez de quebrar.
 function perguntasPerfil() {
   return PERGUNTAS_PERFIL;
+}
+
+function pontosMaximosPerfil() {
+  return PONTOS_MAXIMOS_PERFIL;
 }
 
 function perfilDeInvestidor(respostas = {}) {
   let pontos = 0;
   for (const p of PERGUNTAS_PERFIL) pontos += Number(respostas[p.id]) || 0;
-  const perfil = pontos <= 4 ? 'conservador' : pontos <= 8 ? 'moderado' : 'arrojado';
-  return { pontos, perfil };
+  const perfil =
+    pontos <= PONTOS_MAXIMOS_PERFIL / 3
+      ? 'conservador'
+      : pontos <= (PONTOS_MAXIMOS_PERFIL * 2) / 3
+        ? 'moderado'
+        : 'arrojado';
+  return { pontos, perfil, pontosMaximos: PONTOS_MAXIMOS_PERFIL };
 }
 
 // IMPORTANTE — isto é deliberadamente uma sugestão de proporção por CLASSE de ativo, nunca de
@@ -1318,6 +1436,7 @@ if (typeof module !== 'undefined' && module.exports) {
     resumoDiario,
     lancamentosDoDia,
     perguntasPerfil,
+    pontosMaximosPerfil,
     tiposAlocacao,
     parseCSV,
     decodificarCSV,
