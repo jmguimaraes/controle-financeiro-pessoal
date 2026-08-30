@@ -54,6 +54,7 @@ const {
   subcategoriasUsadas,
   gastosPorSubcategoria,
   gastoDaMeta,
+  decodificarCSV,
   parseCSV,
   analisarPlanilha,
   converterLinhasEmLancamentos,
@@ -1175,9 +1176,9 @@ test('converterLinhasEmLancamentos usa a coluna de categoria quando mapeada, sen
   assert.equal(lancamentos[1].categoria, 'Transporte');
 });
 
-test('converterLinhasEmLancamentos lê parcelas da coluna (N ou N/M) e cai na descrição quando não há coluna', () => {
+test('converterLinhasEmLancamentos lê parcelas da coluna e cai na descrição quando não há coluna', () => {
   const comColuna = converterLinhasEmLancamentos(
-    [['01/08/2026', 'Notebook', '-3600,00', '3/12'], ['01/08/2026', 'Fone', '-200,00', '']],
+    [['01/08/2026', 'Notebook', '-3600,00', '12'], ['01/08/2026', 'Fone', '-200,00', '']],
     { data: 0, descricao: 1, valor: 2, parcelas: 3 }
   ).lancamentos;
   assert.equal(comColuna[0].parcelas, 12);
@@ -1530,4 +1531,90 @@ test('analisarPlanilha sugere a coluna de subcategoria', () => {
   const { sugestao } = analisarPlanilha('data;valor;categoria;subcategoria\n01/08/2026;10;a;b\n');
   assert.equal(sugestao.subcategoria, 3);
   assert.equal(sugestao.categoria, 2);
+});
+
+// --- Correções apontadas na revisão do diff ---
+
+const importar = (linhas, mapa, opcoes) => converterLinhasEmLancamentos(linhas, mapa, opcoes);
+const valorImportado = (texto) => {
+  const { lancamentos } = importar([['01/08/2026', 'x', texto]], { data: 0, descricao: 1, valor: 2 });
+  return lancamentos.length ? lancamentos[0].valorTotal : null;
+};
+
+test('valor de import: separador de milhar sem centavos não vira decimal', () => {
+  assert.equal(valorImportado('R$ 1.234'), 1234);
+  assert.equal(valorImportado('-1.234'), 1234);
+  assert.equal(valorImportado('1.234.567'), 1234567);
+  assert.equal(valorImportado('1,234'), 1234); // exportação em inglês
+});
+
+test('valor de import: centavos continuam sendo centavos', () => {
+  assert.equal(valorImportado('-89,90'), 89.9);
+  assert.equal(valorImportado('1.234,56'), 1234.56);
+  assert.equal(valorImportado('1,234.56'), 1234.56);
+  assert.equal(valorImportado('7.50'), 7.5);
+  assert.equal(valorImportado('7,5'), 7.5);
+  assert.equal(valorImportado('1234'), 1234);
+  assert.equal(valorImportado('R$ (210,45)'), 210.45);
+});
+
+test('valor de import: linha de valor zero é recusada com o motivo certo', () => {
+  const { lancamentos, ignoradas } = importar([['01/08/2026', 'x', '0,00']], { data: 0, descricao: 1, valor: 2 });
+  assert.equal(lancamentos.length, 0);
+  assert.match(ignoradas[0].motivo, /zerado/i);
+});
+
+test('coluna "3/12" é uma parcela já lançada, não um parcelamento a criar', () => {
+  // A linha do extrato vale a parcela daquele mês. Tratar como "12x de 100" dividiria por 12 e
+  // ainda inventaria 11 cobranças futuras que o extrato não tem.
+  const { lancamentos } = importar([['01/08/2026', 'Notebook', '-100,00', '3/12']], { data: 0, descricao: 1, valor: 2, parcelas: 3 });
+  assert.equal(lancamentos[0].valorTotal, 100);
+  assert.equal(lancamentos[0].parcelas, 1);
+  assert.equal(parcelaValor(lancamentos[0]), 100);
+});
+
+test('coluna de parcelas com número solto continua criando parcelamento', () => {
+  const { lancamentos } = importar([['01/08/2026', 'Notebook', '-3600,00', '12']], { data: 0, descricao: 1, valor: 2, parcelas: 3 });
+  assert.equal(lancamentos[0].parcelas, 12);
+  assert.equal(lancamentos[0].valorTotal, 3600);
+});
+
+test('analisarPlanilha não deixa "subcategoria" ser confundida com "categoria"', () => {
+  const so = analisarPlanilha('data;valor;subcategoria\n01/08/2026;10;x\n').sugestao;
+  assert.equal(so.subcategoria, 2);
+  assert.equal(so.categoria, null);
+
+  const ambas = analisarPlanilha('data;valor;categoria;subcategoria\n01/08/2026;10;a;b\n').sugestao;
+  assert.equal(ambas.categoria, 2);
+  assert.equal(ambas.subcategoria, 3);
+});
+
+test('analisarPlanilha não dá a mesma coluna a dois campos', () => {
+  const { sugestao } = analisarPlanilha('data;valor;descricao\n01/08/2026;10;x\n');
+  const usados = Object.values(sugestao).filter((v) => v !== null);
+  assert.equal(new Set(usados).size, usados.length);
+});
+
+test('parseCSV informa em que linha do arquivo cada registro começou', () => {
+  const r = parseCSV('data,valor\n\n2026-08-01,10\n2026-08-02,20\n');
+  assert.deepEqual(r.numerosDeLinha, [3, 4]); // cabeçalho é a 1, a 2 está em branco
+});
+
+test('linha ignorada aponta o número de linha do arquivo, não o índice dos dados', () => {
+  const { linhas, numerosDeLinha } = parseCSV('data;descricao;valor\n\n01/08/2026;ok;-10,00\nsem data;ruim;-10,00\n');
+  const { ignoradas } = converterLinhasEmLancamentos(linhas, { data: 0, descricao: 1, valor: 2 }, { numerosDeLinha });
+  assert.equal(ignoradas[0].linha, 4);
+});
+
+test('decodificarCSV cai pro Windows-1252 quando o arquivo não é UTF-8', () => {
+  const ansi = Buffer.from('data;descricao;valor\n01/08/2026;Almoço no Café;-45,00\n', 'latin1');
+  const texto = decodificarCSV(ansi.buffer.slice(ansi.byteOffset, ansi.byteOffset + ansi.byteLength));
+  assert.match(texto, /Almoço no Café/);
+});
+
+test('decodificarCSV preserva UTF-8 normal', () => {
+  const utf8 = Buffer.from('data;descrição;valor\n01/08/2026;Almoço;-45,00\n', 'utf8');
+  const texto = decodificarCSV(utf8.buffer.slice(utf8.byteOffset, utf8.byteOffset + utf8.byteLength));
+  assert.match(texto, /descrição/);
+  assert.match(texto, /Almoço/);
 });

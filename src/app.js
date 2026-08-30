@@ -401,12 +401,15 @@
     aplicarAnaliseCSV(texto);
   }
 
+  // Lê como bytes, não como texto: readAsText assume UTF-8, mas o Excel em português salva CSV no
+  // code page do Windows — e é justamente esse caminho que a tela sugere. decodificarCSV escolhe a
+  // codificação certa (ver logic.js); ler errado gravaria "Almo�o" pra sempre.
   function lerArquivoCSV(arquivo) {
     if (!arquivo) return;
     const leitor = new FileReader();
-    leitor.onload = () => aplicarAnaliseCSV(String(leitor.result || ''));
+    leitor.onload = () => aplicarAnaliseCSV(logica.decodificarCSV(leitor.result));
     leitor.onerror = () => alert('Não consegui ler esse arquivo.');
-    leitor.readAsText(arquivo);
+    leitor.readAsArrayBuffer(arquivo);
   }
 
   function aplicarAnaliseCSV(texto) {
@@ -441,6 +444,7 @@
     const { lancamentos, ignoradas } = logica.converterLinhasEmLancamentos(importCSV.linhas, mapa, {
       contaPadraoId: contaEl && contaEl.value ? contaEl.value : null,
       contas: state.contas || [],
+      numerosDeLinha: importCSV.numerosDeLinha,
     });
     if (!lancamentos.length) {
       alert('Nenhuma linha pôde ser importada. Confira o mapeamento das colunas.');

@@ -483,11 +483,13 @@ function renderNovoLancamento(state, dadosIniciais) {
   const tipo = d.tipo || 'despesa';
   // Sugestões da categoria escolhida: "Mercado" só faz sentido dentro de Alimentação. Quando a
   // pessoa troca a categoria no formulário, app.js repõe esta lista (ver atualizarSugestoesSubcategoria).
-  // Em lançamento novo o rascunho ainda não tem categoria, mas o combo já exibe a primeira da
-  // lista — então a sugestão tem que seguir essa mesma, senão o campo mostra "Moradia" e sugere
-  // subcategoria de outra categoria qualquer.
+  // Segue exatamente a mesma escolha que renderComboSelect faz pra exibir: a categoria do rascunho
+  // quando ela é válida pro tipo, senão a primeira da lista. Isso cobre tanto o lançamento novo
+  // (rascunho sem categoria) quanto a troca de despesa pra receita, em que a categoria antiga
+  // deixa de existir — nos dois casos o campo exibiria uma categoria e sugeriria a de outra.
   const categoriasDoTipo = opcoesCategoria(tipo);
-  const categoriaAtual = d.categoria || (categoriasDoTipo[0] ? categoriasDoTipo[0].valor : '');
+  const categoriaValida = categoriasDoTipo.some((o) => o.valor === d.categoria);
+  const categoriaAtual = categoriaValida ? d.categoria : categoriasDoTipo[0] ? categoriasDoTipo[0].valor : '';
   const subcategorias = L.subcategoriasUsadas(state.lancamentos || [], categoriaAtual);
   const parcelado = (d.parcelas || 1) > 1;
   const saldoProjetado = d.saldoProjetado ?? 0;
@@ -687,8 +689,15 @@ function renderMetas(state, ano, mes) {
   // estourado. Agora os dois lados falam das mesmas metas.
   const categoriasComMetaPropria = new Set(metas.filter((m) => !m.subcategoria).map((m) => m.categoria));
   const metasDoTotal = metas.filter((m) => !m.subcategoria || !categoriasComMetaPropria.has(m.categoria));
-  const totalGasto = metasDoTotal.reduce((s, m) => s + L.gastoDaMeta(state.lancamentos, m, ano, mes), 0);
   const totalLimite = metasDoTotal.reduce((s, m) => s + m.limite, 0);
+  // Os limites somam por meta, mas o gasto soma por ESCOPO: duas metas na mesma categoria (dois
+  // tetos pro mesmo bolso) medem o mesmo dinheiro, e somar as duas contaria o gasto em dobro.
+  const gastoPorEscopo = new Map();
+  for (const m of metasDoTotal) {
+    const escopo = m.subcategoria ? `${m.categoria}›${m.subcategoria}` : m.categoria;
+    if (!gastoPorEscopo.has(escopo)) gastoPorEscopo.set(escopo, L.gastoDaMeta(state.lancamentos, m, ano, mes));
+  }
+  const totalGasto = [...gastoPorEscopo.values()].reduce((s, v) => s + v, 0);
   const percentualGeral = totalLimite ? (totalGasto / totalLimite) * 100 : 0;
   const hoje = new Date();
   const ehMesAtual = hoje.getFullYear() === ano && hoje.getMonth() + 1 === mes;

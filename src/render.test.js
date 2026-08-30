@@ -27,7 +27,7 @@ const {
   renderCalculadoras,
   monogramaAtivo,
 } = require('./render.js');
-const { estadoInicial } = require('./logic.js');
+const { estadoInicial, applyAction, alertasFinanceiros, resumoMensal, totalCarteira, gastoDaMeta } = require('./logic.js');
 const fs = require('node:fs');
 const path = require('node:path');
 const { execSync } = require('node:child_process');
@@ -1069,4 +1069,128 @@ test('renderNovoLancamento sugere subcategorias da categoria que o combo exibe p
   const html = renderNovoLancamento(state, { tipo: 'despesa' });
   assert.match(html, /<datalist id="lista-subcategorias">[\s\S]*?<option value="Luz">/);
   assert.doesNotMatch(html, /<datalist id="lista-subcategorias">[\s\S]*?<option value="Mercado">/);
+});
+
+// --- Compatibilidade com dado gravado antes desta leva de features ---
+// Estado no formato que o app produzia antes de existirem pessoa, subcategoria e reserva. É o que
+// está publicado no state.json de quem já usa o app, então nenhuma tela pode quebrar nem mudar de
+// número por causa de campo que esses registros não têm.
+
+const ESTADO_LEGADO = {
+  lancamentos: [
+    { id: 'l1', data: '2026-08-05', tipo: 'receita', categoria: 'Salário', descricao: 'Salário', valorTotal: 5000, parcelas: 1, contaId: 'c1' },
+    { id: 'l2', data: '2026-08-07', tipo: 'despesa', categoria: 'Moradia', descricao: 'Aluguel', valorTotal: 1500, parcelas: 1, contaId: 'c1' },
+    { id: 'l3', data: '2026-08-10', tipo: 'despesa', categoria: 'Outras Despesas', descricao: 'Notebook', valorTotal: 3600, parcelas: 12, contaId: 'c1' },
+    { id: 'l4', data: '2026-08-11', tipo: 'transferencia', categoria: 'Outras Despesas', descricao: 'Fatura', valorTotal: 800, parcelas: 1, contaId: 'c1' },
+  ],
+  investimentos: [
+    { id: 'i1', nome: 'PETR4', tipo: 'acao', precoAtual: 40, operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-02', quantidade: 100, precoUnitario: 30 }], proventos: [{ id: 'p1', tipo: 'dividendo', data: '2026-07-01', valor: 120 }] },
+    { id: 'i2', nome: 'CDB', tipo: 'renda_fixa', precoAtual: 10000, operacoes: [{ id: 'o2', tipo: 'compra', data: '2026-01-02', quantidade: 1, precoUnitario: 10000 }] },
+  ],
+  contas: [{ id: 'c1', nome: 'Nubank', tipo: 'conta', fechamento: 10 }],
+  metas: [{ id: 'm1', categoria: 'Moradia', nome: 'Aluguel', limite: 2000 }],
+  dividas: [{ id: 'd1', nome: 'Carro', tipo: 'financiamento_veiculo', saldoDevedor: 32000, valorParcela: 950, parcelasRestantes: 36 }],
+  alocacaoAlvo: { acao: 60, renda_fixa: 40 },
+  tema: 'escuro',
+  ocultarValores: false,
+  idioma: 'pt',
+};
+
+const legado = () => JSON.parse(JSON.stringify(ESTADO_LEGADO));
+
+test('estado legado renderiza todas as telas sem lançar erro', () => {
+  const s = legado();
+  assert.doesNotThrow(() => {
+    renderResumo(s, 2026, 8);
+    renderLancamentos(s, 2026, 8);
+    renderNovoLancamento(s, { tipo: 'despesa' });
+    renderNovoLancamento(s, s.lancamentos[1]); // edição de lançamento antigo
+    renderCategoriaDetalhe(s, 'Moradia', 2026, 8);
+    renderMetas(s, 2026, 8);
+    renderInvestimentos(s);
+    renderAtivoDetalhe(s, 'i1');
+    renderCalendario(s, 2026, 8, 'pt');
+    renderDiaDetalhe(s, '2026-08-07', 'pt');
+    renderConfiguracoes(s, false);
+    renderImportarPlanilha(s, null);
+  });
+});
+
+test('estado legado: nenhuma tela inventa subcategoria, pessoa ou selo de reserva', () => {
+  const s = legado();
+  // o "›" é procurado só na linha de meta do item — o cabeçalho usa o mesmo caractere na seta de
+  // próximo mês desde antes desta leva, e casar com ele não diria nada sobre subcategoria.
+  const linhasMeta = renderLancamentos(s, 2026, 8).match(/<div class="nv-item-meta">[^<]*<\/div>/g) || [];
+  assert.ok(linhasMeta.length > 0);
+  assert.equal(linhasMeta.some((l) => l.includes('›')), false);
+  assert.doesNotMatch(renderLancamentos(s, 2026, 8), /campo-pessoa-filtro/);
+  assert.doesNotMatch(renderCategoriaDetalhe(s, 'Moradia', 2026, 8), /POR SUBCATEGORIA/);
+  assert.doesNotMatch(renderAtivoDetalhe(s, 'i2'), /RESERVA DE EMERG/i);
+});
+
+test('estado legado: alerta de reserva fica calado porque nada foi marcado como reserva', () => {
+  const s = legado();
+  // 950 de parcela sobre 5.000 de renda = 19%, abaixo das faixas: silêncio é o certo aqui.
+  assert.deepEqual(alertasFinanceiros(s, 2026, 8), []);
+
+  // e as regras continuam valendo em dado antigo quando a faixa é de fato ultrapassada
+  const apertado = legado();
+  apertado.dividas[0].valorParcela = 2000; // 40% da renda
+  const ids = alertasFinanceiros(apertado, 2026, 8).map((a) => a.id);
+  assert.equal(ids.includes('comprometimento'), true);
+  assert.equal(ids.includes('reserva'), false); // segue calado: nenhum ativo marcado
+});
+
+test('estado legado: números do mês seguem os mesmos de antes', () => {
+  const s = legado();
+  const resumo = resumoMensal(s.lancamentos, 2026, 8);
+  assert.equal(resumo.receitas, 5000);
+  assert.equal(resumo.despesas, 1800); // 1500 + 300 da parcela; transferência fora
+  assert.equal(resumo.saldo, 3200);
+  assert.equal(totalCarteira(s.investimentos).totalAtual, 14000);
+  // meta antiga (sem subcategoria) continua medindo a categoria inteira
+  assert.equal(gastoDaMeta(s.lancamentos, s.metas[0], 2026, 8), 1500);
+});
+
+test('editar um lançamento antigo preserva os campos que o formulário não conhece', () => {
+  // O formulário devolve uma lista fixa de campos; editLancamento faz merge, então nada que o
+  // formulário não edita (contaId de outro fluxo, origem de importação) pode ser apagado.
+  let s = { ...estadoInicial(), lancamentos: [{ id: 'l1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'Bar', valorTotal: 100, parcelas: 1, origem: 'importacao', campoDeOutraVersao: 'x' }] };
+  s = applyAction(s, {
+    type: 'editLancamento',
+    id: 'l1',
+    changes: { data: '2026-08-02', descricao: 'Bar do Zé', categoria: 'Lazer', subcategoria: '', pessoa: '', tipo: 'despesa', valorTotal: 120, contaId: null, parcelas: 1 },
+  });
+  const l = s.lancamentos[0];
+  assert.equal(l.valorTotal, 120);
+  assert.equal(l.origem, 'importacao');
+  assert.equal(l.campoDeOutraVersao, 'x');
+});
+
+test('renderMetas nao conta o mesmo gasto duas vezes com duas metas na mesma categoria', () => {
+  const state = estado({
+    lancamentos: [{ id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'x', valorTotal: 600, parcelas: 1 }],
+    metas: [
+      { id: 'm1', categoria: 'Lazer', nome: 'Bar', limite: 500 },
+      { id: 'm2', categoria: 'Lazer', nome: 'Cinema', limite: 500 },
+    ],
+  });
+  const html = renderMetas(state, 2026, 8).replace(/\s/g, ' ');
+  // os 600 gastos entram uma vez so, contra a soma dos dois limites
+  assert.match(html, /R\$ 600,00 de R\$ 1\.000,00/);
+  assert.match(html, />60</);
+});
+
+test('renderNovoLancamento sugere subcategoria da categoria valida para o tipo escolhido', () => {
+  // Moradia nao existe em receita: o combo cai em "Salario", e a sugestao tem que acompanhar,
+  // senao o campo mostra uma categoria e sugere subcategoria de outra.
+  const state = estado({
+    lancamentos: [
+      { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Moradia', subcategoria: 'Luz', descricao: 'x', valorTotal: 10, parcelas: 1 },
+      { id: '2', data: '2026-08-02', tipo: 'receita', categoria: 'Salário', subcategoria: 'Bônus', descricao: 'y', valorTotal: 10, parcelas: 1 },
+    ],
+  });
+  const html = renderNovoLancamento(state, { tipo: 'receita', categoria: 'Moradia' });
+  assert.match(html, /<datalist id="lista-subcategorias">[\s\S]*?<option value="Bônus">/);
+  assert.doesNotMatch(html, /<datalist id="lista-subcategorias">[\s\S]*?<option value="Luz">/);
 });

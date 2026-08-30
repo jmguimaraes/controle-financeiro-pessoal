@@ -918,6 +918,19 @@ function detectarSeparadorCSV(primeiraLinha) {
   return escolhido;
 }
 
+// O Excel em português salva "CSV" no code page do Windows (1252), não em UTF-8 — e é exatamente
+// esse o caminho que a tela de importação sugere. Lido como UTF-8, "Almoço" vira "Almo�o" e fica
+// gravado torto pra sempre. Tenta UTF-8 estrito primeiro; se o arquivo não for UTF-8 válido, cai
+// pro 1252, que aceita qualquer byte.
+function decodificarCSV(bufferOuTexto) {
+  if (typeof bufferOuTexto === 'string') return bufferOuTexto;
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bufferOuTexto);
+  } catch (erro) {
+    return new TextDecoder('windows-1252').decode(bufferOuTexto);
+  }
+}
+
 function parseCSV(texto) {
   const limpo = String(texto || '').replace(/^﻿/, '').replace(/\r\n?/g, '\n');
   const primeiraQuebra = limpo.indexOf('\n');
@@ -925,11 +938,17 @@ function parseCSV(texto) {
   const sep = detectarSeparadorCSV(linhaCabecalho);
 
   const linhas = [];
+  // Número da linha do ARQUIVO onde cada registro começa, pra dizer "linha 7" apontando o que a
+  // pessoa vê na planilha — contando cabeçalho e linhas em branco, que o parser descarta.
+  const inicios = [];
+  let linhaArquivo = 1;
+  let inicioDoRegistro = 1;
   let campo = '';
   let linha = [];
   let dentroDeAspas = false;
   for (let i = 0; i < limpo.length; i++) {
     const c = limpo[i];
+    if (c === '\n' && dentroDeAspas) linhaArquivo += 1; // quebra dentro de aspas ainda é linha do arquivo
     if (dentroDeAspas) {
       if (c === '"') {
         if (limpo[i + 1] === '"') {
@@ -949,6 +968,9 @@ function parseCSV(texto) {
     } else if (c === '\n') {
       linha.push(campo);
       linhas.push(linha);
+      inicios.push(inicioDoRegistro);
+      linhaArquivo += 1;
+      inicioDoRegistro = linhaArquivo;
       linha = [];
       campo = '';
     } else {
@@ -957,11 +979,18 @@ function parseCSV(texto) {
   }
   linha.push(campo);
   linhas.push(linha);
+  inicios.push(inicioDoRegistro);
 
   const naoVazia = (l) => l.some((c) => c.trim() !== '');
-  const comConteudo = linhas.filter(naoVazia).map((l) => l.map((c) => c.trim()));
-  if (!comConteudo.length) return { colunas: [], linhas: [] };
-  return { colunas: comConteudo[0], linhas: comConteudo.slice(1) };
+  const comConteudo = [];
+  const numerosComConteudo = [];
+  linhas.forEach((l, i) => {
+    if (!naoVazia(l)) return;
+    comConteudo.push(l.map((c) => c.trim()));
+    numerosComConteudo.push(inicios[i]);
+  });
+  if (!comConteudo.length) return { colunas: [], linhas: [], numerosDeLinha: [] };
+  return { colunas: comConteudo[0], linhas: comConteudo.slice(1), numerosDeLinha: numerosComConteudo.slice(1) };
 }
 
 // A partir dos cabeçalhos, chuta qual coluna é cada campo. Compara sem acento nem caixa, primeiro por
@@ -976,23 +1005,32 @@ const CHAVES_MAPEAMENTO_CSV = {
   conta: ['conta', 'account', 'banco', 'carteira', 'cartao'],
 };
 
+// A ordem importa duas vezes: "subcategoria" vem antes de "categoria" porque a busca por "contém"
+// faria a coluna Subcategoria casar também com "categoria", e uma coluna já escolhida sai da
+// disputa — sem isso, uma planilha só com Subcategoria alimentava os dois campos com a mesma
+// coluna, e a categoria vinha errada sem ninguém perceber.
+const ORDEM_MAPEAMENTO_CSV = ['data', 'valor', 'subcategoria', 'categoria', 'parcelas', 'conta', 'descricao'];
+
 function analisarPlanilha(texto) {
-  const { colunas, linhas } = parseCSV(texto);
+  const { colunas, linhas, numerosDeLinha } = parseCSV(texto);
   const normalizados = colunas.map((c) => normalizarTexto(c).trim());
+  const usados = new Set();
   const achar = (chaves) => {
     for (let i = 0; i < normalizados.length; i++) {
-      if (chaves.some((k) => normalizados[i] === k)) return i;
+      if (!usados.has(i) && chaves.some((k) => normalizados[i] === k)) return i;
     }
     for (let i = 0; i < normalizados.length; i++) {
-      if (chaves.some((k) => normalizados[i].includes(k))) return i;
+      if (!usados.has(i) && chaves.some((k) => normalizados[i].includes(k))) return i;
     }
     return null;
   };
   const sugestao = {};
-  for (const campo of Object.keys(CHAVES_MAPEAMENTO_CSV)) {
-    sugestao[campo] = achar(CHAVES_MAPEAMENTO_CSV[campo]);
+  for (const campo of ORDEM_MAPEAMENTO_CSV) {
+    const indice = achar(CHAVES_MAPEAMENTO_CSV[campo]);
+    if (indice !== null) usados.add(indice);
+    sugestao[campo] = indice;
   }
-  return { colunas, linhas, sugestao };
+  return { colunas, linhas, numerosDeLinha, sugestao };
 }
 
 function parseDataImportada(texto) {
@@ -1017,9 +1055,32 @@ function parseDataImportada(texto) {
 
 // Aceita "-89,90", "R$ 1.234,56", "(210,45)" (contábil = negativo) e "50,00-" (sinal no fim).
 // Devolve número com sinal, ou null se não houver dígito ou o valor der zero.
+// Converte o texto de uma célula de valor em número, entendendo separador de milhar.
+// NÃO dá pra reusar numeroDecimalFlexivel aqui: a regra dele ("o separador mais à direita é o
+// decimal") serve pra campo digitado à mão, onde "1.5" quer dizer 1,5. Numa planilha, "1.234" é
+// mil duzentos e trinta e quatro, e lê-lo como 1,23 erraria o valor por mil vezes, em silêncio.
+// Regra: separador seguido de exatamente 3 dígitos e nada depois é milhar; senão é decimal. Isso
+// cobre "1.234,56", "1,234.56" e o caso sem centavos ("1.234"). O preço é que um valor de três
+// casas decimais ("0,750") viraria 750 — não é o que aparece em extrato de dinheiro, onde o que
+// existe é milhar.
+function numeroDePlanilha(texto) {
+  const s = String(texto || '').trim();
+  if (!s) return NaN;
+  const ultimaVirgula = s.lastIndexOf(',');
+  const ultimoPonto = s.lastIndexOf('.');
+  const posSeparador = Math.max(ultimaVirgula, ultimoPonto);
+  if (posSeparador === -1) return Number(s);
+
+  const depois = s.slice(posSeparador + 1);
+  if (/^\d{3}$/.test(depois)) return Number(s.replace(/[.,]/g, ''));
+
+  const inteiro = s.slice(0, posSeparador).replace(/[.,]/g, '');
+  return Number(`${inteiro}.${depois}`);
+}
+
 function parseValorImportado(texto) {
   let s = String(texto || '').trim();
-  if (!s) return null;
+  if (!s) return { erro: 'Valor ausente ou inválido' };
   s = s.replace(/r\$/gi, '').replace(/[\s ]/g, '');
   let negativo = false;
   if (/^\(.*\)$/.test(s)) {
@@ -1028,18 +1089,24 @@ function parseValorImportado(texto) {
   }
   if (/^-/.test(s) || /-$/.test(s)) negativo = true;
   s = s.replace(/^[+-]/, '').replace(/-$/, '');
-  if (!/\d/.test(s)) return null;
-  const n = numeroDecimalFlexivel(s);
-  if (!Number.isFinite(n) || n === 0) return null;
-  return negativo ? -n : n;
+  if (!/^\d[\d.,]*$/.test(s)) return { erro: 'Valor ausente ou inválido' };
+  const n = numeroDePlanilha(s);
+  if (!Number.isFinite(n)) return { erro: 'Valor ausente ou inválido' };
+  // Lançamento de zero não muda saldo nem gasto. Entra como recusa com o motivo certo, em vez de
+  // "valor inválido", que deixaria a pessoa procurando um erro de digitação que não existe.
+  if (n === 0) return { erro: 'Valor zerado' };
+  return { valor: negativo ? -n : n };
 }
 
 // "12" -> 12; "3/12" (parcela atual/total) -> 12; vazio ou sem número -> 1.
+// "12" (a compra é em 12x, e o valor da linha é o total) -> 12.
+// "3/12" é outra coisa: a linha é a 3ª parcela já cobrada, e o valor dela é o da parcela, não o
+// total. Criar um parcelamento de 12x aqui dividiria esse valor por 12 e ainda inventaria 11
+// cobranças futuras que o extrato não tem — então a linha entra como lançamento único.
 function parseParcelasImportada(texto) {
   const s = String(texto || '').trim();
-  let m = s.match(/(\d+)\s*\/\s*(\d+)/);
-  if (m) return Math.max(1, parseInt(m[2], 10));
-  m = s.match(/(\d+)/);
+  if (/\d+\s*\/\s*\d+/.test(s)) return 1;
+  const m = s.match(/(\d+)/);
   if (m) return Math.max(1, parseInt(m[1], 10));
   return 1;
 }
@@ -1055,9 +1122,13 @@ function converterLinhasEmLancamentos(linhas, mapa, opcoes = {}) {
   const contaPadraoId = opcoes.contaPadraoId || null;
   const temColuna = (idx) => idx !== null && idx !== undefined && idx >= 0;
 
+  // Números de linha do arquivo (ver parseCSV). Sem eles, cai no índice do registro — que só
+  // coincide com a planilha quando não há cabeçalho nem linha em branco.
+  const numerosDeLinha = opcoes.numerosDeLinha || null;
+
   (linhas || []).forEach((linhaBruta, i) => {
     const linha = linhaBruta || [];
-    const numeroLinha = i + 1;
+    const numeroLinha = numerosDeLinha && numerosDeLinha[i] ? numerosDeLinha[i] : i + 1;
     const cel = (idx) => (temColuna(idx) ? String(linha[idx] == null ? '' : linha[idx]).trim() : '');
 
     if (linha.every((c) => String(c == null ? '' : c).trim() === '')) return; // linha em branco: pula sem contar
@@ -1067,9 +1138,9 @@ function converterLinhasEmLancamentos(linhas, mapa, opcoes = {}) {
       ignoradas.push({ linha: numeroLinha, motivo: 'Data ausente ou em formato não reconhecido' });
       return;
     }
-    const valor = parseValorImportado(cel(mapa.valor));
-    if (valor === null) {
-      ignoradas.push({ linha: numeroLinha, motivo: 'Valor ausente ou inválido' });
+    const { valor, erro } = parseValorImportado(cel(mapa.valor));
+    if (erro) {
+      ignoradas.push({ linha: numeroLinha, motivo: erro });
       return;
     }
 
@@ -1246,6 +1317,7 @@ if (typeof module !== 'undefined' && module.exports) {
     perguntasPerfil,
     tiposAlocacao,
     parseCSV,
+    decodificarCSV,
     analisarPlanilha,
     converterLinhasEmLancamentos,
     pessoasUsadas,
