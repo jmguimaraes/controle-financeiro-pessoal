@@ -265,6 +265,24 @@
     return nomes.map((s) => `<option value="${s.replace(/"/g, '&quot;')}">`).join('');
   }
 
+  // Reserva de emergência não tem cotas: quem só quer registrar quanto guardou não deve precisar
+  // responder "quantidade" e "preço por cota" pra dizer um número só. O tipo já marca como
+  // reserva, então a caixinha de marcação também sai de cena.
+  function ajustarFormularioPorTipoAtivo(tipo) {
+    const form = document.getElementById('formulario-investimento');
+    if (!form) return;
+    const ehReserva = tipo === 'reserva_emergencia';
+    const linhaQuantidade = document.getElementById('linha-quantidade');
+    if (linhaQuantidade) linhaQuantidade.hidden = ehReserva;
+    if (ehReserva) form.elements.quantidade.value = '1';
+    const rotuloPago = document.getElementById('rotulo-preco-pago');
+    if (rotuloPago) rotuloPago.textContent = ehReserva ? 'Valor guardado' : 'Preço pago por cota';
+    const rotuloAtual = document.getElementById('rotulo-preco-atual');
+    if (rotuloAtual) rotuloAtual.textContent = ehReserva ? 'Valor guardado hoje' : 'Preço atual por cota';
+    const linhaReserva = form.elements.reserva.closest('label');
+    if (linhaReserva) linhaReserva.hidden = ehReserva;
+  }
+
   function atualizarSugestoesSubcategoriaMeta(categoria) {
     const lista = document.getElementById('lista-subcategorias-meta');
     if (lista) lista.innerHTML = opcoesDatalist(logica.subcategoriasUsadas(state.lancamentos || [], categoria));
@@ -715,7 +733,13 @@
       form.elements.id.value = '';
       atualizarSugestoesAtivo('acao');
       definirComboPorValor(comboTipo, 'acao');
+      form.elements.quantidade.value = '1';
+      form.elements.dataCompra.value = new Date().toISOString().slice(0, 10);
     }
+    // A primeira compra só faz sentido ao criar: num ativo que já existe a posição vem do
+    // histórico de operações, e editar por aqui contradiria o que está lançado lá.
+    document.getElementById('bloco-primeira-compra').hidden = !!id;
+    ajustarFormularioPorTipoAtivo(id ? state.investimentos.find((i) => i.id === id).tipo : 'acao');
     document.getElementById('botao-excluir-investimento').hidden = !id;
     document.getElementById('form-investimento').showModal();
   }
@@ -1015,7 +1039,10 @@
         selecionarItemCombo(combo, alvo.dataset.valor, alvo.dataset.rotulo);
         fecharTodosCombos();
         // trocar o tipo de ativo muda quais tickers fazem sentido sugerir no nome
-        if (alvo.closest('#combo-tipo-investimento')) atualizarSugestoesAtivo(alvo.dataset.valor);
+        if (alvo.closest('#combo-tipo-investimento')) {
+          atualizarSugestoesAtivo(alvo.dataset.valor);
+          ajustarFormularioPorTipoAtivo(alvo.dataset.valor);
+        }
         // e trocar a categoria muda quais subcategorias fazem sentido sugerir
         if (alvo.closest('#combo-categoria-meta')) atualizarSugestoesSubcategoriaMeta(alvo.dataset.valor);
         // o id do combo fica no botão, não no wrapper, então o item clicado não está "dentro"
@@ -1162,15 +1189,25 @@
             },
           });
         } else {
+          // Quantidade e preço pago viram a primeira operação de compra, então o ativo já nasce
+          // com posição e preço médio. Sem preço atual informado, o de agora é o que foi pago —
+          // quem acabou de comprar não tem lucro nem prejuízo ainda.
+          const quantidade = Number(dados.get('quantidade')) || 0;
+          const precoPago = numeroDoCampoMoeda(dados.get('precoPago'));
+          const precoAtual = numeroDoCampoMoeda(dados.get('precoAtual')) || precoPago;
+          const operacoes =
+            quantidade > 0 && precoPago > 0
+              ? [{ id: uid(), tipo: 'compra', data: dados.get('dataCompra') || new Date().toISOString().slice(0, 10), quantidade, precoUnitario: precoPago }]
+              : [];
           despachar({
             type: 'addInvestimento',
             investimento: {
               id,
               nome: dados.get('nome'),
               tipo: dados.get('tipo'),
-              precoAtual: numeroDoCampoMoeda(dados.get('precoAtual')),
+              precoAtual,
               reserva: dados.get('reserva') === 'on',
-              operacoes: [],
+              operacoes,
             },
           });
           abrirAtivo(id);

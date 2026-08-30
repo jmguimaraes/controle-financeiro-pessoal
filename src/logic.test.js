@@ -49,6 +49,7 @@ const {
   lancamentosDoDia,
   pessoasUsadas,
   reservaEmergencia,
+  tiposAlocacao,
   despesaMediaMensal,
   alertasFinanceiros,
   subcategoriasUsadas,
@@ -1617,4 +1618,35 @@ test('decodificarCSV preserva UTF-8 normal', () => {
   const texto = decodificarCSV(utf8.buffer.slice(utf8.byteOffset, utf8.byteOffset + utf8.byteLength));
   assert.match(texto, /descrição/);
   assert.match(texto, /Almoço/);
+});
+
+test('reservaEmergencia conta o tipo "reserva de emergencia" sem precisar de marcacao', () => {
+  const guardado = {
+    id: 'r1', nome: 'Reserva de emergência', tipo: 'reserva_emergencia', precoAtual: 8000,
+    operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: 8000 }],
+  };
+  const r = reservaEmergencia([guardado]);
+  assert.equal(r.total, 8000);
+  assert.equal(r.temMarcado, true);
+});
+
+test('reservaEmergencia soma o tipo dedicado junto com ativos marcados na mao', () => {
+  const guardado = {
+    id: 'r1', nome: 'Reserva', tipo: 'reserva_emergencia', precoAtual: 5000,
+    operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: 5000 }],
+  };
+  const cdbMarcado = {
+    id: 'i1', nome: 'CDB liquidez diária', tipo: 'renda_fixa', reserva: true, precoAtual: 2000,
+    operacoes: [{ id: 'o2', tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: 2000 }],
+  };
+  const acao = {
+    id: 'i2', nome: 'PETR4', tipo: 'acao', precoAtual: 40,
+    operacoes: [{ id: 'o3', tipo: 'compra', data: '2026-01-01', quantidade: 100, precoUnitario: 30 }],
+  };
+  assert.equal(reservaEmergencia([guardado, cdbMarcado, acao]).total, 7000);
+});
+
+test('reserva de emergencia nao entra nos tipos que participam da meta de alocacao', () => {
+  // Reserva não é uma classe pra distribuir percentual: é o colchão que fica de fora do jogo.
+  assert.equal(tiposAlocacao().includes('reserva_emergencia'), false);
 });

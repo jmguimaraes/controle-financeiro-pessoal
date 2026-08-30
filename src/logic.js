@@ -529,7 +529,10 @@ const PERCENTUAL_META_ATENCAO = 80;
 // se um "renda fixa" é resgatável hoje ou está travado por três anos, e tratar os dois como
 // reserva daria um alerta tranquilizador pra quem, na verdade, não tem de onde tirar dinheiro.
 function reservaEmergencia(investimentos) {
-  const marcados = (investimentos || []).filter((i) => i && i.reserva);
+  // Dois caminhos, de propósito: o tipo "reserva de emergência" é o atalho pra quem só quer dizer
+  // quanto tem guardado, sem modelar cotas; a marcação continua pra quem quer apontar um ativo
+  // real (um CDB de liquidez diária) como sendo a reserva.
+  const marcados = (investimentos || []).filter((i) => i && (i.reserva || i.tipo === 'reserva_emergencia'));
   const total = marcados.reduce((soma, i) => soma + resumoInvestimento(i).valorAtual, 0);
   return { total, temMarcado: marcados.length > 0 };
 }

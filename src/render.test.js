@@ -721,7 +721,7 @@ test('renderCalendario monta a grade do mês com os dias e o saldo de cada um', 
     ],
   });
   const html = renderCalendario(state, 2026, 8);
-  assert.match(html, /AGO 2026/);
+  assert.match(html, /AGOSTO 2026/); // mesmo cabeçalho de Lançamentos e Metas, com navegação de mês
   assert.match(html, /data-dia="2026-08-05"/);
   assert.match(html, /data-dia="2026-08-07"/);
   assert.match(html, /nv-dia-positivo/); // dia 5 fechou no azul
@@ -1217,4 +1217,11 @@ test('grafico de composicao cabe inteiro no viewBox, sem cortar a espessura do t
     assert.ok(Number(cx) + bordaExterna <= largura, `corta a direita: ${largura - (Number(cx) + bordaExterna)}`);
     assert.ok(Number(cy) + bordaExterna <= altura, `corta embaixo: ${altura - (Number(cy) + bordaExterna)}`);
   }
+});
+
+test('renderCalendario permite navegar entre meses, como as outras telas', () => {
+  const html = renderCalendario(estado(), 2026, 8, 'pt');
+  assert.match(html, /data-acao="mes-anterior"/);
+  assert.match(html, /data-acao="mes-seguinte"/);
+  assert.match(html, /AGOSTO 2026/);
 });

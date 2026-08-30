@@ -20,6 +20,9 @@ const ROTULOS_TIPO_INVESTIMENTO = {
   etf_internacional: 'ETF Internacional',
   tesouro_direto: 'Tesouro Direto',
   renda_fixa: 'Renda Fixa',
+  // Atalho pra quem só quer registrar quanto tem guardado, sem transformar a reserva num ativo
+  // com cotas e preço. O formulário simplifica os campos quando este tipo é escolhido.
+  reserva_emergencia: 'Reserva de emergência',
   outro: 'Outro',
 };
 
@@ -794,11 +797,9 @@ function renderCalendario(state, ano, mes, idioma) {
   }).join('');
 
   const totalMes = Object.values(dias).reduce((s, d) => s + d.saldo, 0);
+  void mesesAbrev;
   return `
-    <div class="nv-header">
-      <span class="nv-title">Calendário</span>
-      <span class="nv-month-label">${mesesAbrev[mes - 1]} ${ano}</span>
-    </div>
+    ${headerTituloMes('Calendário', ano, mes)}
     <div class="nv-calendario">
       <div class="nv-dias-semana">${['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d) => `<span>${d}</span>`).join('')}</div>
       <div class="nv-grade">${celulasVazias}${celulas}</div>
@@ -1505,9 +1506,11 @@ function renderInvestimentos(state) {
         : ''
     }
     ${blocoDividas(state, investimentos, ocultar)}
-    <button type="button" class="nv-novo" data-acao="nova-divida">
-      <span>NOVA DÍVIDA</span><span class="nv-novo-mais">+</span>
-    </button>
+    <div class="nv-acao-fixa">
+      <button type="button" class="nv-btn-contorno" data-acao="nova-divida">
+        <span>NOVA DÍVIDA</span><span class="mais">+</span>
+      </button>
+    </div>
     ${tabBar('carteira', state.idioma)}
   `;
 }
