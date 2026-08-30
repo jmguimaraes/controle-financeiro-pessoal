@@ -101,10 +101,24 @@ test('renderResumo traduz pro espanhol', () => {
 });
 
 test('tabBar (via renderResumo) traduz os rótulos das abas', () => {
+  // Rótulos por extenso e em caixa mista: "LANÇAM."/"CALEND." abreviavam por falta de espaço,
+  // que a barra com ícone em cima e nome embaixo resolveu.
   const html = renderResumo(estado({ idioma: 'en' }), 2026, 8);
-  assert.match(html, />SUMMARY</);
-  assert.match(html, />ENTRIES</);
-  assert.match(html, />GOALS</);
+  assert.match(html, />Summary</);
+  assert.match(html, />Entries</);
+  assert.match(html, />Goals</);
+  assert.match(html, />Calendar</);
+  assert.doesNotMatch(html, />CALEND\.</);
+});
+
+test('tabBar mostra o nome inteiro de cada aba, com ícone', () => {
+  const html = renderResumo(estado(), 2026, 8);
+  for (const nome of ['Resumo', 'Lançamentos', 'Carteira', 'Metas', 'Calendário']) {
+    assert.match(html, new RegExp(`>${nome}<`), `aba ${nome}`);
+  }
+  const abas = html.match(/<nav class="nv-tabbar--icones">[\s\S]*?<\/nav>/);
+  assert.ok(abas, 'barra de abas encontrada');
+  assert.equal((abas[0].match(/<svg/g) || []).length, 5, 'um ícone por aba');
 });
 
 test('renderResumo lista parcelas em aberto do mês', () => {
@@ -115,7 +129,7 @@ test('renderResumo lista parcelas em aberto do mês', () => {
   });
   const html = renderResumo(state, 2026, 9);
   assert.match(html, /Notebook/);
-  assert.match(html, /2\/12/);
+  assert.match(html, /parcela 2 de 12/); // era "2/12": no cartão sobra espaço pra dizer por extenso
 });
 
 test('renderResumo esconde valores quando ocultarValores está ativo', () => {
@@ -918,7 +932,7 @@ function estadoComAlerta() {
 
 test('renderResumo mostra o bloco de alertas quando há o que avisar', () => {
   const html = renderResumo(estadoComAlerta(), 2026, 8);
-  assert.match(html, /FIQUE DE OLHO/);
+  assert.match(html, /Fique de olho/);
   assert.match(html, /Lazer passou da meta/);
   assert.match(html, /80,00 acima do limite/);
 });

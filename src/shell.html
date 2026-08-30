@@ -6,11 +6,17 @@
   color-scheme:light;
   --nv-radius-control:12px;--nv-radius-avatar:16px;--nv-radius-stepper:9px;--nv-radius-badge:8px;--nv-radius-pill:999px;
   --nv-bg:#f3f2f2;--nv-fg:#201e1d;--nv-fg-inverse:#fff;--nv-accent:#ec3013;--nv-on-accent:#fff;
-  --nv-positive:#201e1d;--nv-negative:#ec3013;--nv-negative-soft:#ec3013;
+  --nv-positive:#12854e;--nv-negative:#ec3013;--nv-negative-soft:#ec3013;
   --nv-muted:rgba(32,30,29,.55);--nv-muted-2:rgba(32,30,29,.5);
   --nv-rule-strong:#201e1d;--nv-rule-soft:rgba(32,30,29,.16);--nv-hairline:rgba(32,30,29,.14);
   --nv-track:rgba(32,30,29,.14);--nv-bar-neutral:rgba(32,30,29,.2);--nv-bar-neutral-strong:#201e1d;
   --nv-group-bg:rgba(32,30,29,.05);--nv-alert-bg:rgba(236,48,19,.06);
+  /* Dois níveis de superfície: o "chão" da tela e o cartão que se levanta dele. Sem essa
+     separação tudo divide o mesmo plano e a tela lê como página, não como app. */
+  --nv-chao:#eceae7;--nv-surface:#fff;--nv-surface-2:#f6f5f3;
+  --nv-surface-borda:rgba(32,30,29,.07);
+  --nv-sombra:0 1px 2px rgba(32,30,29,.04),0 10px 24px -14px rgba(32,30,29,.22);
+  --nv-raio-cartao:20px;--nv-raio-interno:14px;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -21,6 +27,11 @@
     --nv-rule-strong:rgba(243,242,242,.3);--nv-rule-soft:rgba(243,242,242,.2);--nv-hairline:rgba(243,242,242,.14);
     --nv-track:rgba(243,242,242,.18);--nv-bar-neutral:rgba(243,242,242,.28);--nv-bar-neutral-strong:rgba(243,242,242,.8);
     --nv-group-bg:rgba(243,242,242,.06);--nv-alert-bg:rgba(236,48,19,.14);
+    /* No escuro a sombra não se lê: quem separa o cartão do chão é o próprio contraste entre as
+       duas superfícies, apoiado por uma borda de um pixel. */
+    --nv-chao:#141212;--nv-surface:#211f1e;--nv-surface-2:#2a2726;
+    --nv-surface-borda:rgba(243,242,242,.07);
+    --nv-sombra:0 1px 2px rgba(0,0,0,.35);
   }
 }
 :root[data-theme="dark"]{
@@ -31,6 +42,9 @@
   --nv-rule-strong:rgba(243,242,242,.3);--nv-rule-soft:rgba(243,242,242,.2);--nv-hairline:rgba(243,242,242,.14);
   --nv-track:rgba(243,242,242,.18);--nv-bar-neutral:rgba(243,242,242,.28);--nv-bar-neutral-strong:rgba(243,242,242,.8);
   --nv-group-bg:rgba(243,242,242,.06);--nv-alert-bg:rgba(236,48,19,.14);
+  --nv-chao:#141212;--nv-surface:#211f1e;--nv-surface-2:#2a2726;
+  --nv-surface-borda:rgba(243,242,242,.07);
+  --nv-sombra:0 1px 2px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box;}
 html,body{margin:0;}
@@ -50,7 +64,49 @@ select option{background-color:var(--nv-bg);color:var(--nv-fg);}
 .nv-tela{display:flex;flex-direction:column;min-height:100dvh;max-width:480px;margin:0 auto;}
 .nv-tela[hidden]{display:none;}
 
-.nv-header{padding:14px 20px 12px;border-bottom:2px solid var(--nv-rule-strong);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+/* ---- Sistema de cartões ----
+   A tela vira um "chão" onde os cartões se apoiam. O que separa um bloco do outro é o espaço
+   entre eles, não uma régua — por isso os cartões não têm borda dura entre seções. */
+.nv-tela--cartoes{background:var(--nv-chao);}
+.nv-pilha{display:flex;flex-direction:column;gap:12px;padding:12px 14px 22px;flex:1;}
+.nv-cartao{overflow:hidden;background:var(--nv-surface);border:1px solid var(--nv-surface-borda);border-radius:var(--nv-raio-cartao);box-shadow:var(--nv-sombra);padding:18px;}
+.nv-cartao--justo{padding:14px 16px;}
+.nv-cartao--limpo{padding:0;overflow:hidden;}
+.nv-cartao-topo{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:14px;}
+.nv-cartao-titulo{font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--nv-muted);text-transform:uppercase;}
+.nv-dupla{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* Cartão do saldo: o número do mês e a trajetória dele são uma coisa só, não dois blocos. */
+.nv-saldo-valor{display:flex;align-items:baseline;gap:7px;margin-top:9px;}
+.nv-saldo-valor .cifrao{font-size:19px;font-weight:600;color:var(--nv-muted);}
+.nv-saldo-valor .numero{font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:.95;font-variant-numeric:tabular-nums;}
+.nv-saldo-sub{margin-top:9px;font-size:12px;font-weight:600;color:var(--nv-muted);display:flex;align-items:center;gap:6px;}
+.nv-saldo-onda{margin:16px -18px -18px;display:block;width:calc(100% + 36px);}
+
+/* Cartão de número curto (entrou / saiu / carteira) */
+.nv-num-rotulo{font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--nv-muted);display:flex;align-items:center;gap:6px;}
+.nv-num-valor{font-size:21px;font-weight:600;margin-top:7px;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+.nv-num-valor.positivo{color:var(--nv-positive);}
+.nv-num-valor.negativo{color:var(--nv-negative);}
+.nv-ponto{width:7px;height:7px;border-radius:50%;flex:none;}
+
+/* Linha de conteúdo dentro de cartão: separador leve, e o último sem separador nenhum. */
+.nv-linha{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--nv-surface-borda);}
+.nv-linha:last-child{border-bottom:none;padding-bottom:0;}
+.nv-linha:first-child{padding-top:0;}
+.nv-linha-botao{width:100%;background:none;border:none;font:inherit;color:inherit;text-align:left;cursor:pointer;}
+.nv-linha-nome{font-size:14px;font-weight:600;}
+.nv-linha-meta{font-size:11.5px;color:var(--nv-muted);margin-top:3px;}
+.nv-linha-valor{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+/* Barra de abas: ícone em cima, nome por extenso embaixo. */
+.nv-tabbar--icones{display:flex;background:var(--nv-surface);border-top:1px solid var(--nv-surface-borda);padding:6px 2px calc(6px + env(safe-area-inset-bottom,0px));position:sticky;bottom:0;}
+.nv-tabbar--icones button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;background:none;border:none;cursor:pointer;font-family:inherit;color:var(--nv-muted-2);}
+.nv-tabbar--icones button span{font-size:9.5px;font-weight:600;letter-spacing:.01em;white-space:nowrap;}
+.nv-tabbar--icones button svg{flex:none;}
+.nv-tabbar--icones button.ativo{color:var(--nv-accent);}
+
+.nv-header{padding:14px 20px 12px;border-bottom:1px solid var(--nv-surface-borda);display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .nv-header--back{justify-content:flex-start;gap:12px;}
 .nv-brand{display:flex;align-items:center;gap:9px;}
 .nv-wordmark{font-size:16px;font-weight:600;letter-spacing:.2em;}
@@ -324,7 +380,7 @@ dialog input[type="checkbox"]{accent-color:var(--nv-accent);padding:0;border:non
 <div id="tela-pin" hidden></div>
 
 <div id="app-shell" hidden>
-  <main id="tela-resumo" class="nv-tela"></main>
+  <main id="tela-resumo" class="nv-tela nv-tela--cartoes"></main>
   <main id="tela-lancamentos" class="nv-tela" hidden></main>
   <main id="tela-carteira" class="nv-tela" hidden></main>
   <main id="tela-metas" class="nv-tela" hidden></main>

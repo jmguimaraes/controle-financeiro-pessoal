@@ -170,20 +170,34 @@ function iconGear(size = 18) {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
 }
 
+// Ícones das abas: mesmo traço dos demais (24x24, stroke 2, pontas redondas), pra barra não
+// destoar do resto. Preenchimento nenhum — só contorno, que é o que o app usa em todo lugar.
+const ICONES_ABA = {
+  resumo: '<path d="M3 10.5 12 3l9 7.5"></path><path d="M5.5 9.5V20h13V9.5"></path><path d="M9.5 20v-6h5v6"></path>',
+  lancamentos: '<rect x="4" y="3" width="16" height="18" rx="2.5"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="13" y2="16"></line>',
+  carteira: '<path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H19a2 2 0 0 1 2 2v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17z"></path><path d="M3 8.5V7a2 2 0 0 1 2-2h11"></path><circle cx="17" cy="12.5" r="1.4"></circle>',
+  metas: '<circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="4.5"></circle><circle cx="12" cy="12" r="1"></circle>',
+  calendario: '<rect x="3.5" y="5" width="17" height="16" rx="2.5"></rect><line x1="3.5" y1="10" x2="20.5" y2="10"></line><line x1="8" y1="3" x2="8" y2="6.5"></line><line x1="16" y1="3" x2="16" y2="6.5"></line>',
+};
+
+function iconeAba(id, tamanho = 21) {
+  return `<svg width="${tamanho}" height="${tamanho}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES_ABA[id] || ''}</svg>`;
+}
+
 function tabBar(abaAtiva, idioma) {
   const itens = [
     { id: 'resumo', rotulo: I18N.t('tabs.resumo', idioma) },
     { id: 'lancamentos', rotulo: I18N.t('tabs.lancamentos', idioma) },
     { id: 'carteira', rotulo: I18N.t('tabs.carteira', idioma) },
     { id: 'metas', rotulo: I18N.t('tabs.metas', idioma) },
-    { id: 'calendario', rotulo: 'CALEND.' },
+    { id: 'calendario', rotulo: I18N.t('tabs.calendario', idioma) },
   ];
   return `
-    <nav class="nv-tabbar">
+    <nav class="nv-tabbar--icones">
       ${itens
         .map(
           (item) => `
-        <button type="button" data-acao="ir-tab" data-tab="${item.id}" class="${item.id === abaAtiva ? 'ativo' : ''}">${item.rotulo}</button>`
+        <button type="button" data-acao="ir-tab" data-tab="${item.id}" class="${item.id === abaAtiva ? 'ativo' : ''}" aria-label="${escapeHtml(item.rotulo)}">${iconeAba(item.id)}<span>${escapeHtml(item.rotulo)}</span></button>`
         )
         .join('')}
     </nav>`;
@@ -259,20 +273,52 @@ function sparkline(pontos) {
 function renderAlertas(alertas) {
   if (!alertas.length) return '';
   return `
-    <div class="nv-section-head" style="padding-bottom:8px">
-      <span class="nv-section-label">FIQUE DE OLHO</span>
-    </div>
-    <div class="nv-alertas">
-      ${alertas
-        .map(
-          (a) => `
-        <div class="nv-alerta nv-alerta--${a.nivel}">
-          <div class="nv-alerta-titulo">${escapeHtml(a.titulo)}</div>
-          <div class="nv-alerta-detalhe">${escapeHtml(a.detalhe)}</div>
-        </div>`
-        )
-        .join('')}
-    </div>`;
+    <section class="nv-cartao nv-cartao--justo">
+      <div class="nv-cartao-topo"><span class="nv-cartao-titulo">Fique de olho</span></div>
+      <div class="nv-alertas">
+        ${alertas
+          .map(
+            (a) => `
+          <div class="nv-alerta nv-alerta--${a.nivel}">
+            <div class="nv-alerta-titulo">${escapeHtml(a.titulo)}</div>
+            <div class="nv-alerta-detalhe">${escapeHtml(a.detalhe)}</div>
+          </div>`
+          )
+          .join('')}
+      </div>
+    </section>`;
+}
+
+// Onda do saldo dos últimos meses, desenhada como área preenchida no rodapé do cartão de saldo.
+// Antes era uma faixa separada logo abaixo do saldo, o que fazia o mês virar dois blocos: o
+// número e "um gráfico". São a mesma informação — quanto sobrou, e vindo de onde.
+function ondaSaldo(pontos) {
+  const valores = pontos.map((p) => p.saldo);
+  const min = Math.min(0, ...valores);
+  const max = Math.max(0, ...valores);
+  const amplitude = max - min || 1;
+  const largura = 320;
+  const altura = 56;
+  const passo = pontos.length > 1 ? largura / (pontos.length - 1) : 0;
+  const coords = pontos.map((p, i) => ({
+    x: i * passo,
+    y: altura - 4 - ((p.saldo - min) / amplitude) * (altura - 12),
+  }));
+  const linha = coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+  const area = `${linha} ${largura},${altura} 0,${altura}`;
+  const ultimo = coords[coords.length - 1];
+  return `
+    <svg class="nv-saldo-onda" viewBox="0 0 ${largura} ${altura}" height="${altura}" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="nv-onda" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--nv-accent)" stop-opacity=".22"></stop>
+          <stop offset="100%" stop-color="var(--nv-accent)" stop-opacity="0"></stop>
+        </linearGradient>
+      </defs>
+      <polygon points="${area}" fill="url(#nv-onda)"></polygon>
+      <polyline points="${linha}" fill="none" stroke="var(--nv-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      <circle cx="${ultimo.x.toFixed(1)}" cy="${ultimo.y.toFixed(1)}" r="3.2" fill="var(--nv-accent)"></circle>
+    </svg>`;
 }
 
 function renderResumo(state, ano, mes) {
@@ -313,42 +359,104 @@ function renderResumo(state, ano, mes) {
         .join('')
     : `<p class="nv-vazio">${I18N.t('resumo.semParcelas', idioma)}</p>`;
 
+  // Os últimos lançamentos são o que dá vida à tela inicial: sem eles o Resumo é só um painel de
+  // totais, e a pessoa precisa trocar de aba pra ver o que de fato aconteceu no mês.
+  const ultimos = L.filtrarLancamentos(state.lancamentos, ano, mes, {}).slice(0, 4);
+  const listaUltimos = ultimos.length
+    ? ultimos
+        .map((l) => {
+          const sinal = l.tipo === 'receita' ? '+' : l.tipo === 'transferencia' ? '' : '−';
+          const classe = l.tipo === 'receita' ? 'positivo' : l.tipo === 'transferencia' ? '' : 'negativo';
+          const dataFmt = l.data.split('-').reverse().slice(0, 2).join('/');
+          const sub = l.subcategoria ? `${l.categoria} › ${l.subcategoria}` : l.categoria;
+          return `
+        <button type="button" class="nv-linha nv-linha-botao" data-id="${l.id}" data-acao="editar-lancamento">
+          <span>
+            <span class="nv-linha-nome">${escapeHtml(l.descricao || l.categoria)}</span>
+            <span class="nv-linha-meta" style="display:block">${dataFmt} · ${escapeHtml(sub)}</span>
+          </span>
+          <span class="nv-linha-valor ${classe}">${sinal} ${mascarar(formatNumero(L.parcelaValor(l), idioma), ocultar)}</span>
+        </button>`;
+        })
+        .join('')
+    : `<p class="nv-vazio" style="padding:8px 0">Nenhum lançamento neste mês ainda.</p>`;
+
   return `
     ${headerResumo(ano, mes, idioma)}
-    <div class="nv-hero">
-      <div class="nv-hero-label">${I18N.t('resumo.saldoDoMes', idioma)}</div>
-      <div class="nv-hero-value">
-        <span class="cifrao">R$</span>
-        <span class="numero">${mascarar(formatNumero(resumo.saldo, idioma), ocultar)}</span>
+    <div class="nv-pilha">
+      <section class="nv-cartao">
+        <span class="nv-cartao-titulo">${I18N.t('resumo.saldoDoMes', idioma)}</span>
+        <div class="nv-saldo-valor">
+          <span class="cifrao">R$</span>
+          <span class="numero">${mascarar(formatNumero(resumo.saldo, idioma), ocultar)}</span>
+        </div>
+        <div class="nv-saldo-sub">
+          ${variacao >= 0 ? '▲' : '▼'} ${mascarar(formatCurrency(Math.abs(variacao), idioma), ocultar)}
+          ${I18N.t('resumo.emRelacaoA', idioma)} ${meses[(mes - 2 + 12) % 12].toLowerCase()}
+        </div>
+        ${ondaSaldo(historico)}
+      </section>
+
+      <div class="nv-dupla">
+        <section class="nv-cartao nv-cartao--justo">
+          <span class="nv-num-rotulo"><span class="nv-ponto" style="background:var(--nv-positive)"></span>${I18N.t('resumo.receitas', idioma)}</span>
+          <div class="nv-num-valor positivo">${mascarar(formatNumero(resumo.receitas, idioma), ocultar)}</div>
+        </section>
+        <section class="nv-cartao nv-cartao--justo">
+          <span class="nv-num-rotulo"><span class="nv-ponto" style="background:var(--nv-negative)"></span>${I18N.t('resumo.despesas', idioma)}</span>
+          <div class="nv-num-valor negativo">${mascarar(formatNumero(resumo.despesas, idioma), ocultar)}</div>
+        </section>
       </div>
-      <div class="nv-hero-sub">${variacao >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(variacao), idioma), ocultar)} ${I18N.t('resumo.emRelacaoA', idioma)} ${meses[(mes - 2 + 12) % 12].toLowerCase()}</div>
+
+      <section class="nv-cartao nv-cartao--justo">${renderEntradaRapida()}</section>
+
+      ${renderAlertas(L.alertasFinanceiros(state, ano, mes))}
+
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo">
+          <span class="nv-cartao-titulo">${I18N.t('resumo.gastosPorCategoria', idioma)}</span>
+          <button type="button" class="nv-link-accent" data-acao="ir-tab" data-tab="lancamentos">${I18N.t('resumo.verTudo', idioma)}</button>
+        </div>
+        <div class="nv-bars" style="padding:0">${barrasCategoria}</div>
+      </section>
+
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo">
+          <span class="nv-cartao-titulo">Últimos lançamentos</span>
+          <button type="button" class="nv-link-accent" data-acao="ir-tab" data-tab="lancamentos">${I18N.t('resumo.verTudo', idioma)}</button>
+        </div>
+        ${listaUltimos}
+      </section>
+
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo">
+          <span class="nv-cartao-titulo">${I18N.t('resumo.carteira', idioma)}</span>
+          <button type="button" class="nv-link-accent" data-acao="ir-tab" data-tab="carteira">${I18N.t('resumo.verTudo', idioma)}</button>
+        </div>
+        <div class="nv-num-valor">${mascarar(formatNumero(carteira.totalAtual, idioma), ocultar)}</div>
+        <div class="nv-linha-meta" style="margin-top:4px">${carteira.rendimentoValor >= 0 ? '▲' : '▼'} ${formatPercent(carteira.rendimentoPercentual, idioma)} sobre ${mascarar(formatCurrency(carteira.totalInvestido, idioma), ocultar)}</div>
+      </section>
+
+      <section class="nv-cartao nv-cartao--justo">
+        <div class="nv-cartao-topo"><span class="nv-cartao-titulo">${I18N.t('resumo.parcelasEmAberto', idioma)}</span></div>
+        ${
+          abertas.length
+            ? abertas
+                .map(
+                  (p) => `
+          <div class="nv-linha">
+            <span>
+              <span class="nv-linha-nome">${escapeHtml(p.descricao)}</span>
+              <span class="nv-linha-meta" style="display:block">parcela ${p.numeroParcela} de ${p.parcelas} · faltam ${p.restantes}</span>
+            </span>
+            <span class="nv-linha-valor">${mascarar(formatNumero(p.valorParcela, idioma), ocultar)}</span>
+          </div>`
+                )
+                .join('')
+            : `<p class="nv-vazio" style="padding:8px 0">${I18N.t('resumo.semParcelas', idioma)}</p>`
+        }
+      </section>
     </div>
-    ${sparkline(historico)}
-    ${renderEntradaRapida()}
-    <div class="nv-cells">
-      <div class="nv-cell">
-        <div class="nv-cell-label">${I18N.t('resumo.receitas', idioma)}</div>
-        <div class="nv-cell-valor">${mascarar(formatNumero(resumo.receitas, idioma), ocultar)}</div>
-      </div>
-      <div class="nv-cell">
-        <div class="nv-cell-label">${I18N.t('resumo.despesas', idioma)}</div>
-        <div class="nv-cell-valor" style="color:var(--nv-negative)">${mascarar(formatNumero(resumo.despesas, idioma), ocultar)}</div>
-      </div>
-      <div class="nv-cell">
-        <div class="nv-cell-label">${I18N.t('resumo.carteira', idioma)}</div>
-        <div class="nv-cell-valor">${mascarar(formatNumero(carteira.totalAtual, idioma), ocultar)}</div>
-      </div>
-    </div>
-    ${renderAlertas(L.alertasFinanceiros(state, ano, mes))}
-    <div class="nv-section-head">
-      <span class="nv-section-label">${I18N.t('resumo.gastosPorCategoria', idioma)}</span>
-      <button type="button" class="nv-link-accent" data-acao="ir-tab" data-tab="lancamentos">${I18N.t('resumo.verTudo', idioma)}</button>
-    </div>
-    <div class="nv-bars">${barrasCategoria}</div>
-    <div class="nv-section-head">
-      <span class="nv-section-label">${I18N.t('resumo.parcelasEmAberto', idioma)}</span>
-    </div>
-    <div class="nv-list-plain">${listaParcelas}</div>
     ${tabBar('resumo', idioma)}
   `;
 }
