@@ -1347,7 +1347,13 @@ function renderAbertura() {
 // resto da UI não usa nenhuma outra cor além dessas).
 function renderGraficoComposicao(composicao, total, cores) {
   const raio = 52;
-  const espessura = 20;
+  // Anel mais fino que a versão anterior (era 20): grosso demais, a rosca virava um pneu e sobrava
+  // pouco vazio no meio pra colocar o total.
+  const espessura = 13;
+  // Fatias encostadas com corte reto ficavam num bloco só, sem leitura de onde uma acaba. O vão é
+  // descontado do comprimento de cada fatia, então a proporção continua honesta — o que a fatia
+  // perde de arco ela não ganha em outro lugar.
+  const vao = composicao.length > 1 ? 4 : 0;
   // O traço é centrado no raio, então metade da espessura fica PARA FORA dele: a borda externa
   // do desenho está em raio + espessura/2, não em raio. Com viewBox fixo em 120 e raio 52, essa
   // borda caía em 62 contra um limite de 60 e a rosca aparecia cortada nos quatro lados. O
@@ -1361,16 +1367,25 @@ function renderGraficoComposicao(composicao, total, cores) {
   const segmentos = composicao
     .map((c, i) => {
       const fracao = total ? c.valor / total : 0;
-      const comprimento = fracao * circunferencia;
-      const dashoffset = -acumulado;
-      acumulado += comprimento;
-      return `<circle cx="${centro}" cy="${centro}" r="${raio}" fill="none" stroke="${cores[i % cores.length]}" stroke-width="${espessura}" stroke-dasharray="${comprimento.toFixed(2)} ${(circunferencia - comprimento).toFixed(2)}" stroke-dashoffset="${dashoffset.toFixed(2)}"></circle>`;
+      const arco = fracao * circunferencia;
+      // A ponta arredondada acrescenta meia espessura em cada extremidade, então o desenho fica
+      // mais comprido que o traço pedido. Descontar a espessura inteira faz o resultado VISÍVEL
+      // medir exatamente "arco menos o vão" — sem isso as fatias se sobrepõem em vez de separar.
+      // O início também anda meio vão + meia espessura, pra fatia ficar centrada no arco dela.
+      const comprimento = Math.max(arco - vao - espessura, 0.01);
+      const dashoffset = -(acumulado + vao / 2 + espessura / 2);
+      acumulado += arco;
+      return `<circle cx="${centro}" cy="${centro}" r="${raio}" fill="none" stroke="${cores[i % cores.length]}" stroke-width="${espessura}" stroke-linecap="round" stroke-dasharray="${comprimento.toFixed(2)} ${(circunferencia - comprimento).toFixed(2)}" stroke-dashoffset="${dashoffset.toFixed(2)}"></circle>`;
     })
     .join('');
+  // A rotação vai no grupo do anel, não no <svg>: girando o svg inteiro, qualquer texto no centro
+  // giraria junto e sairia deitado.
   return `
-    <svg width="120" height="120" viewBox="0 0 ${tamanho} ${tamanho}" style="transform:rotate(-90deg);flex:none" role="img" aria-label="Gráfico de composição da carteira por tipo de ativo">
-      <circle cx="${centro}" cy="${centro}" r="${raio}" fill="none" stroke="var(--nv-hairline)" stroke-width="${espessura}"></circle>
-      ${segmentos}
+    <svg width="128" height="128" viewBox="0 0 ${tamanho} ${tamanho}" style="flex:none" role="img" aria-label="Gráfico de composição da carteira por tipo de ativo">
+      <g transform="rotate(-90 ${centro} ${centro})">
+        <circle cx="${centro}" cy="${centro}" r="${raio}" fill="none" stroke="var(--nv-hairline)" stroke-width="${espessura}"></circle>
+        ${segmentos}
+      </g>
     </svg>`;
 }
 
