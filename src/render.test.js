@@ -904,3 +904,57 @@ test('renderLancamentos e renderNovoLancamento escapam o nome da pessoa', () => 
   const form = renderNovoLancamento(state, { pessoa: nome });
   assert.equal(form.includes('<img src=x'), false);
 });
+
+// --- Alertas no Resumo ---
+
+function estadoComAlerta() {
+  return estado({
+    metas: [{ id: 'm1', categoria: 'Lazer', limite: 100 }],
+    lancamentos: [
+      { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'Bar', valorTotal: 180, parcelas: 1 },
+    ],
+  });
+}
+
+test('renderResumo mostra o bloco de alertas quando há o que avisar', () => {
+  const html = renderResumo(estadoComAlerta(), 2026, 8);
+  assert.match(html, /FIQUE DE OLHO/);
+  assert.match(html, /Lazer passou da meta/);
+  assert.match(html, /80,00 acima do limite/);
+});
+
+test('renderResumo não mostra bloco de alertas nenhum quando está tudo em ordem', () => {
+  const html = renderResumo(estado(), 2026, 8);
+  assert.doesNotMatch(html, /nv-alerta/);
+});
+
+test('renderResumo marca visualmente o alerta crítico', () => {
+  const html = renderResumo(estadoComAlerta(), 2026, 8);
+  assert.match(html, /nv-alerta--critico/);
+});
+
+test('renderResumo escapa o nome da meta no alerta', () => {
+  const state = estado({
+    metas: [{ id: 'm1', categoria: 'Lazer', nome: '<img src=x onerror=alert(1)>', limite: 100 }],
+    lancamentos: [{ id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', descricao: 'x', valorTotal: 180, parcelas: 1 }],
+  });
+  const html = renderResumo(state, 2026, 8);
+  assert.equal(html.includes('<img src=x'), false);
+  assert.match(html, /&lt;img/);
+});
+
+test('renderAtivoDetalhe mostra a marca de reserva de emergência quando o ativo é reserva', () => {
+  const comReserva = estado({
+    investimentos: [
+      { id: 'i1', nome: 'CDB', tipo: 'renda_fixa', reserva: true, precoAtual: 5000, operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: 5000 }] },
+    ],
+  });
+  assert.match(renderAtivoDetalhe(comReserva, 'i1'), /RESERVA DE EMERG/i);
+
+  const semReserva = estado({
+    investimentos: [
+      { id: 'i1', nome: 'CDB', tipo: 'renda_fixa', precoAtual: 5000, operacoes: [{ id: 'o1', tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: 5000 }] },
+    ],
+  });
+  assert.doesNotMatch(renderAtivoDetalhe(semReserva, 'i1'), /RESERVA DE EMERG/i);
+});

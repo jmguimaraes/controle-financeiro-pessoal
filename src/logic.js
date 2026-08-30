@@ -462,6 +462,115 @@ function comprometimentoMensal(dividas, rendaMensal) {
   return { parcelaTotal, percentualDaRenda };
 }
 
+// --- Alertas por regra ---
+// Educação financeira sobre os dados do próprio usuário: nenhuma regra aqui recomenda ativo,
+// corretora ou aplicação — isso seria consultoria de valores mobiliários, atividade regulada pela
+// CVM. O que estes alertas fazem é ler o que já está registrado e apontar padrão de risco de
+// comportamento (meta estourada, renda comprometida, reserva curta), que é livre.
+
+// Faixas de referência da educação financeira brasileira (BC, Serasa), não invenção do app:
+// até 30% da renda em parcela de dívida é o teto usualmente recomendado, e a reserva de
+// emergência costuma ser recomendada em 3 a 6 meses de despesa.
+const LIMITE_COMPROMETIMENTO_ATENCAO = 30;
+const LIMITE_COMPROMETIMENTO_CRITICO = 50;
+const MESES_RESERVA_RECOMENDADO = 3;
+const MESES_RESERVA_CRITICO = 1;
+const PERCENTUAL_META_ATENCAO = 80;
+
+// Só entra o que o usuário marcou explicitamente como reserva. O app não tem como saber sozinho
+// se um "renda fixa" é resgatável hoje ou está travado por três anos, e tratar os dois como
+// reserva daria um alerta tranquilizador pra quem, na verdade, não tem de onde tirar dinheiro.
+function reservaEmergencia(investimentos) {
+  const marcados = (investimentos || []).filter((i) => i && i.reserva);
+  const total = marcados.reduce((soma, i) => soma + resumoInvestimento(i).valorAtual, 0);
+  return { total, temMarcado: marcados.length > 0 };
+}
+
+// Média de despesa dos últimos meses, contando só os meses que tiveram algum movimento: quem usa
+// o app há duas semanas não deve ver a própria média dividida por três e achar que gasta pouco.
+function despesaMediaMensal(lancamentos, ano, mes, quantidade = 3) {
+  const alvo = indiceMes(ano, mes);
+  let soma = 0;
+  let mesesComDado = 0;
+  for (let i = 0; i < quantidade; i += 1) {
+    const { ano: anoAlvo, mes: mesAlvo } = mesPorIndice(alvo - i);
+    const { receitas, despesas } = resumoMensal(lancamentos || [], anoAlvo, mesAlvo);
+    if (receitas === 0 && despesas === 0) continue;
+    soma += despesas;
+    mesesComDado += 1;
+  }
+  return mesesComDado ? soma / mesesComDado : 0;
+}
+
+// Formatação própria porque logic.js não pode depender de render.js (é render que requer logic —
+// o contrário fecharia um ciclo). Usa Intl, e não toFixed, senão o alerta sairia com "R$ 2000,00"
+// enquanto o resto da tela mostra "R$ 2.000,00". Os textos ficam em português junto com as demais
+// telas que ainda não entraram na tradução; os números crus vão no próprio alerta, então uma fase
+// futura de i18n consegue remontar as frases sem tocar em nenhuma regra.
+function formatBR(valor, casas = 2) {
+  return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas }).format(valor);
+}
+
+function alertasFinanceiros(state, ano, mes) {
+  const lancamentos = (state && state.lancamentos) || [];
+  const alertas = [];
+
+  for (const meta of (state && state.metas) || []) {
+    const gasto = gastosPorCategoria(lancamentos, ano, mes).find((c) => c.categoria === meta.categoria);
+    const { percentual, excedeu, excedente } = statusMeta(gasto ? gasto.valor : 0, meta.limite);
+    const nome = meta.nome ? `${meta.categoria} (${meta.nome})` : meta.categoria;
+    if (excedeu) {
+      alertas.push({
+        id: `meta:${meta.categoria}`,
+        nivel: 'critico',
+        titulo: `${nome} passou da meta`,
+        detalhe: `R$ ${formatBR(excedente)} acima do limite de R$ ${formatBR(meta.limite)} deste mês.`,
+        valores: { percentual, excedente, limite: meta.limite },
+      });
+    } else if (percentual >= PERCENTUAL_META_ATENCAO) {
+      alertas.push({
+        id: `meta:${meta.categoria}`,
+        nivel: 'atencao',
+        titulo: `${nome} perto da meta`,
+        detalhe: `Já usou ${formatBR(percentual, 0)}% do limite de R$ ${formatBR(meta.limite)} deste mês.`,
+        valores: { percentual, excedente, limite: meta.limite },
+      });
+    }
+  }
+
+  const { receitas } = resumoMensal(lancamentos, ano, mes);
+  const { parcelaTotal, percentualDaRenda } = comprometimentoMensal((state && state.dividas) || [], receitas);
+  if (receitas > 0 && percentualDaRenda >= LIMITE_COMPROMETIMENTO_ATENCAO) {
+    alertas.push({
+      id: 'comprometimento',
+      nivel: percentualDaRenda >= LIMITE_COMPROMETIMENTO_CRITICO ? 'critico' : 'atencao',
+      titulo: `${formatBR(percentualDaRenda, 0)}% da renda vai em parcela de dívida`,
+      detalhe: `São R$ ${formatBR(parcelaTotal)} por mês. O teto usualmente recomendado é ${LIMITE_COMPROMETIMENTO_ATENCAO}% da renda.`,
+      valores: { percentualDaRenda, parcelaTotal },
+    });
+  }
+
+  const { total: reserva, temMarcado } = reservaEmergencia((state && state.investimentos) || []);
+  const despesaMedia = despesaMediaMensal(lancamentos, ano, mes);
+  if (temMarcado && despesaMedia > 0) {
+    const meses = reserva / despesaMedia;
+    if (meses < MESES_RESERVA_RECOMENDADO) {
+      alertas.push({
+        id: 'reserva',
+        nivel: meses < MESES_RESERVA_CRITICO ? 'critico' : 'atencao',
+        titulo: `Sua reserva cobre ${formatBR(meses, 1)} ${meses === 1 ? 'mês' : 'meses'} de despesa`,
+        detalhe: `R$ ${formatBR(reserva)} para uma despesa média de R$ ${formatBR(despesaMedia)} por mês. O recomendado costuma ser de ${MESES_RESERVA_RECOMENDADO} a 6 meses.`,
+        valores: { meses, reserva, despesaMedia },
+      });
+    }
+  }
+
+  // Crítico antes de atenção: numa lista curta no topo da tela, o que já estourou tem que ser a
+  // primeira coisa lida. Dentro do mesmo nível vale a ordem em que a regra rodou.
+  const peso = (a) => (a.nivel === 'critico' ? 0 : 1);
+  return alertas.sort((a, b) => peso(a) - peso(b));
+}
+
 // --- Calendário financeiro ---
 
 // Um registro por dia COM movimento (dia parado não vira chave), no formato que a grade do
@@ -1081,5 +1190,8 @@ if (typeof module !== 'undefined' && module.exports) {
     analisarPlanilha,
     converterLinhasEmLancamentos,
     pessoasUsadas,
+    reservaEmergencia,
+    despesaMediaMensal,
+    alertasFinanceiros,
   };
 }

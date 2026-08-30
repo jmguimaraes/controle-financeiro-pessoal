@@ -251,6 +251,27 @@ function sparkline(pontos) {
     </div>`;
 }
 
+// Alertas de comportamento (ver alertasFinanceiros em logic.js). Bloco inteiro some quando não há
+// nada a dizer: alerta que aparece sempre vira moldura e para de ser lido.
+function renderAlertas(alertas) {
+  if (!alertas.length) return '';
+  return `
+    <div class="nv-section-head" style="padding-bottom:8px">
+      <span class="nv-section-label">FIQUE DE OLHO</span>
+    </div>
+    <div class="nv-alertas">
+      ${alertas
+        .map(
+          (a) => `
+        <div class="nv-alerta nv-alerta--${a.nivel}">
+          <div class="nv-alerta-titulo">${escapeHtml(a.titulo)}</div>
+          <div class="nv-alerta-detalhe">${escapeHtml(a.detalhe)}</div>
+        </div>`
+        )
+        .join('')}
+    </div>`;
+}
+
 function renderResumo(state, ano, mes) {
   const idioma = state.idioma;
   const investimentos = state.investimentos || [];
@@ -315,6 +336,7 @@ function renderResumo(state, ano, mes) {
         <div class="nv-cell-valor">${mascarar(formatNumero(carteira.totalAtual, idioma), ocultar)}</div>
       </div>
     </div>
+    ${renderAlertas(L.alertasFinanceiros(state, ano, mes))}
     <div class="nv-section-head">
       <span class="nv-section-label">${I18N.t('resumo.gastosPorCategoria', idioma)}</span>
       <button type="button" class="nv-link-accent" data-acao="ir-tab" data-tab="lancamentos">${I18N.t('resumo.verTudo', idioma)}</button>
@@ -1528,6 +1550,7 @@ function renderAtivoDetalhe(state, ativoId) {
         <span class="nv-item-meta ${classeRend}">${resumo.rendimentoValor >= 0 ? '+' : '−'} ${mascarar(formatCurrency(Math.abs(resumo.rendimentoValor)), ocultar)} sobre ${mascarar(formatCurrency(resumo.valorInvestido), ocultar)}</span>
       </div>
       ${totalProventos ? `<div class="nv-hero-sub">Proventos recebidos: ${mascarar(formatCurrency(totalProventos), ocultar)}</div>` : ''}
+      ${investimento.reserva ? '<div class="nv-hero-sub">RESERVA DE EMERGÊNCIA</div>' : ''}
     </div>
     <div class="nv-cells">
       <div class="nv-cell">

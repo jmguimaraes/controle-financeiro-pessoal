@@ -48,6 +48,9 @@ const {
   resumoDiario,
   lancamentosDoDia,
   pessoasUsadas,
+  reservaEmergencia,
+  despesaMediaMensal,
+  alertasFinanceiros,
   parseCSV,
   analisarPlanilha,
   converterLinhasEmLancamentos,
@@ -1270,4 +1273,147 @@ test('filtrarLancamentos combina o filtro de pessoa com busca e tipo', () => {
   ];
   const r = filtrarLancamentos(lancamentos, 2026, 8, { pessoa: 'Ana', filtro: 'despesas', busca: 'cine' });
   assert.deepEqual(r.map((l) => l.id), ['1']);
+});
+
+// --- Alertas por regra ---
+
+const ativoReserva = (id, valor, reserva) => ({
+  id,
+  nome: id,
+  tipo: 'renda_fixa',
+  reserva,
+  precoAtual: valor,
+  operacoes: [{ id: 'o' + id, tipo: 'compra', data: '2026-01-01', quantidade: 1, precoUnitario: valor }],
+});
+
+test('reservaEmergencia soma só o que foi marcado como reserva', () => {
+  const investimentos = [ativoReserva('a', 5000, true), ativoReserva('b', 20000, false), ativoReserva('c', 1000, true)];
+  const r = reservaEmergencia(investimentos);
+  assert.equal(r.total, 6000);
+  assert.equal(r.temMarcado, true);
+});
+
+test('reservaEmergencia avisa quando ninguém marcou nada', () => {
+  const r = reservaEmergencia([ativoReserva('a', 5000, false)]);
+  assert.equal(r.total, 0);
+  assert.equal(r.temMarcado, false);
+});
+
+test('despesaMediaMensal ignora meses sem movimento nenhum', () => {
+  // Só julho e agosto têm lançamento: a média é sobre 2 meses, não sobre 3.
+  const lancamentos = [
+    { id: '1', data: '2026-07-10', tipo: 'despesa', categoria: 'Lazer', valorTotal: 1000, parcelas: 1 },
+    { id: '2', data: '2026-08-10', tipo: 'despesa', categoria: 'Lazer', valorTotal: 2000, parcelas: 1 },
+  ];
+  assert.equal(despesaMediaMensal(lancamentos, 2026, 8, 3), 1500);
+});
+
+test('despesaMediaMensal devolve zero quando não há histórico', () => {
+  assert.equal(despesaMediaMensal([], 2026, 8, 3), 0);
+});
+
+test('alertasFinanceiros aponta meta estourada como crítico e meta perto do limite como atenção', () => {
+  const state = {
+    ...estadoInicial(),
+    metas: [{ id: 'm1', categoria: 'Lazer', limite: 100 }, { id: 'm2', categoria: 'Moradia', limite: 1000 }],
+    lancamentos: [
+      { id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', valorTotal: 180, parcelas: 1 },
+      { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Moradia', valorTotal: 850, parcelas: 1 },
+    ],
+  };
+  const alertas = alertasFinanceiros(state, 2026, 8);
+  const estourada = alertas.find((a) => a.id === 'meta:Lazer');
+  const perto = alertas.find((a) => a.id === 'meta:Moradia');
+  assert.equal(estourada.nivel, 'critico');
+  assert.match(estourada.detalhe, /80,00/);
+  assert.equal(perto.nivel, 'atencao');
+});
+
+test('alertasFinanceiros não reclama de meta dentro do limite', () => {
+  const state = {
+    ...estadoInicial(),
+    metas: [{ id: 'm1', categoria: 'Lazer', limite: 1000 }],
+    lancamentos: [{ id: '1', data: '2026-08-01', tipo: 'despesa', categoria: 'Lazer', valorTotal: 100, parcelas: 1 }],
+  };
+  assert.equal(alertasFinanceiros(state, 2026, 8).some((a) => a.id.indexOf('meta:') === 0), false);
+});
+
+test('alertasFinanceiros escala o comprometimento de renda por faixa', () => {
+  const base = {
+    ...estadoInicial(),
+    lancamentos: [{ id: '1', data: '2026-08-01', tipo: 'receita', categoria: 'Salário', valorTotal: 5000, parcelas: 1 }],
+  };
+  const divida = (parcela) => [{ id: 'd1', nome: 'x', tipo: 'emprestimo', saldoDevedor: 100, valorParcela: parcela, parcelasRestantes: 1 }];
+
+  const tranquilo = alertasFinanceiros({ ...base, dividas: divida(1000) }, 2026, 8); // 20%
+  assert.equal(tranquilo.some((a) => a.id === 'comprometimento'), false);
+
+  const atencao = alertasFinanceiros({ ...base, dividas: divida(2000) }, 2026, 8); // 40%
+  assert.equal(atencao.find((a) => a.id === 'comprometimento').nivel, 'atencao');
+
+  const critico = alertasFinanceiros({ ...base, dividas: divida(3000) }, 2026, 8); // 60%
+  assert.equal(critico.find((a) => a.id === 'comprometimento').nivel, 'critico');
+});
+
+test('alertasFinanceiros não divide por zero quando não há receita no mês', () => {
+  const state = {
+    ...estadoInicial(),
+    dividas: [{ id: 'd1', nome: 'x', tipo: 'emprestimo', saldoDevedor: 100, valorParcela: 900, parcelasRestantes: 1 }],
+  };
+  assert.equal(alertasFinanceiros(state, 2026, 8).some((a) => a.id === 'comprometimento'), false);
+});
+
+test('alertasFinanceiros mede a reserva em meses de despesa', () => {
+  const lancamentos = [
+    { id: '1', data: '2026-07-10', tipo: 'despesa', categoria: 'Lazer', valorTotal: 1000, parcelas: 1 },
+    { id: '2', data: '2026-08-10', tipo: 'despesa', categoria: 'Lazer', valorTotal: 1000, parcelas: 1 },
+  ];
+  const comPouco = alertasFinanceiros({ ...estadoInicial(), lancamentos, investimentos: [ativoReserva('a', 2000, true)] }, 2026, 8);
+  const alerta = comPouco.find((a) => a.id === 'reserva');
+  assert.equal(alerta.nivel, 'atencao');
+  assert.match(alerta.titulo, /2,0 meses/);
+  assert.equal(alerta.valores.meses, 2);
+  // Milhar agrupado como no resto do app ("2.000,00", não "2000,00").
+  assert.match(alerta.detalhe, /R\$ 2\.000,00/);
+
+  const critico = alertasFinanceiros({ ...estadoInicial(), lancamentos, investimentos: [ativoReserva('a', 500, true)] }, 2026, 8);
+  assert.equal(critico.find((a) => a.id === 'reserva').nivel, 'critico');
+
+  const suficiente = alertasFinanceiros({ ...estadoInicial(), lancamentos, investimentos: [ativoReserva('a', 9000, true)] }, 2026, 8);
+  assert.equal(suficiente.some((a) => a.id === 'reserva'), false);
+});
+
+test('alertasFinanceiros fica calado sobre reserva quando nenhum ativo foi marcado', () => {
+  const state = {
+    ...estadoInicial(),
+    lancamentos: [{ id: '1', data: '2026-08-10', tipo: 'despesa', categoria: 'Lazer', valorTotal: 1000, parcelas: 1 }],
+    investimentos: [ativoReserva('a', 50, false)],
+  };
+  assert.equal(alertasFinanceiros(state, 2026, 8).some((a) => a.id === 'reserva'), false);
+});
+
+test('alertasFinanceiros põe o crítico antes do atenção', () => {
+  const state = {
+    ...estadoInicial(),
+    metas: [{ id: 'm1', categoria: 'Moradia', limite: 1000 }],
+    lancamentos: [
+      { id: '1', data: '2026-08-01', tipo: 'receita', categoria: 'Salário', valorTotal: 5000, parcelas: 1 },
+      { id: '2', data: '2026-08-02', tipo: 'despesa', categoria: 'Moradia', valorTotal: 850, parcelas: 1 },
+    ],
+    dividas: [{ id: 'd1', nome: 'x', tipo: 'emprestimo', saldoDevedor: 100, valorParcela: 3000, parcelasRestantes: 1 }],
+  };
+  const alertas = alertasFinanceiros(state, 2026, 8);
+  assert.equal(alertas[0].nivel, 'critico');
+  assert.ok(alertas.length >= 2);
+});
+
+test('alertasFinanceiros devolve lista vazia pra quem está com tudo em ordem', () => {
+  assert.deepEqual(alertasFinanceiros(estadoInicial(), 2026, 8), []);
+});
+
+test('applyAction marca um ativo como reserva', () => {
+  let s = estadoInicial();
+  s = applyAction(s, { type: 'addInvestimento', investimento: { id: 'i1', nome: 'CDB', tipo: 'renda_fixa', operacoes: [] } });
+  s = applyAction(s, { type: 'editInvestimento', id: 'i1', changes: { reserva: true } });
+  assert.equal(s.investimentos[0].reserva, true);
 });

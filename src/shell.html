@@ -133,6 +133,15 @@ button.nv-dia{cursor:pointer;}
 .nv-bar-track{height:6px;border-radius:var(--nv-radius-pill);background:var(--nv-track);}
 .nv-bar-fill{height:6px;border-radius:var(--nv-radius-pill);}
 
+/* Alertas por regra: crítico usa o acento da marca; atenção fica no cinza neutro, pra que só o
+   que já estourou puxe o olho. Sem cor nova — a paleta do app é monocromática + acento. */
+.nv-alertas{padding:0 20px 4px;display:flex;flex-direction:column;gap:8px;}
+.nv-alerta{padding:11px 13px;border-radius:var(--nv-radius-control);border-left:3px solid var(--nv-bar-neutral);background:var(--nv-group-bg);}
+.nv-alerta--critico{border-left-color:var(--nv-accent);background:var(--nv-alert-bg);}
+.nv-alerta-titulo{font-size:12.5px;font-weight:600;line-height:1.3;}
+.nv-alerta--critico .nv-alerta-titulo{color:var(--nv-negative);}
+.nv-alerta-detalhe{font-size:11.5px;color:var(--nv-muted);margin-top:3px;line-height:1.4;}
+
 .nv-list-plain{padding:0 20px 8px;}
 .nv-row-plain{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--nv-hairline);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
 .nv-row-plain:last-child{border-bottom:none;}
@@ -287,6 +296,8 @@ dialog::backdrop{background:rgba(20,18,14,.55);}
 dialog h3{font-weight:600;margin:0 0 12px;font-size:1.1rem;}
 dialog label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;margin-bottom:10px;color:var(--nv-muted);}
 dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border-radius:8px;border:1px solid var(--nv-rule-soft);background:var(--nv-bg);color:var(--nv-fg);}
+/* Checkbox nativo sai no azul do sistema por padrão — accent-color traz pro vermelho da marca. */
+dialog input[type="checkbox"]{accent-color:var(--nv-accent);padding:0;border:none;}
 .form-acoes{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
 .form-acoes button{padding:8px 16px;border-radius:8px;border:1px solid var(--nv-rule-soft);background:var(--nv-bg);color:var(--nv-fg);cursor:pointer;font-family:inherit;}
 .form-acoes button.primario{background:var(--nv-accent);border-color:var(--nv-accent);color:var(--nv-on-accent);}
@@ -322,6 +333,12 @@ dialog input,dialog select{font-family:inherit;font-size:1rem;padding:8px;border
     <label for="campo-nome-ativo">Nome do ativo</label>
     <div id="combo-nome-ativo"></div>
     <label>Preço atual por cota<input type="text" inputmode="decimal" name="precoAtual" class="nv-campo-moeda" required /></label>
+    <!-- O app não tem como saber sozinho se um ativo é resgatável hoje: quem diz é o usuário, e é
+         isso que o alerta de reserva de emergência no Resumo usa como base. -->
+    <label style="flex-direction:row;align-items:center;gap:10px;justify-content:space-between">
+      <span>Conta como reserva de emergência<small style="display:block;color:var(--nv-muted);font-weight:400">só marque se der pra resgatar rápido</small></span>
+      <input type="checkbox" name="reserva" style="width:auto;flex:none" />
+    </label>
     <div class="form-acoes">
       <button type="button" id="botao-excluir-investimento" data-acao="excluir-investimento-atual" hidden style="margin-right:auto;color:var(--nv-negative);border-color:var(--nv-negative)">Excluir</button>
       <button type="button" data-acao="cancelar-form">Cancelar</button>

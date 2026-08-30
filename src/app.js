@@ -687,6 +687,7 @@
       form.elements.nome.value = item.nome;
       definirComboPorValor(comboTipo, item.tipo);
       form.elements.precoAtual.value = renderizacao.formatNumero(migrado.precoAtual);
+      form.elements.reserva.checked = !!item.reserva;
     } else {
       form.elements.id.value = '';
       atualizarSugestoesAtivo('acao');
@@ -1120,12 +1121,24 @@
           despachar({
             type: 'editInvestimento',
             id,
-            changes: { nome: dados.get('nome'), tipo: dados.get('tipo'), precoAtual: numeroDoCampoMoeda(dados.get('precoAtual')) },
+            changes: {
+              nome: dados.get('nome'),
+              tipo: dados.get('tipo'),
+              precoAtual: numeroDoCampoMoeda(dados.get('precoAtual')),
+              reserva: dados.get('reserva') === 'on',
+            },
           });
         } else {
           despachar({
             type: 'addInvestimento',
-            investimento: { id, nome: dados.get('nome'), tipo: dados.get('tipo'), precoAtual: numeroDoCampoMoeda(dados.get('precoAtual')), operacoes: [] },
+            investimento: {
+              id,
+              nome: dados.get('nome'),
+              tipo: dados.get('tipo'),
+              precoAtual: numeroDoCampoMoeda(dados.get('precoAtual')),
+              reserva: dados.get('reserva') === 'on',
+              operacoes: [],
+            },
           });
           abrirAtivo(id);
         }
