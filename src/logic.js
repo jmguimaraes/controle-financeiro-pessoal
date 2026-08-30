@@ -712,6 +712,224 @@ function numeroDecimalFlexivel(texto) {
   return Number.isFinite(numero) ? numero : 0;
 }
 
+// --- Importação de planilha CSV ---
+// Tudo aqui é síncrono e sem rede: o arquivo já chega como texto (lido no navegador via FileReader,
+// que é API de arquivo local e não passa pela CSP do Artifact que bloqueia fetch externo).
+
+// Scanner de CSV no estilo RFC 4180: aspas duplas delimitam campo, "" é uma aspa literal, e dentro
+// de aspas o separador e a quebra de linha são texto comum. O separador é detectado na 1ª linha —
+// exportação de banco/Excel brasileiro usa ";" quase sempre, mas ',' e tab também aparecem.
+function detectarSeparadorCSV(primeiraLinha) {
+  const candidatos = [';', ',', '\t'];
+  let escolhido = ',';
+  let melhor = -1;
+  for (const sep of candidatos) {
+    const quantidade = primeiraLinha.split(sep).length;
+    if (quantidade > melhor) {
+      melhor = quantidade;
+      escolhido = sep;
+    }
+  }
+  return escolhido;
+}
+
+function parseCSV(texto) {
+  const limpo = String(texto || '').replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  const primeiraQuebra = limpo.indexOf('\n');
+  const linhaCabecalho = primeiraQuebra === -1 ? limpo : limpo.slice(0, primeiraQuebra);
+  const sep = detectarSeparadorCSV(linhaCabecalho);
+
+  const linhas = [];
+  let campo = '';
+  let linha = [];
+  let dentroDeAspas = false;
+  for (let i = 0; i < limpo.length; i++) {
+    const c = limpo[i];
+    if (dentroDeAspas) {
+      if (c === '"') {
+        if (limpo[i + 1] === '"') {
+          campo += '"';
+          i++;
+        } else {
+          dentroDeAspas = false;
+        }
+      } else {
+        campo += c;
+      }
+    } else if (c === '"') {
+      dentroDeAspas = true;
+    } else if (c === sep) {
+      linha.push(campo);
+      campo = '';
+    } else if (c === '\n') {
+      linha.push(campo);
+      linhas.push(linha);
+      linha = [];
+      campo = '';
+    } else {
+      campo += c;
+    }
+  }
+  linha.push(campo);
+  linhas.push(linha);
+
+  const naoVazia = (l) => l.some((c) => c.trim() !== '');
+  const comConteudo = linhas.filter(naoVazia).map((l) => l.map((c) => c.trim()));
+  if (!comConteudo.length) return { colunas: [], linhas: [] };
+  return { colunas: comConteudo[0], linhas: comConteudo.slice(1) };
+}
+
+// A partir dos cabeçalhos, chuta qual coluna é cada campo. Compara sem acento nem caixa, primeiro por
+// igualdade exata e depois por "contém" — assim "Valor" ganha de "Valor previsto" quando os dois existem.
+const CHAVES_MAPEAMENTO_CSV = {
+  data: ['data', 'date', 'dia', 'vencimento', 'competencia', 'dt'],
+  valor: ['valor', 'value', 'amount', 'montante', 'quantia', 'preco', 'total', 'vlr'],
+  descricao: ['descricao', 'description', 'historico', 'memo', 'nome', 'detalhe', 'lancamento', 'estabelecimento', 'titulo', 'referencia'],
+  categoria: ['categoria', 'category', 'tipo', 'classe', 'class', 'grupo', 'rubrica'],
+  parcelas: ['parcela', 'parcelas', 'installment', 'parc'],
+  conta: ['conta', 'account', 'banco', 'carteira', 'cartao'],
+};
+
+function analisarPlanilha(texto) {
+  const { colunas, linhas } = parseCSV(texto);
+  const normalizados = colunas.map((c) => normalizarTexto(c).trim());
+  const achar = (chaves) => {
+    for (let i = 0; i < normalizados.length; i++) {
+      if (chaves.some((k) => normalizados[i] === k)) return i;
+    }
+    for (let i = 0; i < normalizados.length; i++) {
+      if (chaves.some((k) => normalizados[i].includes(k))) return i;
+    }
+    return null;
+  };
+  const sugestao = {};
+  for (const campo of Object.keys(CHAVES_MAPEAMENTO_CSV)) {
+    sugestao[campo] = achar(CHAVES_MAPEAMENTO_CSV[campo]);
+  }
+  return { colunas, linhas, sugestao };
+}
+
+function parseDataImportada(texto) {
+  const s = String(texto || '').trim();
+  if (!s) return null;
+  const validar = (ano, mes, dia) => {
+    if (!(mes >= 1 && mes <= 12 && dia >= 1 && dia <= 31)) return null;
+    const d = new Date(ano, mes - 1, dia);
+    if (d.getFullYear() !== ano || d.getMonth() !== mes - 1 || d.getDate() !== dia) return null;
+    return `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+  };
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); // ISO, com ou sem hora depois
+  if (m) return validar(Number(m[1]), Number(m[2]), Number(m[3]));
+  m = s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/); // DD/MM/AAAA ou DD/MM/AA
+  if (m) {
+    let ano = Number(m[3]);
+    if (ano < 100) ano += 2000;
+    return validar(ano, Number(m[2]), Number(m[1]));
+  }
+  return null;
+}
+
+// Aceita "-89,90", "R$ 1.234,56", "(210,45)" (contábil = negativo) e "50,00-" (sinal no fim).
+// Devolve número com sinal, ou null se não houver dígito ou o valor der zero.
+function parseValorImportado(texto) {
+  let s = String(texto || '').trim();
+  if (!s) return null;
+  s = s.replace(/r\$/gi, '').replace(/[\s ]/g, '');
+  let negativo = false;
+  if (/^\(.*\)$/.test(s)) {
+    negativo = true;
+    s = s.slice(1, -1);
+  }
+  if (/^-/.test(s) || /-$/.test(s)) negativo = true;
+  s = s.replace(/^[+-]/, '').replace(/-$/, '');
+  if (!/\d/.test(s)) return null;
+  const n = numeroDecimalFlexivel(s);
+  if (!Number.isFinite(n) || n === 0) return null;
+  return negativo ? -n : n;
+}
+
+// "12" -> 12; "3/12" (parcela atual/total) -> 12; vazio ou sem número -> 1.
+function parseParcelasImportada(texto) {
+  const s = String(texto || '').trim();
+  let m = s.match(/(\d+)\s*\/\s*(\d+)/);
+  if (m) return Math.max(1, parseInt(m[2], 10));
+  m = s.match(/(\d+)/);
+  if (m) return Math.max(1, parseInt(m[1], 10));
+  return 1;
+}
+
+// Converte as linhas cruas do CSV em lançamentos no mesmo formato do resto do app. `mapa` diz o
+// índice de cada campo (null quando a coluna não existe). `opcoes.contaPadraoId` é a conta única
+// escolhida na tela de import; `opcoes.contas` serve pra casar o nome quando há coluna de conta.
+// Linhas com data ou valor inválido não entram — voltam em `ignoradas` com o motivo, pra tela mostrar.
+function converterLinhasEmLancamentos(linhas, mapa, opcoes = {}) {
+  const lancamentos = [];
+  const ignoradas = [];
+  const contas = opcoes.contas || [];
+  const contaPadraoId = opcoes.contaPadraoId || null;
+  const temColuna = (idx) => idx !== null && idx !== undefined && idx >= 0;
+
+  (linhas || []).forEach((linhaBruta, i) => {
+    const linha = linhaBruta || [];
+    const numeroLinha = i + 1;
+    const cel = (idx) => (temColuna(idx) ? String(linha[idx] == null ? '' : linha[idx]).trim() : '');
+
+    if (linha.every((c) => String(c == null ? '' : c).trim() === '')) return; // linha em branco: pula sem contar
+
+    const data = parseDataImportada(cel(mapa.data));
+    if (!data) {
+      ignoradas.push({ linha: numeroLinha, motivo: 'Data ausente ou em formato não reconhecido' });
+      return;
+    }
+    const valor = parseValorImportado(cel(mapa.valor));
+    if (valor === null) {
+      ignoradas.push({ linha: numeroLinha, motivo: 'Valor ausente ou inválido' });
+      return;
+    }
+
+    const tipo = valor < 0 ? 'despesa' : 'receita';
+    const descricao = temColuna(mapa.descricao) ? cel(mapa.descricao) : '';
+
+    let categoria = temColuna(mapa.categoria) ? cel(mapa.categoria) : '';
+    if (!categoria) {
+      const palpite = interpretarLancamento(descricao);
+      categoria = palpite.reconheceuCategoria
+        ? palpite.categoria
+        : tipo === 'receita'
+          ? 'Outras Receitas'
+          : 'Outras Despesas';
+    }
+
+    let parcelas = temColuna(mapa.parcelas)
+      ? parseParcelasImportada(cel(mapa.parcelas))
+      : interpretarLancamento(descricao).parcelas;
+    if (!(parcelas >= 1)) parcelas = 1;
+
+    const lancamento = {
+      id: uid(),
+      data,
+      tipo,
+      categoria,
+      descricao,
+      valorTotal: Math.abs(valor),
+      parcelas,
+      origem: 'importacao',
+    };
+
+    let contaId = contaPadraoId;
+    if (temColuna(mapa.conta)) {
+      const alvo = normalizarTexto(cel(mapa.conta)).trim();
+      const achou = alvo && contas.find((c) => normalizarTexto(c.nome).trim() === alvo);
+      contaId = achou ? achou.id : contaPadraoId;
+    }
+    if (contaId) lancamento.contaId = contaId;
+
+    lancamentos.push(lancamento);
+  });
+
+  return { lancamentos, ignoradas };
+}
+
 function estadoInicial() {
   return {
     lancamentos: [],
@@ -741,6 +959,8 @@ function applyAction(state, action) {
   switch (action.type) {
     case 'addLancamento':
       return { ...base, lancamentos: [...lancamentos, action.lancamento] };
+    case 'importarLancamentos':
+      return { ...base, lancamentos: [...lancamentos, ...(action.lancamentos || [])] };
     case 'editLancamento':
       return {
         ...base,
@@ -838,5 +1058,8 @@ if (typeof module !== 'undefined' && module.exports) {
     lancamentosDoDia,
     perguntasPerfil,
     tiposAlocacao,
+    parseCSV,
+    analisarPlanilha,
+    converterLinhasEmLancamentos,
   };
 }

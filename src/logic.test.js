@@ -47,6 +47,9 @@ const {
   comprometimentoMensal,
   resumoDiario,
   lancamentosDoDia,
+  parseCSV,
+  analisarPlanilha,
+  converterLinhasEmLancamentos,
 } = require('./logic.js');
 
 const arred = (x) => Math.round(x * 100) / 100;
@@ -1076,4 +1079,154 @@ test('applyAction adiciona, edita e remove dívida', () => {
 
 test('estadoInicial já traz a lista de dívidas vazia', () => {
   assert.deepEqual(estadoInicial().dividas, []);
+});
+
+// --- Importação de planilha CSV ---
+
+test('parseCSV separa colunas e linhas com vírgula', () => {
+  const r = parseCSV('data,descricao,valor\n2026-08-01,Mercado,-89,90\n');
+  assert.deepEqual(r.colunas, ['data', 'descricao', 'valor']);
+  assert.equal(r.linhas.length, 1);
+  assert.deepEqual(r.linhas[0], ['2026-08-01', 'Mercado', '-89', '90']);
+});
+
+test('parseCSV detecta ponto-e-vírgula (Excel brasileiro)', () => {
+  const r = parseCSV('Data;Histórico;Valor\r\n01/08/2026;Padaria;-12,50\r\n02/08/2026;Salário;4500,00\r\n');
+  assert.deepEqual(r.colunas, ['Data', 'Histórico', 'Valor']);
+  assert.equal(r.linhas.length, 2);
+  assert.deepEqual(r.linhas[1], ['02/08/2026', 'Salário', '4500,00']);
+});
+
+test('parseCSV respeita aspas com separador e quebra de linha dentro', () => {
+  const r = parseCSV('a,b\n"1,00","linha\ncom quebra"\n"aspas ""dentro""",fim\n');
+  assert.deepEqual(r.linhas[0], ['1,00', 'linha\ncom quebra']);
+  assert.deepEqual(r.linhas[1], ['aspas "dentro"', 'fim']);
+});
+
+test('parseCSV remove BOM e ignora linhas totalmente vazias', () => {
+  const r = parseCSV('\uFEFFdata,valor\n\n2026-08-01,10\n\n');
+  assert.deepEqual(r.colunas, ['data', 'valor']);
+  assert.equal(r.linhas.length, 1);
+});
+
+test('analisarPlanilha sugere o mapeamento a partir dos cabeçalhos', () => {
+  const { sugestao } = analisarPlanilha('Data;Descrição;Categoria;Valor;Parcelas;Conta\n01/08/2026;x;y;10;1;Nubank\n');
+  assert.equal(sugestao.data, 0);
+  assert.equal(sugestao.descricao, 1);
+  assert.equal(sugestao.categoria, 2);
+  assert.equal(sugestao.valor, 3);
+  assert.equal(sugestao.parcelas, 4);
+  assert.equal(sugestao.conta, 5);
+});
+
+test('analisarPlanilha reconhece cabeçalhos em inglês e ignora colunas desconhecidas', () => {
+  const { sugestao } = analisarPlanilha('date,memo,amount,foo\n2026-08-01,x,10,bar\n');
+  assert.equal(sugestao.data, 0);
+  assert.equal(sugestao.descricao, 1);
+  assert.equal(sugestao.valor, 2);
+  assert.equal(sugestao.categoria, null);
+  assert.equal(sugestao.parcelas, null);
+  assert.equal(sugestao.conta, null);
+});
+
+test('converterLinhasEmLancamentos: data BR e sinal definem tipo e valor', () => {
+  const linhas = [
+    ['01/08/2026', 'Mercado', '-89,90'],
+    ['02/08/2026', 'Salário', '4.500,00'],
+  ];
+  const { lancamentos, ignoradas } = converterLinhasEmLancamentos(linhas, { data: 0, descricao: 1, valor: 2 });
+  assert.equal(ignoradas.length, 0);
+  assert.equal(lancamentos[0].data, '2026-08-01');
+  assert.equal(lancamentos[0].tipo, 'despesa');
+  assert.equal(lancamentos[0].valorTotal, 89.9);
+  assert.equal(lancamentos[0].parcelas, 1);
+  assert.equal(lancamentos[0].origem, 'importacao');
+  assert.equal(lancamentos[1].tipo, 'receita');
+  assert.equal(lancamentos[1].valorTotal, 4500);
+});
+
+test('converterLinhasEmLancamentos aceita ISO, R$ e parênteses como negativo', () => {
+  const linhas = [
+    ['2026-08-03', 'Conta de luz', 'R$ (210,45)'],
+    ['2026-08-04T10:00:00', 'Reembolso', 'R$ 50,00'],
+  ];
+  const { lancamentos } = converterLinhasEmLancamentos(linhas, { data: 0, descricao: 1, valor: 2 });
+  assert.equal(lancamentos[0].data, '2026-08-03');
+  assert.equal(lancamentos[0].tipo, 'despesa');
+  assert.equal(lancamentos[0].valorTotal, 210.45);
+  assert.equal(lancamentos[1].data, '2026-08-04');
+  assert.equal(lancamentos[1].tipo, 'receita');
+});
+
+test('converterLinhasEmLancamentos usa a coluna de categoria quando mapeada, senão infere pela descrição', () => {
+  const linhas = [
+    ['01/08/2026', 'uber pro trabalho', '-32,00', 'Deslocamento'],
+    ['02/08/2026', 'uber pro trabalho', '-32,00', ''],
+  ];
+  const { lancamentos } = converterLinhasEmLancamentos(linhas, { data: 0, descricao: 1, valor: 2, categoria: 3 });
+  assert.equal(lancamentos[0].categoria, 'Deslocamento');
+  assert.equal(lancamentos[1].categoria, 'Transporte');
+});
+
+test('converterLinhasEmLancamentos lê parcelas da coluna (N ou N/M) e cai na descrição quando não há coluna', () => {
+  const comColuna = converterLinhasEmLancamentos(
+    [['01/08/2026', 'Notebook', '-3600,00', '3/12'], ['01/08/2026', 'Fone', '-200,00', '']],
+    { data: 0, descricao: 1, valor: 2, parcelas: 3 }
+  ).lancamentos;
+  assert.equal(comColuna[0].parcelas, 12);
+  assert.equal(comColuna[1].parcelas, 1);
+
+  const semColuna = converterLinhasEmLancamentos(
+    [['01/08/2026', 'Notebook em 10x', '-3600,00']],
+    { data: 0, descricao: 1, valor: 2 }
+  ).lancamentos;
+  assert.equal(semColuna[0].parcelas, 10);
+});
+
+test('converterLinhasEmLancamentos resolve a conta pela coluna e pela conta padrão', () => {
+  const contas = [{ id: 'c1', nome: 'Nubank' }, { id: 'c2', nome: 'Itaú' }];
+  const linhas = [
+    ['01/08/2026', 'x', '-10,00', 'nubank'],
+    ['02/08/2026', 'y', '-10,00', 'Carteira'],
+  ];
+  const { lancamentos } = converterLinhasEmLancamentos(
+    linhas,
+    { data: 0, descricao: 1, valor: 2, conta: 3 },
+    { contaPadraoId: 'c2', contas }
+  );
+  assert.equal(lancamentos[0].contaId, 'c1');
+  assert.equal(lancamentos[1].contaId, 'c2');
+});
+
+test('converterLinhasEmLancamentos não grava contaId quando não há coluna nem conta padrão', () => {
+  const { lancamentos } = converterLinhasEmLancamentos([['01/08/2026', 'x', '-10,00']], { data: 0, descricao: 1, valor: 2 });
+  assert.ok(!('contaId' in lancamentos[0]));
+});
+
+test('converterLinhasEmLancamentos manda pra ignoradas linhas com data ou valor inválido, e pula linhas vazias', () => {
+  const linhas = [
+    ['sem data', 'x', '-10,00'],
+    ['01/08/2026', 'y', 'abc'],
+    ['', '', ''],
+    ['03/08/2026', 'z', '-15,00'],
+  ];
+  const { lancamentos, ignoradas } = converterLinhasEmLancamentos(linhas, { data: 0, descricao: 1, valor: 2 });
+  assert.equal(lancamentos.length, 1);
+  assert.equal(ignoradas.length, 2);
+  assert.equal(ignoradas[0].linha, 1);
+  assert.match(ignoradas[0].motivo, /data/i);
+  assert.equal(ignoradas[1].linha, 2);
+  assert.match(ignoradas[1].motivo, /valor/i);
+});
+
+test('applyAction importarLancamentos anexa em bloco e preserva o resto do estado', () => {
+  let s = estadoInicial();
+  s = applyAction(s, { type: 'addLancamento', lancamento: { id: 'a1', valorTotal: 5, parcelas: 1 } });
+  s = applyAction(s, { type: 'setIdioma', idioma: 'en' });
+  s = applyAction(s, {
+    type: 'importarLancamentos',
+    lancamentos: [{ id: 'i1', valorTotal: 1, parcelas: 1 }, { id: 'i2', valorTotal: 2, parcelas: 1 }],
+  });
+  assert.deepEqual(s.lancamentos.map((l) => l.id), ['a1', 'i1', 'i2']);
+  assert.equal(s.idioma, 'en');
 });

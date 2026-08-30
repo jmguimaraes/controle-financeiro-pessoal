@@ -16,6 +16,7 @@ const {
   renderCategoriaDetalhe,
   renderMetas,
   renderConfiguracoes,
+  renderImportarPlanilha,
   renderAbertura,
   renderInvestimentos,
   renderAtivoDetalhe,
@@ -792,4 +793,46 @@ test('renderInvestimentos escapa o nome da dívida', () => {
   const html = renderInvestimentos(state);
   assert.equal(html.includes('<img src=x'), false);
   assert.match(html, /&lt;img/);
+});
+
+// --- renderImportarPlanilha ---
+
+test('renderImportarPlanilha passo 1 mostra input de arquivo e área de texto', () => {
+  const html = renderImportarPlanilha(estado(), null);
+  assert.match(html, /id="campo-arquivo-csv"/);
+  assert.match(html, /id="campo-texto-csv"/);
+  assert.match(html, /data-acao="analisar-csv"/);
+});
+
+test('renderImportarPlanilha passo 2 pré-seleciona as colunas sugeridas e lista as contas', () => {
+  const imp = {
+    colunas: ['Data', 'Valor', 'Descrição'],
+    linhas: [['01/08/2026', '-10,00', 'Mercado']],
+    sugestao: { data: 0, valor: 1, descricao: 2, categoria: null, parcelas: null, conta: null },
+  };
+  const html = renderImportarPlanilha(estado({ contas: [{ id: 'c1', nome: 'Nubank' }] }), imp);
+  assert.match(html, /<select id="map-data">[\s\S]*?<option value="0" selected>Data<\/option>/);
+  assert.match(html, /<select id="map-valor">[\s\S]*?<option value="1" selected>Valor<\/option>/);
+  assert.match(html, /id="import-conta-padrao"/);
+  assert.match(html, /data-acao="confirmar-importacao"/);
+});
+
+test('renderImportarPlanilha passo 2 escapa o conteúdo da prévia', () => {
+  const imp = {
+    colunas: ['Descrição'],
+    linhas: [['<img src=x onerror=alert(1)>']],
+    sugestao: { data: null, valor: null, descricao: 0, categoria: null, parcelas: null, conta: null },
+  };
+  const html = renderImportarPlanilha(estado(), imp);
+  assert.equal(html.includes('<img src=x'), false);
+  assert.match(html, /&lt;img/);
+});
+
+test('renderImportarPlanilha passo 3 resume importados e ignorados', () => {
+  const imp = { colunas: ['a'], linhas: [], sugestao: {}, resultado: { total: 12, ignoradas: [{ linha: 3, motivo: 'Valor ausente ou inválido' }] } };
+  const html = renderImportarPlanilha(estado(), imp);
+  assert.match(html, />12</);
+  assert.match(html, /Linha 3/);
+  assert.match(html, /Valor ausente/);
+  assert.match(html, /data-acao="fechar-importar"/);
 });

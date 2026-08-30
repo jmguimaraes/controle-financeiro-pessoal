@@ -1080,6 +1080,10 @@ function renderConfiguracoes(state, temPin) {
         <span class="nv-switch"><span class="knob"></span></span>
       </label>
     </div>
+    <div class="nv-dado-linha">
+      <span>${I18N.t('config.importarPlanilha', idioma)}</span>
+      <button type="button" class="nv-link-accent" data-acao="abrir-importacao" style="font-size:11px">${I18N.t('config.importar', idioma)}</button>
+    </div>
     <div class="nv-section-head" style="padding-top:8px;padding-bottom:8px;border-top:1px solid var(--nv-rule-soft)"><span class="nv-section-label">${I18N.t('config.seguranca', idioma)}</span></div>
     <div class="nv-dado-linha">
       <span>${I18N.t('config.pinAcesso', idioma)}</span>
@@ -1091,6 +1095,130 @@ function renderConfiguracoes(state, temPin) {
     </div>
     <div class="nv-rodape-versao">NUVRA 1.0.0</div>
   `;
+}
+
+// Tela de importação de CSV — 3 passos guardados no mesmo objeto `imp` (ver app.js):
+// sem `colunas` -> escolher arquivo; com `colunas` -> mapear; com `resultado` -> resumo.
+// Fica em português (fase de i18n ainda não cobre telas fora de Resumo/Config).
+function renderImportarPlanilha(state, imp) {
+  const contas = state.contas || [];
+  const voltar = headerVoltar('Importar planilha', 'fechar-importar');
+
+  if (imp && imp.resultado) {
+    const { total, ignoradas } = imp.resultado;
+    const listaIgnoradas = ignoradas.length
+      ? `<div class="nv-section-head"><span class="nv-section-label">LINHAS IGNORADAS</span></div>
+         ${ignoradas
+           .map(
+             (ig) =>
+               `<div class="nv-dado-linha"><span>Linha ${ig.linha}</span><span class="nv-item-meta">${escapeHtml(ig.motivo)}</span></div>`
+           )
+           .join('')}`
+      : '';
+    return `
+      ${voltar}
+      <div class="nv-hero" style="border-bottom:1px solid var(--nv-rule-soft)">
+        <div class="nv-hero-label">IMPORTADOS</div>
+        <div class="nv-hero-value"><span class="numero" style="font-size:44px">${total}</span></div>
+        <div class="nv-item-meta" style="margin-top:10px">
+          ${total} lançamento${total === 1 ? '' : 's'} adicionado${total === 1 ? '' : 's'}${
+            ignoradas.length ? ` · ${ignoradas.length} ignorada${ignoradas.length === 1 ? '' : 's'}` : ''
+          }
+        </div>
+      </div>
+      ${listaIgnoradas}
+      <p class="nv-vazio" style="text-align:left;padding:16px 20px">
+        Confira em Lançamentos. Importar o mesmo arquivo de novo cria lançamentos duplicados — não há verificação de repetidos.
+      </p>
+      <div style="padding:8px 20px 24px">
+        <button type="button" class="nv-btn-contorno" data-acao="fechar-importar"><span>CONCLUIR</span></button>
+      </div>`;
+  }
+
+  if (imp && imp.colunas && imp.colunas.length) {
+    const opcoesColuna = (selecionado) =>
+      '<option value="">— não importar —</option>' +
+      imp.colunas
+        .map(
+          (c, i) =>
+            `<option value="${i}" ${String(selecionado) === String(i) ? 'selected' : ''}>${escapeHtml(c || `Coluna ${i + 1}`)}</option>`
+        )
+        .join('');
+    const campo = (id, rotulo, sugerido, obrigatorio) => `
+      <div class="nv-campo-linha">
+        <span class="nv-campo-label">${rotulo}${obrigatorio ? ' *' : ''}</span>
+        <select id="${id}">${opcoesColuna(sugerido)}</select>
+      </div>`;
+
+    const tabela = `
+      <div style="overflow-x:auto;padding:0 20px 12px">
+        <table style="border-collapse:collapse;font-size:11px;width:100%">
+          <thead><tr>${imp.colunas
+            .map(
+              (c) =>
+                `<th style="text-align:left;padding:6px 12px 6px 0;border-bottom:1px solid var(--nv-rule-soft);white-space:nowrap">${escapeHtml(c)}</th>`
+            )
+            .join('')}</tr></thead>
+          <tbody>${imp.linhas
+            .slice(0, 6)
+            .map(
+              (l) =>
+                `<tr>${imp.colunas
+                  .map(
+                    (unused, i) =>
+                      `<td style="padding:6px 12px 6px 0;border-bottom:1px solid var(--nv-hairline);white-space:nowrap">${escapeHtml(l[i] || '')}</td>`
+                  )
+                  .join('')}</tr>`
+            )
+            .join('')}</tbody>
+        </table>
+      </div>`;
+
+    const seletorContaPadrao = contas.length
+      ? `<div class="nv-campo-linha">
+           <span class="nv-campo-label">LANÇAR NA CONTA</span>
+           <select id="import-conta-padrao">
+             <option value="">— nenhuma —</option>
+             ${contas.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.nome)}</option>`).join('')}
+           </select>
+         </div>`
+      : '';
+
+    return `
+      ${voltar}
+      <div class="nv-section-head"><span class="nv-section-label">${imp.linhas.length} LINHA${
+        imp.linhas.length === 1 ? '' : 'S'
+      } ENCONTRADA${imp.linhas.length === 1 ? '' : 'S'}</span></div>
+      ${tabela}
+      <div class="nv-section-head"><span class="nv-section-label">DE QUAL COLUNA VEM CADA CAMPO</span></div>
+      ${campo('map-data', 'DATA', imp.sugestao.data, true)}
+      ${campo('map-valor', 'VALOR', imp.sugestao.valor, true)}
+      ${campo('map-descricao', 'DESCRIÇÃO', imp.sugestao.descricao, false)}
+      ${campo('map-categoria', 'CATEGORIA', imp.sugestao.categoria, false)}
+      ${campo('map-parcelas', 'PARCELAS', imp.sugestao.parcelas, false)}
+      ${contas.length ? campo('map-conta', 'CONTA', imp.sugestao.conta, false) : ''}
+      ${seletorContaPadrao}
+      <p class="nv-vazio" style="text-align:left;padding:12px 20px">
+        Valor negativo vira despesa; positivo, receita. Sem coluna de categoria, o Nuvra adivinha pela descrição. Uma coluna de conta na planilha, quando o nome bate com uma das suas contas, tem prioridade sobre a conta escolhida acima.
+      </p>
+      <div style="padding:8px 20px 24px">
+        <button type="button" class="nv-btn-contorno" data-acao="confirmar-importacao"><span>IMPORTAR LANÇAMENTOS</span></button>
+      </div>`;
+  }
+
+  return `
+    ${voltar}
+    <div style="padding:20px">
+      <p style="font-size:13px;color:var(--nv-muted);line-height:1.5;margin:0 0 16px">
+        Exporte sua planilha como CSV (no Excel: <strong>Salvar como → CSV</strong>) e escolha o arquivo abaixo. Cada linha com data e valor vira um lançamento. Nada sai do aparelho — o arquivo é lido aqui mesmo.
+      </p>
+      <input type="file" id="campo-arquivo-csv" accept=".csv,text/csv,text/plain" style="font-size:13px;width:100%;margin-bottom:20px" />
+      <p style="font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--nv-muted);margin:0 0 8px">OU COLE O CONTEÚDO</p>
+      <textarea id="campo-texto-csv" rows="6" placeholder="data,descrição,valor&#10;01/08/2026,Mercado,-89,90" style="width:100%;font-family:inherit;font-size:13px;padding:10px;border:1px solid var(--nv-rule-soft);border-radius:8px;background:var(--nv-bg);color:var(--nv-fg);resize:vertical;box-sizing:border-box"></textarea>
+      <div style="margin-top:16px">
+        <button type="button" class="nv-btn-contorno" data-acao="analisar-csv"><span>CONTINUAR</span></button>
+      </div>
+    </div>`;
 }
 
 function renderAbertura() {
@@ -1439,6 +1567,7 @@ if (typeof module !== 'undefined' && module.exports) {
     renderCategoriaDetalhe,
     renderMetas,
     renderConfiguracoes,
+    renderImportarPlanilha,
     renderPin,
     renderComboSelect,
     renderComboBusca,

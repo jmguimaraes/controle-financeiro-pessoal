@@ -9,6 +9,7 @@
     renderCategoriaDetalhe,
     renderMetas,
     renderConfiguracoes,
+    renderImportarPlanilha,
     renderAbertura,
     renderInvestimentos,
     renderAtivoDetalhe,
@@ -36,6 +37,7 @@
   let rascunhoLancamento = null; // dados em edição na tela de novo lançamento
   let descricaoSincronizacao = 'Verificando…';
   let calculadoraAtiva = 'compostos'; // compostos | simples | porcentagem | milhao
+  let importCSV = null; // tela de importação: null | {texto,colunas,linhas,sugestao} | {...,resultado}
   let modoMilhao = 'tempo'; // tempo | aporte — qual variável a calculadora "primeiro milhão" resolve
 
   async function iniciar() {
@@ -294,8 +296,11 @@
     if (telaAtual === 'calculadoras') {
       document.getElementById('tela-calculadoras').innerHTML = renderCalculadoras(calculadoraAtiva, modoMilhao);
     }
+    if (telaAtual === 'importar') {
+      document.getElementById('tela-importar').innerHTML = renderImportarPlanilha(state, importCSV);
+    }
 
-    const telas = ['resumo', 'lancamentos', 'carteira', 'metas', 'calendario', 'dia', 'categoria', 'ativo-detalhe', 'novo-lancamento', 'configuracoes', 'calculadoras'];
+    const telas = ['resumo', 'lancamentos', 'carteira', 'metas', 'calendario', 'dia', 'categoria', 'ativo-detalhe', 'novo-lancamento', 'configuracoes', 'importar', 'calculadoras'];
     for (const nome of telas) {
       document.getElementById(`tela-${nome}`).hidden = nome !== telaAtual;
     }
@@ -352,6 +357,77 @@
 
   function fecharCalculadoras() {
     telaAtual = abaAtual;
+    renderizarTudo();
+  }
+
+  function abrirImportacao() {
+    importCSV = null;
+    telaAtual = 'importar';
+    renderizarTudo();
+  }
+
+  function fecharImportacao() {
+    importCSV = null;
+    telaAtual = 'configuracoes';
+    renderizarTudo();
+  }
+
+  function analisarCSVDaTela() {
+    const area = document.getElementById('campo-texto-csv');
+    const texto = area ? area.value.trim() : '';
+    if (!texto) {
+      alert('Escolha um arquivo CSV ou cole o conteúdo.');
+      return;
+    }
+    aplicarAnaliseCSV(texto);
+  }
+
+  function lerArquivoCSV(arquivo) {
+    if (!arquivo) return;
+    const leitor = new FileReader();
+    leitor.onload = () => aplicarAnaliseCSV(String(leitor.result || ''));
+    leitor.onerror = () => alert('Não consegui ler esse arquivo.');
+    leitor.readAsText(arquivo);
+  }
+
+  function aplicarAnaliseCSV(texto) {
+    const analise = logica.analisarPlanilha(texto);
+    if (!analise.colunas.length || !analise.linhas.length) {
+      alert('A planilha parece vazia ou sem linhas de dados.');
+      return;
+    }
+    importCSV = { texto, ...analise };
+    renderizarTudo();
+  }
+
+  function confirmarImportacao() {
+    const indiceDoCampo = (id) => {
+      const el = document.getElementById(id);
+      return el && el.value !== '' ? Number(el.value) : null;
+    };
+    const mapa = {
+      data: indiceDoCampo('map-data'),
+      valor: indiceDoCampo('map-valor'),
+      descricao: indiceDoCampo('map-descricao'),
+      categoria: indiceDoCampo('map-categoria'),
+      parcelas: indiceDoCampo('map-parcelas'),
+      conta: indiceDoCampo('map-conta'),
+    };
+    if (mapa.data === null || mapa.valor === null) {
+      alert('Escolha pelo menos as colunas de data e valor.');
+      return;
+    }
+    const contaEl = document.getElementById('import-conta-padrao');
+    const { lancamentos, ignoradas } = logica.converterLinhasEmLancamentos(importCSV.linhas, mapa, {
+      contaPadraoId: contaEl && contaEl.value ? contaEl.value : null,
+      contas: state.contas || [],
+    });
+    if (!lancamentos.length) {
+      alert('Nenhuma linha pôde ser importada. Confira o mapeamento das colunas.');
+      return;
+    }
+    despachar({ type: 'importarLancamentos', lancamentos });
+    importCSV = { ...importCSV, resultado: { total: lancamentos.length, ignoradas } };
     renderizarTudo();
   }
 
@@ -750,6 +826,10 @@
       if (acao === 'fechar-configuracoes') fecharConfiguracoes();
       if (acao === 'abrir-calculadoras') abrirCalculadoras();
       if (acao === 'fechar-calculadoras') fecharCalculadoras();
+      if (acao === 'abrir-importacao') abrirImportacao();
+      if (acao === 'fechar-importar') fecharImportacao();
+      if (acao === 'analisar-csv') analisarCSVDaTela();
+      if (acao === 'confirmar-importacao') confirmarImportacao();
       if (acao === 'definir-calculadora') {
         calculadoraAtiva = alvo.dataset.calc;
         renderizarTudo();
@@ -965,6 +1045,9 @@
       }
       if (evento.target.id === 'campo-ocultar-valores') {
         despachar({ type: 'setOcultarValores', valor: evento.target.checked });
+      }
+      if (evento.target.id === 'campo-arquivo-csv') {
+        lerArquivoCSV(evento.target.files && evento.target.files[0]);
       }
     });
 
